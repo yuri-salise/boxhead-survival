@@ -95,7 +95,23 @@ class ArenaCombatTestRunner extends Node2D:
 		assert(level.blood_container.get_child_count() > decals_before, "Permanent blood decals must be added to ground")
 		print("Special Infected (Walker, Runner, Boomer, Tanker, Spitter, Witch) & Permanent Blood Decals: PASS")
 		
-		# 5. Test Player Death triggers Death Panel
+		# 5. Test Mobile Touch Controls (Twin-Stick + Dash/Weapon/Grenade Touch Buttons)
+		var tc = level.touch_controls
+		assert(tc != null, "Mobile TouchControls node must exist in level UI")
+		assert(tc.dash_btn != null and tc.grenade_btn != null and tc.weapon_btn != null, "Mobile action buttons must exist")
+		tc.simulate_stick_input(Vector2(1.0, 0.0), Vector2(0.0, -1.0), true)
+		assert(tc.move_vector == Vector2(1.0, 0.0), "Left virtual stick should set move_vector")
+		assert(tc.aim_vector == Vector2(0.0, -1.0), "Right virtual stick should set aim_vector")
+		assert(tc.is_firing == true, "Right virtual stick deflection should trigger auto-fire")
+		p._physics_process(0.016)
+		assert(p.velocity.x > 0.0, "Player should move right when left virtual joystick is deflected right")
+		var w_before = p.weapon_controller.current_weapon_id
+		tc.weapon_btn.pressed.emit()
+		assert(p.weapon_controller.current_weapon_id != w_before, "Mobile WeaponSwitchButton should cycle unlocked weapons")
+		tc.simulate_stick_input(Vector2.ZERO, Vector2.ZERO, false)
+		print("Mobile Twin-Stick & Touch Action HUD: PASS")
+		
+		# 6. Test Player Death triggers Death Panel
 		p.current_armor = 0.0
 		p.take_damage(p.max_health + 50.0)
 		assert(p.is_dead == true, "Player should be dead")

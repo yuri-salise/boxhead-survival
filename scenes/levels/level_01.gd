@@ -18,6 +18,7 @@ const ZombieScript = preload("res://scripts/zombie_basic.gd")
 
 # HUD references
 @onready var horror_vignette: Control = $UI/HorrorVignette
+@onready var touch_controls: Control = $UI/TouchControls
 @onready var health_bar: ProgressBar = $UI/MarginContainer/TopBar/VitalsColumn/HealthBar
 @onready var health_label: Label = $UI/MarginContainer/TopBar/VitalsColumn/HealthLabel
 @onready var armor_bar: ProgressBar = $UI/MarginContainer/TopBar/VitalsColumn/ArmorBar
@@ -58,6 +59,7 @@ func _ready() -> void:
 	
 	if player:
 		player.add_to_group("players")
+		player.touch_controls = touch_controls
 		player.health_changed.connect(_on_player_health_changed)
 		player.armor_changed.connect(_on_player_armor_changed)
 		player.dash_changed.connect(_on_player_dash_changed)
@@ -70,6 +72,22 @@ func _ready() -> void:
 		if player.weapon_controller:
 			player.weapon_controller.weapon_changed.connect(_on_weapon_updated)
 			player.weapon_controller.ammo_changed.connect(_on_ammo_updated)
+		
+		if touch_controls:
+			touch_controls.dash_pressed.connect(func():
+				if is_instance_valid(player):
+					var aim_dir := Vector2.from_angle(player.visuals.rotation if player.visuals else 0.0)
+					player.try_dash(player.velocity, player.global_position + aim_dir * 120.0)
+			)
+			touch_controls.grenade_pressed.connect(func():
+				if is_instance_valid(player):
+					var aim_dir := Vector2.from_angle(player.visuals.rotation if player.visuals else 0.0)
+					player.try_throw_grenade(player.global_position + aim_dir * 190.0)
+			)
+			touch_controls.switch_weapon_pressed.connect(func():
+				if is_instance_valid(player) and player.weapon_controller:
+					player.weapon_controller.cycle_weapon(1)
+			)
 		
 		_on_player_health_changed(player.current_health, player.max_health)
 		_on_player_armor_changed(player.current_armor, player.max_armor)
@@ -153,13 +171,15 @@ func _on_player_armor_changed(cur: float, max_a: float) -> void:
 	if armor_label:
 		armor_label.text = "ARMOR: " + str(int(ceil(cur))) + " / " + str(int(max_a))
 
-func _on_player_dash_changed(cd_left: float, _cd_max: float) -> void:
+func _on_player_dash_changed(cd_left: float, cd_max: float) -> void:
+	if touch_controls and touch_controls.has_method("set_dash_cooldown"):
+		touch_controls.set_dash_cooldown(cd_left, cd_max)
 	if dash_label:
 		if cd_left <= 0.02:
-			dash_label.text = "DASH [SPACE/RMB]: READY"
+			dash_label.text = "DASH: READY"
 			dash_label.add_theme_color_override("font_color", Color(0.35, 0.92, 0.50))
 		else:
-			dash_label.text = "DASH RECHARGING: " + String.num(cd_left, 1) + "S"
+			dash_label.text = "DASH: " + String.num(cd_left, 1) + "S"
 			dash_label.add_theme_color_override("font_color", Color(0.85, 0.55, 0.25))
 
 func _on_player_grenades_changed(_count: int) -> void:
@@ -172,11 +192,17 @@ func _on_ammo_updated(_wid: String, _ammo: int, _max_ammo: int) -> void:
 	_refresh_weapon_hud()
 
 func _refresh_weapon_hud() -> void:
-	if not weapon_label or not player or not player.weapon_controller:
+	if not player or not player.weapon_controller:
 		return
 	var w_text: String = player.weapon_controller.get_current_weapon_display()
 	var g_count: int = int(player.grenade_count)
-	weapon_label.text = w_text + "  ·  [G] FRAG GRENADES: " + str(g_count)
+	if weapon_label:
+		weapon_label.text = w_text + "  ·  FRAGS: " + str(g_count)
+	if touch_controls:
+		if touch_controls.has_method("set_weapon_display"):
+			touch_controls.set_weapon_display(w_text)
+		if touch_controls.has_method("set_grenade_count"):
+			touch_controls.set_grenade_count(g_count)
 
 func _on_player_pickup_collected(msg: String, col: Color) -> void:
 	if is_instance_valid(player):

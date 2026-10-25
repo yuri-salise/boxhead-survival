@@ -42,6 +42,7 @@ var input_override_enabled: bool = false
 var override_move_vec: Vector2 = Vector2.ZERO
 var override_aim_pos: Vector2 = Vector2.ZERO
 var override_is_shooting: bool = false
+var touch_controls: Control = null
 
 @onready var visuals: Node2D = $Visuals
 @onready var muzzle_marker: Marker2D = $Visuals/MuzzlePoint
@@ -105,8 +106,21 @@ func _physics_process(delta: float) -> void:
 			var dy := (1 if Input.is_key_pressed(KEY_S) else 0) - (1 if Input.is_key_pressed(KEY_W) else 0)
 			move_vec = Vector2(dx, dy)
 		
-		aim_pos = get_global_mouse_position()
-		shooting = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+		# Blend in mobile virtual movement joystick if active
+		if is_instance_valid(touch_controls) and touch_controls.get("move_vector") != Vector2.ZERO:
+			move_vec = touch_controls.get("move_vector")
+		
+		# Check if mobile right twin-stick is actively aiming/shooting
+		if is_instance_valid(touch_controls) and touch_controls.get("is_firing") == true:
+			var stick_aim: Vector2 = touch_controls.get("aim_vector")
+			aim_pos = global_position + stick_aim * 150.0
+			shooting = true
+		else:
+			aim_pos = get_global_mouse_position()
+			var pointer_on_touch_ui := false
+			if is_instance_valid(touch_controls) and touch_controls.has_method("is_using_touch_input"):
+				pointer_on_touch_ui = touch_controls.is_using_touch_input() or touch_controls._is_point_on_action_buttons(get_viewport().get_mouse_position())
+			shooting = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not pointer_on_touch_ui
 		
 		# Dash trigger on Space or Shift
 		if Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT):

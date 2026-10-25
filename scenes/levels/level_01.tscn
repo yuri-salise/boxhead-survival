@@ -1,32 +1,34 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scenes/levels/level_01.gd" id="1_r72dd"]
-[ext_resource type="Script" path="res://scripts/arena_environment.gd" id="2_ijn0p"]
-[ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="3_jmes4"]
-[ext_resource type="Script" path="res://scripts/player.gd" id="4_tyxjt"]
-[ext_resource type="Script" path="res://scripts/weapon_controller.gd" id="5_07lms"]
-[ext_resource type="Script" path="res://scripts/horror_vignette.gd" id="6_gi8m4"]
-[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="7_cwffn"]
-[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="8_e6lid"]
-[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="9_3g50r"]
-[ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="10_iu1m7"]
+[ext_resource type="Script" path="res://scenes/levels/level_01.gd" id="1_jmes4"]
+[ext_resource type="Script" path="res://scripts/arena_environment.gd" id="2_tyxjt"]
+[ext_resource type="PackedScene" path="res://scenes/actors/player.tscn" id="3_07lms"]
+[ext_resource type="Script" path="res://scripts/player.gd" id="4_gi8m4"]
+[ext_resource type="Script" path="res://scripts/weapon_controller.gd" id="5_cwffn"]
+[ext_resource type="Script" path="res://scripts/horror_vignette.gd" id="6_e6lid"]
+[ext_resource type="PackedScene" path="res://scenes/ui/touch_controls.tscn" id="7_3g50r"]
+[ext_resource type="Script" path="res://scripts/touch_controls.gd" id="8_iu1m7"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="9_cywot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="10_vrcmr"]
+[ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="11_svp4f"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="12_1b0o8"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_cywot"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_w4kkx"]
 size = Vector2(20, 640)
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_vrcmr"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_mhiu8"]
 size = Vector2(20, 640)
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_svp4f"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lswbx"]
 size = Vector2(1200, 20)
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_1b0o8"]
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_uujh0"]
 size = Vector2(1200, 20)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_7wueq"]
 radius = 18.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_w4kkx"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_3t34l"]
 bg_color = Color(0.1, 0.11, 0.13, 0.92)
 border_width_left = 1
 border_width_top = 1
@@ -34,10 +36,10 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.42, 0.16, 0.16, 0.95)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_mhiu8"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qy4h0"]
 bg_color = Color(0.8, 0.18, 0.18, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_lswbx"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_e5bmj"]
 bg_color = Color(0.1, 0.12, 0.16, 0.92)
 border_width_left = 1
 border_width_top = 1
@@ -45,43 +47,43 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.22, 0.42, 0.62, 0.95)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uujh0"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_iqf6e"]
 bg_color = Color(0.28, 0.65, 0.95, 1)
 
-[node name="Level01" type="Node2D" unique_id=1663900850]
-script = ExtResource("1_r72dd")
+[node name="Level01" type="Node2D" unique_id=859548071]
+script = ExtResource("1_jmes4")
 
-[node name="ArenaEnvironment" type="Node2D" parent="." unique_id=1914104385]
-script = ExtResource("2_ijn0p")
+[node name="ArenaEnvironment" type="Node2D" parent="." unique_id=1349122706]
+script = ExtResource("2_tyxjt")
 
-[node name="BloodDecalContainer" type="Node2D" parent="." unique_id=1537955495]
+[node name="BloodDecalContainer" type="Node2D" parent="." unique_id=814044892]
 
-[node name="ArenaWalls" type="StaticBody2D" parent="." unique_id=2035691204]
+[node name="ArenaWalls" type="StaticBody2D" parent="." unique_id=557910511]
 collision_mask = 0
 
-[node name="LeftWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=1637978663]
+[node name="LeftWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=570134561]
 position = Vector2(40, 360)
-shape = SubResource("RectangleShape2D_cywot")
+shape = SubResource("RectangleShape2D_w4kkx")
 
-[node name="RightWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=1181024779]
+[node name="RightWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=933157021]
 position = Vector2(1240, 360)
-shape = SubResource("RectangleShape2D_vrcmr")
+shape = SubResource("RectangleShape2D_mhiu8")
 
-[node name="TopWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=694253312]
+[node name="TopWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=767738138]
 position = Vector2(640, 40)
-shape = SubResource("RectangleShape2D_svp4f")
+shape = SubResource("RectangleShape2D_lswbx")
 
-[node name="BottomWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=1859891635]
+[node name="BottomWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=204839212]
 position = Vector2(640, 680)
-shape = SubResource("RectangleShape2D_1b0o8")
+shape = SubResource("RectangleShape2D_uujh0")
 
-[node name="PickupContainer" type="Node2D" parent="." unique_id=1384277515]
+[node name="PickupContainer" type="Node2D" parent="." unique_id=1230551732]
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=59910373 instance=ExtResource("3_jmes4")]
+[node name="Player" type="CharacterBody2D" parent="." unique_id=59910373 instance=ExtResource("3_07lms")]
 position = Vector2(640, 360)
 collision_layer = 8
 collision_mask = 3
-script = ExtResource("4_tyxjt")
+script = ExtResource("4_gi8m4")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player" unique_id=247064278]
 shape = SubResource("CircleShape2D_7wueq")
@@ -120,134 +122,192 @@ color = Color(0.14, 0.15, 0.17, 1)
 position = Vector2(26, 4)
 
 [node name="WeaponController" type="Node" parent="Player" unique_id=1354235684]
-script = ExtResource("5_07lms")
+script = ExtResource("5_cwffn")
 
-[node name="ZombieContainer" type="Node2D" parent="." unique_id=448603154]
+[node name="ZombieContainer" type="Node2D" parent="." unique_id=807273235]
 
-[node name="FXContainer" type="Node2D" parent="." unique_id=1543225225]
+[node name="FXContainer" type="Node2D" parent="." unique_id=1582904310]
 
-[node name="SpawnTimer" type="Timer" parent="." unique_id=1333670373]
+[node name="SpawnTimer" type="Timer" parent="." unique_id=529278762]
 wait_time = 1.65
 autostart = true
 
-[node name="UI" type="CanvasLayer" parent="." unique_id=1512650398]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1403276233]
 
-[node name="HorrorVignette" type="Control" parent="UI" unique_id=498376009]
+[node name="HorrorVignette" type="Control" parent="UI" unique_id=1493062385]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-script = ExtResource("6_gi8m4")
+script = ExtResource("6_e6lid")
 
-[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=958600285]
+[node name="TouchControls" type="Control" parent="UI" unique_id=689087572 instance=ExtResource("7_3g50r")]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+script = ExtResource("8_iu1m7")
+
+[node name="MoveStickLabel" type="Label" parent="UI/TouchControls" unique_id=342529266]
+custom_minimum_size = Vector2(100, 22)
+layout_mode = 0
+offset_left = 98.0
+offset_top = 642.0
+offset_right = 98.0
+offset_bottom = 642.0
+theme_override_fonts/font = ExtResource("9_cywot")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.75, 0.8, 0.85, 0.78)
+text = "MOVE"
+horizontal_alignment = 1
+
+[node name="AimStickLabel" type="Label" parent="UI/TouchControls" unique_id=1798833182]
+custom_minimum_size = Vector2(120, 22)
+layout_mode = 0
+offset_left = 1055.0
+offset_top = 642.0
+offset_right = 1055.0
+offset_bottom = 642.0
+theme_override_fonts/font = ExtResource("9_cywot")
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.95, 0.55, 0.5, 0.82)
+text = "AIM & SHOOT"
+horizontal_alignment = 1
+
+[node name="DashButton" type="Button" parent="UI/TouchControls" unique_id=573054148]
+custom_minimum_size = Vector2(92, 60)
+layout_mode = 0
+offset_left = 915.0
+offset_top = 560.0
+offset_right = 915.0
+offset_bottom = 560.0
+theme_override_font_sizes/font_size = 20
+text = "DASH"
+
+[node name="GrenadeButton" type="Button" parent="UI/TouchControls" unique_id=1365109803]
+custom_minimum_size = Vector2(102, 54)
+layout_mode = 0
+offset_left = 945.0
+offset_top = 482.0
+offset_right = 945.0
+offset_bottom = 482.0
+theme_override_font_sizes/font_size = 18
+text = "FRAG (2)"
+
+[node name="WeaponSwitchButton" type="Button" parent="UI/TouchControls" unique_id=1801127127]
+custom_minimum_size = Vector2(320, 52)
+layout_mode = 0
+offset_left = 480.0
+offset_top = 636.0
+offset_right = 480.0
+offset_bottom = 636.0
+theme_override_font_sizes/font_size = 19
+text = "GUN: 9MM SERVICE PISTOL [ INF ]"
+
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=635289488]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 14
-theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 14
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 16
 
-[node name="TopBar" type="HBoxContainer" parent="UI/MarginContainer" unique_id=173890254]
+[node name="TopBar" type="HBoxContainer" parent="UI/MarginContainer" unique_id=1302126105]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 18
 
-[node name="VitalsColumn" type="VBoxContainer" parent="UI/MarginContainer/TopBar" unique_id=1654068028]
+[node name="VitalsColumn" type="VBoxContainer" parent="UI/MarginContainer/TopBar" unique_id=1046945012]
 custom_minimum_size = Vector2(210, 0)
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="HealthLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=558363854]
+[node name="HealthLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=558427164]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 16
 theme_override_colors/font_color = Color(0.95, 0.88, 0.88, 1)
 text = "HP: 100 / 100"
 
-[node name="HealthBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=136986427]
+[node name="HealthBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=1665032228]
 custom_minimum_size = Vector2(210, 12)
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_w4kkx")
-theme_override_styles/fill = SubResource("StyleBoxFlat_mhiu8")
+theme_override_styles/background = SubResource("StyleBoxFlat_3t34l")
+theme_override_styles/fill = SubResource("StyleBoxFlat_qy4h0")
 value = 100.0
 show_percentage = false
 
-[node name="ArmorLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=85439110]
+[node name="ArmorLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=576232806]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.65, 0.86, 1, 1)
-text = "ARMOR: 25 / 100"
+text = "ARMOR: 0 / 100"
 
-[node name="ArmorBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=942800099]
+[node name="ArmorBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=268673939]
 custom_minimum_size = Vector2(210, 9)
 layout_mode = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_lswbx")
-theme_override_styles/fill = SubResource("StyleBoxFlat_uujh0")
-value = 25.0
+theme_override_styles/background = SubResource("StyleBoxFlat_e5bmj")
+theme_override_styles/fill = SubResource("StyleBoxFlat_iqf6e")
 show_percentage = false
 
-[node name="DashStatusLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=192325427]
+[node name="DashStatusLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=852557333]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.35, 0.92, 0.5, 1)
-text = "DASH [SPACE/RMB]: READY"
+text = "DASH: READY"
 
-[node name="SpacerLeft" type="Control" parent="UI/MarginContainer/TopBar" unique_id=1404789696]
+[node name="SpacerLeft" type="Control" parent="UI/MarginContainer/TopBar" unique_id=705667401]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="CenterColumn" type="VBoxContainer" parent="UI/MarginContainer/TopBar" unique_id=549706742]
+[node name="CenterColumn" type="VBoxContainer" parent="UI/MarginContainer/TopBar" unique_id=2140993839]
 layout_mode = 2
+mouse_filter = 2
 theme_override_constants/separation = 2
 
-[node name="KillsLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=881398433]
+[node name="KillsLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=647847228]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
-theme_override_font_sizes/font_size = 22
+theme_override_fonts/font = ExtResource("9_cywot")
+theme_override_font_sizes/font_size = 24
 theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
 text = "INFECTED KILLED: 0   ·   SCORE: 0"
 horizontal_alignment = 1
 
-[node name="WeaponLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=1223802851]
+[node name="WeaponLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=1175827819]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 17
 theme_override_colors/font_color = Color(0.98, 0.82, 0.35, 1)
-text = "9MM SERVICE PISTOL [ INF ]  ·  [G] FRAG GRENADES: 2"
+text = "9MM SERVICE PISTOL [ INF ]  ·  FRAGS: 2"
 horizontal_alignment = 1
 
-[node name="ControlsHintLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=522601948]
-layout_mode = 2
-theme_override_fonts/font = ExtResource("8_e6lid")
-theme_override_font_sizes/font_size = 11
-theme_override_colors/font_color = Color(0.65, 0.7, 0.75, 1)
-text = "[WASD] MOVE  ·  [SPACE/RMB] DASH  ·  [1-5 / Q / E] SWITCH WEAPON  ·  [G] GRENADE"
-horizontal_alignment = 1
-
-[node name="SpacerRight" type="Control" parent="UI/MarginContainer/TopBar" unique_id=162095313]
+[node name="SpacerRight" type="Control" parent="UI/MarginContainer/TopBar" unique_id=133504965]
 layout_mode = 2
 size_flags_horizontal = 3
 mouse_filter = 2
 
-[node name="PauseButton" type="Button" parent="UI/MarginContainer/TopBar" unique_id=627413006]
-custom_minimum_size = Vector2(96, 38)
+[node name="PauseButton" type="Button" parent="UI/MarginContainer/TopBar" unique_id=392993132]
+custom_minimum_size = Vector2(114, 46)
 layout_mode = 2
 size_flags_vertical = 0
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 text = "|| PAUSE"
 
-[node name="PauseMenu" type="Control" parent="UI" unique_id=857925483 instance=ExtResource("9_3g50r")]
+[node name="PauseMenu" type="Control" parent="UI" unique_id=857925483 instance=ExtResource("10_vrcmr")]
 process_mode = 3
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-script = ExtResource("10_iu1m7")
+script = ExtResource("11_svp4f")
 
 [node name="PauseBackdrop" type="ColorRect" parent="UI/PauseMenu" unique_id=646335485]
 layout_mode = 0
@@ -278,7 +338,7 @@ theme_override_constants/separation = 14
 
 [node name="PauseTitle" type="Label" parent="UI/PauseMenu/CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=168063289]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 34
 theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
 text = "OUTPOST PAUSED"
@@ -286,7 +346,7 @@ horizontal_alignment = 1
 
 [node name="SaveStatusLabel" type="Label" parent="UI/PauseMenu/CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1518822248]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("8_e6lid")
+theme_override_fonts/font = ExtResource("12_1b0o8")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
 text = "[ TACTICAL FIELD TERMINAL // GAME PAUSED ]"
@@ -315,7 +375,7 @@ custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "RETURN TO MAIN"
 
-[node name="DeathPanel" type="PanelContainer" parent="UI" unique_id=1265265995]
+[node name="DeathPanel" type="PanelContainer" parent="UI" unique_id=307100079]
 visible = false
 custom_minimum_size = Vector2(520, 320)
 anchors_preset = 8
@@ -328,39 +388,39 @@ offset_top = -160.0
 offset_right = 260.0
 offset_bottom = 160.0
 
-[node name="DeathMargin" type="MarginContainer" parent="UI/DeathPanel" unique_id=1096970987]
+[node name="DeathMargin" type="MarginContainer" parent="UI/DeathPanel" unique_id=538607618]
 layout_mode = 2
 theme_override_constants/margin_left = 32
 theme_override_constants/margin_top = 28
 theme_override_constants/margin_right = 32
 theme_override_constants/margin_bottom = 28
 
-[node name="DeathVBox" type="VBoxContainer" parent="UI/DeathPanel/DeathMargin" unique_id=1247944671]
+[node name="DeathVBox" type="VBoxContainer" parent="UI/DeathPanel/DeathMargin" unique_id=270639549]
 layout_mode = 2
 theme_override_constants/separation = 14
 
-[node name="DeathTitle" type="Label" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=907235243]
+[node name="DeathTitle" type="Label" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=1047951778]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("7_cwffn")
+theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 34
 theme_override_colors/font_color = Color(0.85, 0.25, 0.25, 1)
 text = "OUTPOST OVERRUN"
 horizontal_alignment = 1
 
-[node name="DeathKillsLabel" type="Label" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=939242310]
+[node name="DeathKillsLabel" type="Label" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=1392222150]
 layout_mode = 2
-theme_override_fonts/font = ExtResource("8_e6lid")
+theme_override_fonts/font = ExtResource("12_1b0o8")
 theme_override_font_sizes/font_size = 14
 theme_override_colors/font_color = Color(0.8, 0.84, 0.88, 1)
 text = "YOU SURVIVED AND ELIMINATED 0 WALKERS"
 horizontal_alignment = 1
 
-[node name="RestartButton" type="Button" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=1494120986]
+[node name="RestartButton" type="Button" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=897773983]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-text = "RETRY RUN (R)"
+text = "RETRY ZONE"
 
-[node name="MenuButton" type="Button" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=925970800]
+[node name="MenuButton" type="Button" parent="UI/DeathPanel/DeathMargin/DeathVBox" unique_id=821900636]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
-text = "RETURN TO BASE"
+text = "RETURN TO MAIN"
