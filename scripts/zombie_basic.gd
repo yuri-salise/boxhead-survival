@@ -2,11 +2,83 @@ extends CharacterBody2D
 
 signal zombie_died(zombie: Node2D)
 signal hit_player(target: Node2D, damage: float)
+signal blood_splashed(world_pos: Vector2, dir: Vector2, splatter_type: int, scale_mult: float)
+signal boomer_exploded(world_pos: Vector2, radius: float, damage: float)
+signal witch_startled(witch: Node2D)
+signal drop_requested(world_pos: Vector2, zombie_type_name: String)
 
+enum ZombieType {
+	WALKER,
+	RUNNER,
+	BOOMER,
+	TANK,
+	SPITTER,
+	WITCH
+}
+
+const ZOMBIE_CONFIGS: Dictionary = {
+	ZombieType.WALKER: {
+		"name": "WALKER",
+		"hp": 50.0,
+		"speed": 145.0,
+		"damage": 15.0,
+		"cooldown": 0.80,
+		"scale": 1.0,
+		"score": 10
+	},
+	ZombieType.RUNNER: {
+		"name": "RUNNER",
+		"hp": 40.0,
+		"speed": 238.0,
+		"damage": 12.0,
+		"cooldown": 0.55,
+		"scale": 0.92,
+		"score": 18
+	},
+	ZombieType.BOOMER: {
+		"name": "BOOMER",
+		"hp": 95.0,
+		"speed": 92.0,
+		"damage": 20.0,
+		"cooldown": 1.00,
+		"scale": 1.35,
+		"score": 30
+	},
+	ZombieType.TANK: {
+		"name": "TANKER",
+		"hp": 320.0,
+		"speed": 100.0,
+		"damage": 35.0,
+		"cooldown": 1.10,
+		"scale": 1.75,
+		"score": 75
+	},
+	ZombieType.SPITTER: {
+		"name": "SPITTER",
+		"hp": 65.0,
+		"speed": 125.0,
+		"damage": 12.0,
+		"cooldown": 0.90,
+		"scale": 1.0,
+		"score": 28
+	},
+	ZombieType.WITCH: {
+		"name": "WITCH",
+		"hp": 170.0,
+		"speed": 42.0, # Enrages to 305.0 when startled!
+		"damage": 38.0,
+		"cooldown": 0.50,
+		"scale": 1.05,
+		"score": 60
+	}
+}
+
+@export var zombie_type: int = ZombieType.WALKER
 @export var speed: float = 145.0
 @export var max_health: float = 50.0
 @export var attack_damage: float = 15.0
 @export var attack_cooldown: float = 0.8
+@export var projectile_scene: PackedScene = preload("res://scenes/actors/projectile.tscn")
 
 var current_health: float = 50.0
 var is_dead: bool = false
@@ -14,38 +86,118 @@ var target_player: Node2D = null
 
 var can_attack: bool = true
 var attack_timer: float = 0.0
+var spit_cooldown: float = 2.2
+var is_enraged: bool = false
+var score_value: int = 10
+
+var anim_time: float = 0.0
+var hurt_flash_timer: float = 0.0
+var knockback_velocity: Vector2 = Vector2.ZERO
+var last_hit_dir: Vector2 = Vector2.RIGHT
 
 @onready var visuals: Node2D = $Visuals
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 
 func _ready() -> void:
+	anim_time = randf() * 10.0
 	current_health = max_health
 	is_dead = false
 	can_attack = true
+	
+	# Hide legacy blocky ColorRects inside Visuals so custom _draw() renders our detailed zombies
+	if visuals:
+		for child in visuals.get_children():
+			if child is ColorRect:
+				child.visible = false
+
+func configure_type(p_type: int) -> void:
+	zombie_type = p_type
+	var cfg: Dictionary = ZOMBIE_CONFIGS.get(zombie_type, ZOMBIE_CONFIGS[ZombieType.WALKER])
+	max_health = float(cfg["hp"])
+	current_health = max_health
+	speed = float(cfg["speed"])
+	attack_damage = float(cfg["damage"])
+	attack_cooldown = float(cfg["cooldown"])
+	score_value = int(cfg["score"])
+	is_enraged = false
+	
+	if collision_shape and collision_shape.shape is CircleShape2D:
+		var dup_shape := (collision_shape.shape as CircleShape2D).duplicate() as CircleShape2D
+		dup_shape.radius = 16.0 * float(cfg["scale"])
+		collision_shape.shape = dup_shape
+	queue_redraw()
+
+func get_type_name() -> String:
+	var cfg: Dictionary = ZOMBIE_CONFIGS.get(zombie_type, ZOMBIE_CONFIGS[ZombieType.WALKER])
+	return str(cfg["name"])
 
 func _physics_process(delta: float) -> void:
+	anim_time += delta
 	update_attack_cooldown(delta)
+	if hurt_flash_timer > 0.0:
+		hurt_flash_timer = maxf(0.0, hurt_flash_timer - delta)
+	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 650.0 * delta)
 	
 	if is_dead:
+		queue_redraw()
 		return
 	
-	# Auto-acquire target player if none assigned
 	if not is_instance_valid(target_player) or (target_player.get("is_dead") == true):
 		target_player = _find_nearest_living_player()
 	
 	if is_instance_valid(target_player):
-		var dir = get_pursuit_direction()
+		var dist := global_position.distance_to(target_player.global_position)
+		var dir := get_pursuit_direction()
+		
+		# Witch startle proximity check
+		if zombie_type == ZombieType.WITCH and not is_enraged and dist < 165.0:
+			_trigger_witch_enrage()
+		
+		# Spitter ranged acid attack
+		if zombie_type == ZombieType.SPITTER:
+			spit_cooldown -= delta
+			if dist < 310.0 and spit_cooldown <= 0.0:
+				_fire_acid_spit(dir)
+				spit_cooldown = 3.2
+		
 		if dir != Vector2.ZERO:
-			visuals.rotation = dir.angle()
-			velocity = dir * speed
+			if visuals:
+				visuals.rotation = dir.angle()
+			
+			var move_spd := speed
+			if zombie_type == ZombieType.SPITTER and dist < 210.0:
+				move_spd = speed * 0.35 # Spitter hangs back at medium range
+			
+			velocity = dir * move_spd + knockback_velocity
 			move_and_slide()
 			
-			# Check contact attacks
 			for i in range(get_slide_collision_count()):
-				var collision = get_slide_collision(i)
-				var collider = collision.get_collider()
+				var collision := get_slide_collision(i)
+				var collider := collision.get_collider()
 				if is_instance_valid(collider) and collider.is_in_group("players"):
 					try_attack_target(collider)
+	
+	queue_redraw()
+
+func _trigger_witch_enrage() -> void:
+	if is_enraged:
+		return
+	is_enraged = true
+	speed = 305.0
+	witch_startled.emit(self)
+
+func _fire_acid_spit(dir: Vector2) -> void:
+	if not projectile_scene or not get_parent():
+		return
+	var spit: Node2D = projectile_scene.instantiate()
+	get_parent().add_child(spit)
+	spit.init(global_position + dir * 20.0, dir, 440.0, 14.0, self, 1, Color(0.45, 0.95, 0.18), true)
+
+func apply_hit_impulse(impulse: Vector2) -> void:
+	var resist := 0.25 if zombie_type == ZombieType.TANK else 1.0
+	knockback_velocity = impulse * resist
+	if impulse != Vector2.ZERO:
+		last_hit_dir = impulse.normalized()
 
 func set_target(player: Node2D) -> void:
 	target_player = player
@@ -78,7 +230,15 @@ func take_damage(amount: float) -> void:
 	if is_dead or amount <= 0.0:
 		return
 	
+	hurt_flash_timer = 0.10
+	if zombie_type == ZombieType.WITCH and not is_enraged:
+		_trigger_witch_enrage()
+	
 	current_health = max(0.0, current_health - amount)
+	
+	# Emit active blood splash on hit
+	var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
+	blood_splashed.emit(global_position, last_hit_dir, s_type, 0.85)
 	
 	if current_health <= 0.0:
 		die()
@@ -90,22 +250,164 @@ func die() -> void:
 	velocity = Vector2.ZERO
 	if collision_shape:
 		collision_shape.set_deferred("disabled", true)
+	
+	# Death blood / gore splatter
+	if zombie_type == ZombieType.BOOMER:
+		blood_splashed.emit(global_position, last_hit_dir, 6, 1.85) # Massive Boomer bile + gore
+		boomer_exploded.emit(global_position, 130.0, 28.0)
+	elif zombie_type == ZombieType.TANK:
+		blood_splashed.emit(global_position, last_hit_dir, 5, 1.90) # Massive Tank gore pool
+	else:
+		blood_splashed.emit(global_position, last_hit_dir, 1 if randf() < 0.5 else 5, 1.35)
+	
+	# Spitter leaves an acid puddle on death
+	if zombie_type == ZombieType.SPITTER and get_parent():
+		var pool := Area2D.new()
+		pool.set_script(load("res://scripts/acid_pool.gd"))
+		pool.global_position = global_position
+		get_parent().call_deferred("add_child", pool)
+	
+	drop_requested.emit(global_position, get_type_name())
 	zombie_died.emit(self)
 	
-	# Visual death fade/queue_free
-	var tween = create_tween()
-	tween.tween_property(self, "modulate:a", 0.0, 0.4)
+	var tween := create_tween()
+	tween.tween_property(self, "modulate:a", 0.0, 0.32)
 	tween.tween_callback(queue_free)
 
 func _find_nearest_living_player() -> Node2D:
-	var players = get_tree().get_nodes_in_group("players")
+	var players := get_tree().get_nodes_in_group("players")
 	var nearest: Node2D = null
 	var min_dist: float = INF
 	
 	for p in players:
 		if is_instance_valid(p) and p.get("is_dead") != true:
-			var d = global_position.distance_squared_to(p.global_position)
+			var d := global_position.distance_squared_to(p.global_position)
 			if d < min_dist:
 				min_dist = d
 				nearest = p
 	return nearest
+
+func _draw() -> void:
+	var cfg: Dictionary = ZOMBIE_CONFIGS.get(zombie_type, ZOMBIE_CONFIGS[ZombieType.WALKER])
+	var sc: float = float(cfg["scale"])
+	var rot := visuals.rotation if visuals else 0.0
+	var sway := sin(anim_time * (12.0 if zombie_type == ZombieType.RUNNER or is_enraged else 5.5)) * 3.0
+	
+	# Ground Shadow
+	draw_circle(Vector2(0, 4 * sc), 15.0 * sc, Color(0.0, 0.0, 0.0, 0.48))
+	
+	# Witch warning ring when stalking/weeping
+	if zombie_type == ZombieType.WITCH:
+		var ring_col := Color(0.95, 0.15, 0.15, 0.45) if is_enraged else Color(0.85, 0.25, 0.25, 0.18 + 0.10 * sin(anim_time * 4.0))
+		draw_arc(Vector2.ZERO, 24.0 if is_enraged else 38.0, 0.0, TAU, 28, ring_col, 2.0)
+	
+	draw_set_transform(Vector2.ZERO, rot, Vector2(sc, sc))
+	
+	match zombie_type:
+		ZombieType.WALKER:
+			var body_c := Color(0.32, 0.36, 0.30, 1.0) if hurt_flash_timer <= 0.0 else Color(0.95, 0.3, 0.3, 1.0)
+			# Outstretched zombie arms & bloody claws
+			draw_line(Vector2(2, -11), Vector2(18, -7 + sway * 0.5), Color(0.46, 0.52, 0.42, 1.0), 5.0)
+			draw_line(Vector2(2, 11), Vector2(18, 7 - sway * 0.5), Color(0.46, 0.52, 0.42, 1.0), 5.0)
+			draw_circle(Vector2(18, -7 + sway * 0.5), 3.2, Color(0.65, 0.12, 0.12, 1.0))
+			draw_circle(Vector2(18, 7 - sway * 0.5), 3.2, Color(0.65, 0.12, 0.12, 1.0))
+			# Ragged torso with bloodstains
+			draw_rect(Rect2(Vector2(-10, -13), Vector2(18, 26)), body_c, true)
+			draw_circle(Vector2(-2, 5), 5.0, Color(0.48, 0.08, 0.08, 0.85))
+			# Rotting skull head + glowing yellow eyes
+			draw_circle(Vector2(1, sway * 0.3), 8.2, Color(0.55, 0.62, 0.48, 1.0))
+			draw_circle(Vector2(6, -3 + sway * 0.3), 1.6, Color(0.95, 0.85, 0.20, 1.0))
+			draw_circle(Vector2(6, 3 + sway * 0.3), 1.6, Color(0.95, 0.85, 0.20, 1.0))
+			
+		ZombieType.RUNNER:
+			var body_c := Color(0.42, 0.14, 0.14, 1.0) if hurt_flash_timer <= 0.0 else Color(1.0, 0.4, 0.4, 1.0)
+			# Feral forward-lunging claws
+			draw_line(Vector2(3, -10), Vector2(21, -4 + sway), Color(0.58, 0.48, 0.45, 1.0), 4.5)
+			draw_line(Vector2(3, 10), Vector2(21, 4 - sway), Color(0.58, 0.48, 0.45, 1.0), 4.5)
+			draw_circle(Vector2(21, -4 + sway), 3.5, Color(0.85, 0.10, 0.10, 1.0))
+			draw_circle(Vector2(21, 4 - sway), 3.5, Color(0.85, 0.10, 0.10, 1.0))
+			# Lean blood-soaked torso
+			var pts := PackedVector2Array([Vector2(-11, -11), Vector2(8, -9), Vector2(8, 9), Vector2(-11, 11)])
+			draw_colored_polygon(pts, body_c)
+			# Feral head with glowing crimson eyes
+			draw_circle(Vector2(3, 0), 7.5, Color(0.62, 0.54, 0.50, 1.0))
+			draw_circle(Vector2(8, -2.8), 1.9, Color(1.0, 0.12, 0.12, 1.0))
+			draw_circle(Vector2(8, 2.8), 1.9, Color(1.0, 0.12, 0.12, 1.0))
+			
+		ZombieType.BOOMER:
+			var belly_c := Color(0.46, 0.58, 0.24, 1.0) if hurt_flash_timer <= 0.0 else Color(0.85, 0.95, 0.55, 1.0)
+			# Huge distended bloated belly
+			draw_circle(Vector2(-1, 0), 15.5, belly_c)
+			draw_arc(Vector2(-1, 0), 15.5, 0.0, TAU, 24, Color(0.25, 0.34, 0.12, 1.0), 2.0)
+			# Glowing toxic pus boils/pustules
+			draw_circle(Vector2(-6, -7), 4.2, Color(0.78, 0.88, 0.22, 0.92))
+			draw_circle(Vector2(-5, 8), 3.6, Color(0.78, 0.88, 0.22, 0.92))
+			draw_circle(Vector2(4, -9), 3.0, Color(0.85, 0.72, 0.18, 0.92))
+			# Stubby swollen arms
+			draw_line(Vector2(4, -13), Vector2(15, -9), belly_c, 6.0)
+			draw_line(Vector2(4, 13), Vector2(15, 9), belly_c, 6.0)
+			# Sunken bloated head with bile-green mouth
+			draw_circle(Vector2(5, 0), 7.8, Color(0.52, 0.62, 0.32, 1.0))
+			draw_circle(Vector2(10, 0), 3.5, Color(0.32, 0.85, 0.15, 0.95))
+			
+		ZombieType.TANK:
+			var hulk_c := Color(0.34, 0.26, 0.28, 1.0) if hurt_flash_timer <= 0.0 else Color(0.95, 0.35, 0.35, 1.0)
+			# Enormous hulking gorilla arms & massive fists
+			draw_line(Vector2(2, -15), Vector2(19, -11 + sway * 0.4), hulk_c.darkened(0.15), 9.0)
+			draw_line(Vector2(2, 15), Vector2(19, 11 - sway * 0.4), hulk_c.darkened(0.15), 9.0)
+			draw_circle(Vector2(20, -10 + sway * 0.4), 6.2, Color(0.48, 0.18, 0.18, 1.0))
+			draw_circle(Vector2(20, 10 - sway * 0.4), 6.2, Color(0.48, 0.18, 0.18, 1.0))
+			# Massive muscular trapezius & chest
+			var tank_pts := PackedVector2Array([
+				Vector2(-14, -17), Vector2(9, -16), Vector2(13, 0), Vector2(9, 16), Vector2(-14, 17)
+			])
+			draw_colored_polygon(tank_pts, hulk_c)
+			draw_polyline(tank_pts + PackedVector2Array([tank_pts[0]]), Color(0.18, 0.10, 0.12, 1.0), 2.2)
+			# Brutish scarred head set into shoulders
+			draw_circle(Vector2(5, 0), 7.5, Color(0.46, 0.36, 0.38, 1.0))
+			draw_circle(Vector2(10, -2.5), 1.8, Color(1.0, 0.15, 0.10, 1.0))
+			draw_circle(Vector2(10, 2.5), 1.8, Color(1.0, 0.15, 0.10, 1.0))
+			
+		ZombieType.SPITTER:
+			var spit_c := Color(0.30, 0.38, 0.32, 1.0) if hurt_flash_timer <= 0.0 else Color(0.65, 1.0, 0.45, 1.0)
+			# Acid sacs on back
+			draw_circle(Vector2(-7, -6), 5.0, Color(0.38, 0.85, 0.16, 0.88))
+			draw_circle(Vector2(-7, 6), 5.0, Color(0.38, 0.85, 0.16, 0.88))
+			draw_rect(Rect2(Vector2(-9, -11), Vector2(16, 22)), spit_c, true)
+			# Long gaunt neck & glowing neon-green acid jaw
+			draw_line(Vector2(4, 0), Vector2(13, 0), Color(0.52, 0.64, 0.48, 1.0), 7.0)
+			draw_circle(Vector2(10, 0), 7.2, Color(0.52, 0.64, 0.48, 1.0))
+			draw_circle(Vector2(15, 0), 4.5, Color(0.45, 0.98, 0.18, 0.95))
+			draw_circle(Vector2(13, -3), 1.6, Color(0.75, 1.0, 0.25, 1.0))
+			draw_circle(Vector2(13, 3), 1.6, Color(0.75, 1.0, 0.25, 1.0))
+			
+		ZombieType.WITCH:
+			var dress_c := Color(0.78, 0.76, 0.74, 1.0) if hurt_flash_timer <= 0.0 else Color(1.0, 0.3, 0.3, 1.0)
+			# Long lethal blood-red razor claws
+			var reach := 23.0 if is_enraged else 14.0
+			draw_line(Vector2(3, -10), Vector2(reach, -6 + sway), Color(0.82, 0.80, 0.78, 1.0), 3.8)
+			draw_line(Vector2(3, 10), Vector2(reach, 6 - sway), Color(0.82, 0.80, 0.78, 1.0), 3.8)
+			draw_line(Vector2(reach, -6 + sway), Vector2(reach + 6, -4 + sway), Color(0.85, 0.08, 0.08, 1.0), 2.2)
+			draw_line(Vector2(reach, 6 - sway), Vector2(reach + 6, 4 - sway), Color(0.85, 0.08, 0.08, 1.0), 2.2)
+			# Tattered blood-stained white gown
+			draw_rect(Rect2(Vector2(-10, -11), Vector2(16, 22)), dress_c, true)
+			draw_circle(Vector2(1, 0), 6.0, Color(0.65, 0.08, 0.08, 0.75))
+			# Disheveled pale/black hair & glowing enraged eyes
+			draw_circle(Vector2(2, 0), 8.2, Color(0.14, 0.14, 0.16, 1.0))
+			draw_line(Vector2(0, -7), Vector2(-12, -10), Color(0.20, 0.20, 0.22, 1.0), 3.0)
+			draw_line(Vector2(0, 7), Vector2(-12, 10), Color(0.20, 0.20, 0.22, 1.0), 3.0)
+			var eye_col := Color(1.0, 0.08, 0.08, 1.0) if is_enraged else Color(0.90, 0.45, 0.45, 0.75)
+			draw_circle(Vector2(7, -2.5), 2.0 if is_enraged else 1.3, eye_col)
+			draw_circle(Vector2(7, 2.5), 2.0 if is_enraged else 1.3, eye_col)
+	
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	
+	# Draw Overhead Health Bar when damaged or for Bosses (Tank / Witch / Boomer)
+	if not is_dead and (current_health < max_health or zombie_type == ZombieType.TANK or zombie_type == ZombieType.WITCH):
+		var bar_w := 32.0 * sc
+		var bar_h := 4.5
+		var bar_pos := Vector2(-bar_w * 0.5, -24.0 * sc)
+		var ratio := clampf(current_health / maxf(1.0, max_health), 0.0, 1.0)
+		draw_rect(Rect2(bar_pos, Vector2(bar_w, bar_h)), Color(0.08, 0.08, 0.10, 0.85), true)
+		var fill_c := Color(0.85, 0.20, 0.20, 0.95) if zombie_type != ZombieType.BOOMER else Color(0.55, 0.85, 0.20, 0.95)
+		draw_rect(Rect2(bar_pos, Vector2(bar_w * ratio, bar_h)), fill_c, true)

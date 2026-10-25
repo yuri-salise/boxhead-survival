@@ -1,0 +1,79 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="1_f6eus"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_8uki6"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_0bnpd"]
+
+[node name="PauseMenu" type="Control" unique_id=857925483]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_f6eus")
+
+[node name="PauseBackdrop" type="ColorRect" parent="." unique_id=646335485]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.02, 0.03, 0.04, 0.9)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1734682081]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="PausePanel" type="PanelContainer" parent="CenterContainer" unique_id=930376248]
+custom_minimum_size = Vector2(520, 420)
+layout_mode = 2
+
+[node name="PauseMargin" type="MarginContainer" parent="CenterContainer/PausePanel" unique_id=788358536]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 28
+
+[node name="PauseVBox" type="VBoxContainer" parent="CenterContainer/PausePanel/PauseMargin" unique_id=233606933]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="PauseTitle" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=168063289]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_8uki6")
+theme_override_font_sizes/font_size = 34
+theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
+text = "OUTPOST PAUSED"
+horizontal_alignment = 1
+
+[node name="SaveStatusLabel" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1518822248]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_0bnpd")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
+text = "[ TACTICAL FIELD TERMINAL // GAME PAUSED ]"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1883606371]
+layout_mode = 2
+
+[node name="ResumeButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012932]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "RESUME SURVIVAL"
+
+[node name="SaveButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1852370492]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "SAVE PROGRESS"
+
+[node name="RetryButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1681719678]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "RETRY ZONE"
+
+[node name="MainMenuButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1292362883]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "RETURN TO MAIN"
