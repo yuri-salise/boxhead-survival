@@ -1,0 +1,22 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Exported binaries and packages
+/build/
+/builds/
+/bin/
+*.apk
+*.aab
+*.exe
+*.zip
+
+# Mono / C# (if ever generated)
+.mono/
+data_*/
+mono_crash.*.json
+
+# System and OS files
+.DS_Store
+Thumbs.db
+*.tmp
