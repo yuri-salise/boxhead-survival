@@ -88,7 +88,8 @@ func _draw() -> void:
 	var pulse := 0.85 + 0.15 * sin(elapsed * 6.0)
 	var center := Vector2(0, bob)
 	
-	# Ground beacon glow ring
+	# Ground drop shadow + beacon glow ring
+	draw_circle(Vector2(5.0, 8.0), 12.5, Color(0.0, 0.0, 0.0, 0.48))
 	draw_circle(Vector2.ZERO, 20.0 * pulse, Color(col.r, col.g, col.b, 0.18))
 	draw_arc(Vector2.ZERO, 17.0, 0.0, TAU, 24, Color(col.r, col.g, col.b, 0.65), 1.8)
 	

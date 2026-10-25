@@ -7,6 +7,7 @@ signal grenades_changed(count: int)
 signal pickup_collected(message: String, color: Color)
 signal grenade_detonated(world_pos: Vector2, radius: float, damage: float)
 signal player_damaged_at(world_pos: Vector2, hit_dir: Vector2)
+signal player_bitten(hit_dir: Vector2, damage: float)
 signal player_died()
 
 @export var speed: float = 280.0
@@ -36,6 +37,8 @@ var max_grenades: int = 5
 var walk_cycle: float = 0.0
 var muzzle_flash_timer: float = 0.0
 var hurt_flash_timer: float = 0.0
+var camera_shake_strength: float = 0.0
+var player_camera: Camera2D = null
 
 # External input overrides (e.g. mobile virtual sticks or multiplayer sync)
 var input_override_enabled: bool = false
@@ -52,6 +55,16 @@ func _ready() -> void:
 	current_health = max_health
 	is_dead = false
 	
+	# Attach smooth Camera2D for infinite world movement
+	player_camera = get_node_or_null("PlayerCamera") as Camera2D
+	if not player_camera:
+		player_camera = Camera2D.new()
+		player_camera.name = "PlayerCamera"
+		player_camera.position_smoothing_enabled = true
+		player_camera.position_smoothing_speed = 8.5
+		add_child(player_camera)
+	player_camera.make_current()
+	
 	# Hide legacy blocky ColorRects inside Visuals so our detailed custom _draw() renders cleanly
 	if visuals:
 		for child in visuals.get_children():
@@ -61,8 +74,12 @@ func _ready() -> void:
 	if weapon_controller and weapon_controller.has_signal("shot_fired"):
 		weapon_controller.shot_fired.connect(_on_weapon_shot_fired)
 
+func add_camera_shake(intensity: float) -> void:
+	camera_shake_strength = minf(18.0, camera_shake_strength + intensity)
+
 func _on_weapon_shot_fired(_proj: Node2D) -> void:
 	muzzle_flash_timer = 0.06
+	add_camera_shake(2.2)
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -71,6 +88,15 @@ func _physics_process(delta: float) -> void:
 		muzzle_flash_timer = maxf(0.0, muzzle_flash_timer - delta)
 	if hurt_flash_timer > 0.0:
 		hurt_flash_timer = maxf(0.0, hurt_flash_timer - delta)
+	if camera_shake_strength > 0.0:
+		camera_shake_strength = maxf(0.0, camera_shake_strength - delta * 28.0)
+		if is_instance_valid(player_camera):
+			player_camera.offset = Vector2(
+				randf_range(-camera_shake_strength, camera_shake_strength),
+				randf_range(-camera_shake_strength, camera_shake_strength)
+			)
+	elif is_instance_valid(player_camera) and player_camera.offset != Vector2.ZERO:
+		player_camera.offset = Vector2.ZERO
 	
 	if adrenaline_time_left > 0.0:
 		adrenaline_time_left = maxf(0.0, adrenaline_time_left - delta)
@@ -263,10 +289,14 @@ func get_muzzle_position() -> Vector2:
 	return global_position
 
 func take_damage(amount: float) -> void:
+	take_damage_from(amount, Vector2.ZERO)
+
+func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> void:
 	if is_dead or amount <= 0.0 or is_dashing:
 		return
 	
 	hurt_flash_timer = 0.14
+	add_camera_shake(9.5)
 	var remaining_dmg := amount
 	
 	# Kevlar armor absorbs 70% of damage while active
@@ -278,7 +308,9 @@ func take_damage(amount: float) -> void:
 	
 	current_health = maxf(0.0, current_health - remaining_dmg)
 	health_changed.emit(current_health, max_health)
-	player_damaged_at.emit(global_position, Vector2.RIGHT.rotated(randf() * TAU))
+	var hit_dir := (global_position - attacker_pos).normalized() if (attacker_pos != Vector2.ZERO and attacker_pos != global_position) else Vector2.RIGHT.rotated(randf() * TAU)
+	player_damaged_at.emit(global_position, hit_dir)
+	player_bitten.emit(hit_dir, amount)
 	
 	if current_health <= 0.0:
 		die()
@@ -316,8 +348,12 @@ func _draw() -> void:
 		var rel_pos: Vector2 = g["global_pos"] - global_position
 		draw_circle(rel_pos, 14.0, Color(0.35, 0.75, 0.95, g["alpha"] * 0.45))
 	
-	# Ground shadow
-	draw_circle(Vector2(0, 4), 16.0, Color(0.0, 0.0, 0.0, 0.48))
+	# Realistic Multi-Layered Directional Cast Shadow + Contact Shadow
+	var aim_vec := Vector2.from_angle(rot)
+	draw_circle(Vector2(9.0, 12.0), 14.0, Color(0.0, 0.0, 0.0, 0.28))
+	draw_circle(Vector2(5.0, 7.0), 15.5, Color(0.0, 0.0, 0.0, 0.42))
+	draw_circle(Vector2(0.0, 2.0), 13.5, Color(0.0, 0.0, 0.0, 0.56))
+	draw_line(Vector2(5.0, 7.0), Vector2(5.0, 7.0) + aim_vec * 26.0, Color(0.0, 0.0, 0.0, 0.34), 6.0)
 	
 	# Adrenaline aura ring if active
 	if adrenaline_time_left > 0.0:

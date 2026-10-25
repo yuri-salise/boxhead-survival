@@ -8,7 +8,15 @@ enum SplatterType {
 	SMEAR_STREAK,
 	HEAVY_GORE,
 	BOOMER_BILE,
-	SCORCH_CRATER
+	SCORCH_CRATER,
+	SEVERED_LIMB
+}
+
+enum LimbKind {
+	ARM,
+	LEG,
+	HEAD,
+	RIB_CHUNK
 }
 
 var splatter_type: int = SplatterType.ARTERIAL_SPRAY
@@ -23,14 +31,26 @@ var flying_droplets: Array[Dictionary] = []
 var splash_time: float = 0.0
 var is_animating_splash: bool = true
 
+# Severed limb physics & permanent corpse part state
+var has_limb_part: bool = false
+var limb_kind: int = LimbKind.ARM
+var limb_color: Color = Color(0.46, 0.52, 0.42, 1.0)
+var limb_pos: Vector2 = Vector2.ZERO
+var limb_vel: Vector2 = Vector2.ZERO
+var limb_rot: float = 0.0
+var limb_ang_vel: float = 0.0
+var limb_z: float = 0.0
+var limb_z_vel: float = 0.0
+var limb_settled: bool = true
+
 func setup(p_pos: Vector2, p_dir: Vector2, p_type: int = -1, p_scale: float = 1.0, with_active_splash: bool = true) -> void:
 	global_position = p_pos
 	spray_direction = p_dir.normalized() if p_dir != Vector2.ZERO else Vector2.RIGHT.rotated(randf() * TAU)
 	base_scale = p_scale * randf_range(0.85, 1.25)
 	seed_val = randi()
+	has_limb_part = false
 	
 	if p_type < 0:
-		# Pick a weighted random blood splatter variation
 		var roll := randf()
 		if roll < 0.25:
 			splatter_type = SplatterType.ARTERIAL_SPRAY
@@ -48,26 +68,83 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_type: int = -1, p_scale: float = 1.
 		splatter_type = p_type
 	
 	_generate_splatter_geometry(with_active_splash)
+	set_process(is_animating_splash or not limb_settled)
+	queue_redraw()
+
+func setup_severed_limb(p_pos: Vector2, p_dir: Vector2, p_limb_kind: int, p_skin_color: Color, p_scale: float = 1.0) -> void:
+	global_position = p_pos
+	spray_direction = p_dir.normalized() if p_dir != Vector2.ZERO else Vector2.RIGHT.rotated(randf() * TAU)
+	base_scale = p_scale
+	seed_val = randi()
+	splatter_type = SplatterType.SEVERED_LIMB
+	
+	has_limb_part = true
+	limb_kind = p_limb_kind
+	limb_color = p_skin_color
+	limb_pos = Vector2.ZERO
+	var launch_angle := spray_direction.angle() + randf_range(-0.55, 0.55)
+	limb_vel = Vector2.from_angle(launch_angle) * randf_range(115.0, 235.0) * p_scale
+	limb_rot = randf() * TAU
+	limb_ang_vel = randf_range(-14.0, 14.0)
+	limb_z = 8.0 * p_scale
+	limb_z_vel = randf_range(110.0, 175.0)
+	limb_settled = false
+	
+	_generate_splatter_geometry(true)
+	set_process(true)
 	queue_redraw()
 
 func _process(delta: float) -> void:
-	if not is_animating_splash:
-		set_process(false)
-		return
+	var needs_update := false
 	
-	splash_time += delta
-	var active_count := 0
-	for drop in flying_droplets:
-		if splash_time < drop["duration"]:
-			active_count += 1
-			drop["pos"] += drop["vel"] * delta
-			drop["vel"] = drop["vel"].move_toward(Vector2.ZERO, 420.0 * delta)
+	if is_animating_splash:
+		splash_time += delta
+		var active_count := 0
+		for drop in flying_droplets:
+			if splash_time < drop["duration"]:
+				active_count += 1
+				drop["pos"] += drop["vel"] * delta
+				drop["vel"] = drop["vel"].move_toward(Vector2.ZERO, 420.0 * delta)
+		if active_count == 0 or splash_time >= 0.45:
+			is_animating_splash = false
+			flying_droplets.clear()
+		else:
+			needs_update = true
+	
+	if has_limb_part and not limb_settled:
+		needs_update = true
+		limb_pos += limb_vel * delta
+		limb_rot += limb_ang_vel * delta
+		limb_z_vel -= 480.0 * delta
+		limb_z += limb_z_vel * delta
+		
+		# Bounce on the asphalt floor and leave blood drops on impact
+		if limb_z <= 0.0:
+			limb_z = 0.0
+			if absf(limb_z_vel) > 38.0:
+				limb_z_vel = -limb_z_vel * 0.42
+				limb_vel *= 0.62
+				limb_ang_vel *= 0.60
+				blobs.append({
+					"pos": limb_pos + Vector2(randf_range(-4, 4), randf_range(-4, 4)),
+					"radius": randf_range(4.5, 8.5) * base_scale,
+					"color": Color(0.45, 0.03, 0.04, 0.90)
+				})
+			else:
+				limb_z_vel = 0.0
+				limb_vel = limb_vel.move_toward(Vector2.ZERO, 380.0 * delta)
+				limb_ang_vel = move_toward(limb_ang_vel, 0.0, 28.0 * delta)
+				if limb_vel.length() < 4.0:
+					limb_settled = true
+					# Final coagulated blood puddle under the settled severed limb
+					blobs.append({
+						"pos": limb_pos,
+						"radius": 10.5 * base_scale,
+						"color": Color(0.34, 0.02, 0.03, 0.88)
+					})
 	
 	queue_redraw()
-	if active_count == 0 or splash_time >= 0.45:
-		is_animating_splash = false
-		flying_droplets.clear()
-		queue_redraw()
+	if not needs_update and not is_animating_splash and limb_settled:
 		set_process(false)
 
 func _pick_blood_color(rng: RandomNumberGenerator, is_dark: bool = false) -> Color:
@@ -94,8 +171,7 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 	var base_angle := spray_direction.angle()
 	
 	match splatter_type:
-		SplatterType.ARTERIAL_SPRAY:
-			# Directional fan of droplets and streaks along bullet vector
+		SplatterType.ARTERIAL_SPRAY, SplatterType.SEVERED_LIMB:
 			blobs.append({
 				"pos": Vector2.ZERO,
 				"radius": 8.0 * base_scale,
@@ -123,7 +199,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.COAGULATED_POOL:
-			# Thick overlapping dark crimson puddles
 			for i in range(9):
 				var offset := Vector2(rng.randf_range(-14, 14), rng.randf_range(-14, 14)) * base_scale
 				blobs.append({
@@ -141,7 +216,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.STARBURST:
-			# High-impact jagged radial burst
 			blobs.append({
 				"pos": Vector2.ZERO,
 				"radius": 11.0 * base_scale,
@@ -163,7 +237,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.FINE_MIST:
-			# High-velocity mist of 32 small droplets
 			for i in range(32):
 				var ang := base_angle + rng.randf_range(-1.1, 1.1)
 				var dist := rng.randf_range(4.0, 52.0) * base_scale
@@ -174,7 +247,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.SMEAR_STREAK:
-			# Dragged bloody streaks across concrete
 			var perp := spray_direction.orthogonal()
 			for i in range(5):
 				var lateral := perp * rng.randf_range(-10.0, 10.0) * base_scale
@@ -194,7 +266,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.HEAVY_GORE:
-			# Visceral heavy kill pool with gore chunks and bone fragments
 			for i in range(8):
 				blobs.append({
 					"pos": Vector2(rng.randf_range(-18, 18), rng.randf_range(-18, 18)) * base_scale,
@@ -207,11 +278,10 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				blobs.append({
 					"pos": Vector2.from_angle(ang) * dist,
 					"radius": rng.randf_range(3.0, 7.5) * base_scale,
-					"color": Color(0.55, 0.08, 0.08, 0.95) if i % 4 != 0 else Color(0.78, 0.72, 0.64, 0.90) # Bone/viscera specks
+					"color": Color(0.55, 0.08, 0.08, 0.95) if i % 4 != 0 else Color(0.78, 0.72, 0.64, 0.90)
 				})
 				
 		SplatterType.BOOMER_BILE:
-			# Putrid toxic bile green + dark crimson explosion stain
 			for i in range(14):
 				var ang := rng.randf() * TAU
 				var dist := rng.randf_range(0.0, 50.0) * base_scale
@@ -232,7 +302,6 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 				})
 				
 		SplatterType.SCORCH_CRATER:
-			# Grenade blast charred crater
 			blobs.append({
 				"pos": Vector2.ZERO,
 				"radius": 34.0 * base_scale,
@@ -252,10 +321,9 @@ func _generate_splatter_geometry(with_active_splash: bool) -> void:
 					"color": Color(0.08, 0.07, 0.07, 0.80)
 				})
 
-	# Active flying blood droplets for immediate visceral impact animation
 	if with_active_splash:
 		is_animating_splash = true
-		var count := 14 if splatter_type != SplatterType.HEAVY_GORE and splatter_type != SplatterType.BOOMER_BILE else 26
+		var count := 16 if splatter_type != SplatterType.HEAVY_GORE and splatter_type != SplatterType.BOOMER_BILE else 26
 		for i in range(count):
 			var spread := 0.85 if splatter_type == SplatterType.ARTERIAL_SPRAY else PI
 			var ang := base_angle + rng.randf_range(-spread, spread)
@@ -281,3 +349,52 @@ func _draw() -> void:
 			if splash_time < d["duration"]:
 				var t: float = 1.0 - (splash_time / d["duration"])
 				draw_circle(d["pos"], d["radius"] * (0.5 + 0.5 * t), d["color"])
+	
+	if has_limb_part:
+		_draw_severed_limb()
+
+func _draw_severed_limb() -> void:
+	# Ground shadow offset by airborne height limb_z
+	var shadow_pos := limb_pos + Vector2(4.0 + limb_z * 0.35, 5.0 + limb_z * 0.45)
+	draw_circle(shadow_pos, 7.5 * base_scale, Color(0.0, 0.0, 0.0, 0.52))
+	
+	var visual_pos := limb_pos + Vector2(0.0, -limb_z)
+	draw_set_transform(visual_pos, limb_rot, Vector2(base_scale, base_scale))
+	
+	match limb_kind:
+		LimbKind.ARM:
+			# Exposed white humerus bone at severed joint + bloody stump
+			draw_line(Vector2(-10, 0), Vector2(-4, 0), Color(0.88, 0.85, 0.76, 1.0), 3.0)
+			draw_circle(Vector2(-4, 0), 4.2, Color(0.68, 0.06, 0.06, 1.0))
+			# Forearm flesh & torn sleeve
+			draw_line(Vector2(-4, 0), Vector2(9, 1), limb_color, 5.5)
+			# Bloody clawed zombie hand
+			draw_circle(Vector2(10, 1), 3.5, Color(0.65, 0.10, 0.10, 1.0))
+			draw_line(Vector2(10, -1), Vector2(14, -3), Color(0.75, 0.12, 0.12, 1.0), 1.6)
+			draw_line(Vector2(10, 1), Vector2(15, 1), Color(0.75, 0.12, 0.12, 1.0), 1.6)
+			draw_line(Vector2(10, 3), Vector2(14, 4), Color(0.75, 0.12, 0.12, 1.0), 1.6)
+		LimbKind.LEG:
+			# Exposed femur bone + torn thigh muscle
+			draw_line(Vector2(-11, 0), Vector2(-5, 0), Color(0.90, 0.86, 0.78, 1.0), 3.6)
+			draw_circle(Vector2(-5, 0), 5.0, Color(0.65, 0.05, 0.05, 1.0))
+			# Torn trouser leg
+			draw_line(Vector2(-5, 0), Vector2(8, 0), Color(0.22, 0.24, 0.20, 1.0), 6.8)
+			# Heavy muddy boot
+			draw_rect(Rect2(Vector2(7, -3), Vector2(7, 8)), Color(0.14, 0.12, 0.10, 1.0), true)
+		LimbKind.HEAD:
+			# Severed neck stump & spine bone
+			draw_circle(Vector2(-6, 0), 5.0, Color(0.62, 0.04, 0.05, 1.0))
+			draw_circle(Vector2(-7, 0), 2.2, Color(0.88, 0.85, 0.78, 1.0))
+			# Rotting zombie skull/head
+			draw_circle(Vector2(0, 0), 7.8, limb_color)
+			draw_circle(Vector2(4, -2.5), 1.6, Color(0.12, 0.04, 0.04, 1.0))
+			draw_circle(Vector2(4, 2.5), 1.6, Color(0.75, 0.65, 0.15, 0.85))
+			draw_line(Vector2(5, -3), Vector2(5, 3), Color(0.45, 0.05, 0.05, 1.0), 2.0)
+		LimbKind.RIB_CHUNK:
+			# Mangled flesh chunk with white rib bones
+			draw_circle(Vector2(0, 0), 6.5, Color(0.56, 0.05, 0.06, 0.96))
+			draw_line(Vector2(-5, -3), Vector2(4, -2), Color(0.88, 0.84, 0.75, 1.0), 2.2)
+			draw_line(Vector2(-4, 1), Vector2(5, 2), Color(0.88, 0.84, 0.75, 1.0), 2.2)
+			draw_line(Vector2(-3, 4), Vector2(3, 5), Color(0.88, 0.84, 0.75, 1.0), 2.0)
+	
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

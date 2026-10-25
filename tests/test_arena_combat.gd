@@ -131,7 +131,33 @@ class ArenaCombatTestRunner extends Node2D:
 		assert(level.blood_container.get_child_count() > decals_before, "Permanent blood decals must be added to ground")
 		print("Special Infected (Walker, Runner, Boomer, Tanker, Spitter, Witch) & Permanent Blood Decals: PASS")
 		
-		# 5. Test Mobile Touch Controls (Twin-Stick + Dash/Weapon/Grenade Touch Buttons)
+		# 5. Test Infinite World Streaming, Zombie Dismemberment (Broken Limbs & Crawling), and POV Bite Blood
+		assert(level.get_node_or_null("ArenaWalls") == null, "Enclosing ArenaWalls must be removed for infinite world movement")
+		assert(p.player_camera != null, "Player must have a Camera2D for infinite world tracking")
+		
+		# Test Dismemberment on a Tanker / Walker
+		var dismember_z = level.spawn_test_zombie_at(Vector2(600, 300), ZombieScript.ZombieType.WALKER)
+		assert(dismember_z.has_left_arm == true and dismember_z.has_right_arm == true and dismember_z.has_legs == true, "Zombie starts with all limbs intact")
+		dismember_z.take_damage(18.0) # Heavy hit severs left arm
+		assert(dismember_z.has_left_arm == false, "First heavy hit must sever zombie's left arm")
+		dismember_z.sever_next_limb(Vector2.RIGHT)
+		assert(dismember_z.has_right_arm == false, "Second dismemberment must sever zombie's right arm")
+		dismember_z.sever_next_limb(Vector2.RIGHT)
+		assert(dismember_z.has_legs == false and dismember_z.is_crawling == true, "Third dismemberment must sever legs and force zombie into crawling state")
+		
+		# Test POV Blood on Screen Lens when bitten by a zombie
+		var drops_before: int = level.horror_vignette.pov_blood_drops.size()
+		runner_z.try_attack_target(p)
+		assert(level.horror_vignette.pov_blood_drops.size() > drops_before, "Getting bitten by a zombie must splash POV blood onto the camera lens")
+		assert(level.horror_vignette.bite_flash_alpha > 0.0, "Getting bitten must trigger crimson POV bite flash")
+		
+		# Test Infinite World movement far beyond original 1280x720 bounds
+		p.global_position = Vector2(4800.0, -3600.0)
+		level._process(0.016)
+		assert(level.arena_env.focus_position == Vector2(4800.0, -3600.0), "Infinite ArenaEnvironment must stream chunks around player's world coordinates")
+		print("Infinite World, Shadows, Zombie Limb Dismemberment & POV Bite Blood: PASS")
+		
+		# 6. Test Mobile Touch Controls (Twin-Stick + Dash/Weapon/Grenade Touch Buttons)
 		var tc = level.touch_controls
 		assert(tc != null, "Mobile TouchControls node must exist in level UI")
 		assert(tc.get_child_count() == 5, "TouchControls must not have duplicated subscene children")
@@ -148,7 +174,7 @@ class ArenaCombatTestRunner extends Node2D:
 		tc.simulate_stick_input(Vector2.ZERO, Vector2.ZERO, false)
 		print("Mobile Twin-Stick & Touch Action HUD: PASS")
 		
-		# 6. Test Player Death triggers Death Panel
+		# 7. Test Player Death triggers Death Panel
 		p.current_armor = 0.0
 		p.take_damage(p.max_health + 50.0)
 		assert(p.is_dead == true, "Player should be dead")

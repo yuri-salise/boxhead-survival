@@ -58,25 +58,6 @@ script = ExtResource("2_tyxjt")
 
 [node name="BloodDecalContainer" type="Node2D" parent="." unique_id=814044892]
 
-[node name="ArenaWalls" type="StaticBody2D" parent="." unique_id=557910511]
-collision_mask = 0
-
-[node name="LeftWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=570134561]
-position = Vector2(40, 360)
-shape = SubResource("RectangleShape2D_w4kkx")
-
-[node name="RightWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=933157021]
-position = Vector2(1240, 360)
-shape = SubResource("RectangleShape2D_mhiu8")
-
-[node name="TopWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=767738138]
-position = Vector2(640, 40)
-shape = SubResource("RectangleShape2D_lswbx")
-
-[node name="BottomWall" type="CollisionShape2D" parent="ArenaWalls" unique_id=204839212]
-position = Vector2(640, 680)
-shape = SubResource("RectangleShape2D_uujh0")
-
 [node name="PickupContainer" type="Node2D" parent="." unique_id=1230551732]
 
 [node name="Player" parent="." unique_id=59910373 instance=ExtResource("3_07lms")]

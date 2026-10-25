@@ -67,6 +67,8 @@ func _ready() -> void:
 		player.pickup_collected.connect(_on_player_pickup_collected)
 		player.grenade_detonated.connect(_on_grenade_detonated)
 		player.player_damaged_at.connect(_on_player_damaged_at)
+		if player.has_signal("player_bitten"):
+			player.player_bitten.connect(_on_player_bitten)
 		player.player_died.connect(_on_player_died)
 		
 		if player.weapon_controller:
@@ -112,6 +114,19 @@ func _ready() -> void:
 	
 	_update_kills_display()
 
+func _process(_delta: float) -> void:
+	if is_instance_valid(player) and is_instance_valid(arena_env):
+		if arena_env.has_method("set_focus_position"):
+			arena_env.set_focus_position(player.global_position)
+		
+		# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
+		if is_instance_valid(zombie_container):
+			for z in zombie_container.get_children():
+				if is_instance_valid(z) and not z.get("is_dead"):
+					if z.global_position.distance_to(player.global_position) > 1450.0:
+						var ahead_ang := randf() * TAU
+						z.global_position = player.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+
 func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int = -1, scale_mult: float = 1.0, active_splash: bool = true) -> Node2D:
 	if not blood_container:
 		return null
@@ -126,6 +141,21 @@ func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int 
 	blood_container.add_child(decal)
 	decal.setup(world_pos, hit_dir, splatter_type, scale_mult, active_splash)
 	return decal
+
+func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, skin_color: Color, scale_mult: float = 1.0) -> Node2D:
+	if not blood_container:
+		return null
+	
+	if blood_container.get_child_count() >= max_blood_decals:
+		var oldest := blood_container.get_child(0)
+		if is_instance_valid(oldest):
+			oldest.queue_free()
+	
+	var limb_decal := Node2D.new()
+	limb_decal.set_script(BloodDecalScript)
+	blood_container.add_child(limb_decal)
+	limb_decal.setup_severed_limb(world_pos, hit_dir, limb_kind, skin_color, scale_mult)
+	return limb_decal
 
 func spawn_pickup_at(p_type: String, world_pos: Vector2) -> Node2D:
 	if not pickup_scene or not pickup_container:
@@ -212,13 +242,21 @@ func _on_player_pickup_collected(msg: String, col: Color) -> void:
 func _on_player_damaged_at(world_pos: Vector2, hit_dir: Vector2) -> void:
 	spawn_blood_decal(world_pos, hit_dir, 0, 0.95, true)
 
+func _on_player_bitten(hit_dir: Vector2, damage: float) -> void:
+	if horror_vignette and horror_vignette.has_method("trigger_bite_pov_splatter"):
+		horror_vignette.trigger_bite_pov_splatter(hit_dir, damage)
+
 func _on_grenade_detonated(world_pos: Vector2, radius: float, damage: float) -> void:
 	spawn_blood_decal(world_pos, Vector2.RIGHT, 7, 1.35, true) # Scorch crater + debris
 	spawn_floating_text(world_pos, "FRAG BLAST!", Color(1.0, 0.62, 0.20))
+	if is_instance_valid(player) and player.has_method("add_camera_shake"):
+		player.add_camera_shake(12.0)
 	_apply_aoe_explosion(world_pos, radius, damage, false)
 
 func _on_boomer_exploded(world_pos: Vector2, radius: float, damage: float) -> void:
 	spawn_floating_text(world_pos, "BOOMER BILE BLAST!", Color(0.58, 0.92, 0.20))
+	if is_instance_valid(player) and player.has_method("add_camera_shake"):
+		player.add_camera_shake(11.0)
 	_apply_aoe_explosion(world_pos, radius, damage, true)
 
 func _apply_aoe_explosion(world_pos: Vector2, radius: float, damage: float, can_hurt_player: bool) -> void:
@@ -259,6 +297,8 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1) -> Node2D:
 	zombie.zombie_died.connect(_on_zombie_killed)
 	if zombie.has_signal("blood_splashed"):
 		zombie.blood_splashed.connect(func(pos, dir, stype, sc): spawn_blood_decal(pos, dir, stype, sc, true))
+	if zombie.has_signal("limb_severed"):
+		zombie.limb_severed.connect(func(pos, dir, lkind, scol, sc): spawn_severed_limb(pos, dir, lkind, scol, sc))
 	if zombie.has_signal("boomer_exploded"):
 		zombie.boomer_exploded.connect(_on_boomer_exploded)
 	if zombie.has_signal("witch_startled"):
@@ -300,20 +340,17 @@ func _on_spawn_timer_timeout() -> void:
 	if zombie_container.get_child_count() >= max_alive_zombies:
 		return
 	
-	var spawn_points: Array[Vector2] = [
-		Vector2(randf_range(90, 1190), 75),
-		Vector2(randf_range(90, 1190), 645),
-		Vector2(75, randf_range(90, 630)),
-		Vector2(1205, randf_range(90, 630))
-	]
-	var pos := spawn_points[randi() % spawn_points.size()]
+	# Spawn zombies on a 360-degree perimeter ring around the player's current position in the infinite world
+	var spawn_ang := randf() * TAU
+	var spawn_dist := randf_range(640.0, 780.0)
+	var pos := player.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
 	var z_type := _pick_zombie_type_for_spawn()
 	var z := spawn_test_zombie_at(pos, z_type)
 	if is_instance_valid(z):
 		if z_type == ZombieScript.ZombieType.TANK:
-			spawn_floating_text(pos, "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
 		elif z_type == ZombieScript.ZombieType.WITCH:
-			spawn_floating_text(pos, "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
 
 func _on_zombie_drop_requested(world_pos: Vector2, z_type_name: String) -> void:
 	# Special infected have high/guaranteed supply drop chances; normal walkers have 35% chance
