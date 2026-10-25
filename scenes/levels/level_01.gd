@@ -3,10 +3,12 @@ extends Node2D
 const BloodDecalScript = preload("res://scripts/blood_decal.gd")
 const ZombieScript = preload("res://scripts/zombie_basic.gd")
 
+@export var level_id: int = 1
 @export var zombie_scene: PackedScene = preload("res://scenes/actors/zombie_basic.tscn")
 @export var pickup_scene: PackedScene = preload("res://scenes/actors/pickup.tscn")
 @export var max_alive_zombies: int = 18
 @export var max_blood_decals: int = 240
+@export var custom_waves: Array[Dictionary] = []
 
 @onready var arena_env: Node2D = $ArenaEnvironment
 @onready var blood_container: Node2D = $BloodDecalContainer
@@ -14,7 +16,9 @@ const ZombieScript = preload("res://scripts/zombie_basic.gd")
 @onready var player: CharacterBody2D = $Player
 @onready var zombie_container: Node2D = $ZombieContainer
 @onready var fx_container: Node2D = $FXContainer
-@onready var spawn_timer: Timer = $SpawnTimer
+@onready var wave_director: Node = get_node_or_null("WaveDirector")
+@onready var level_controller: Node = get_node_or_null("LevelController")
+@onready var spawn_timer: Timer = get_node_or_null("SpawnTimer")
 
 # HUD references
 @onready var horror_vignette: Control = $UI/HorrorVignette
@@ -30,6 +34,7 @@ const ZombieScript = preload("res://scripts/zombie_basic.gd")
 @onready var pause_button: Button = $UI/MarginContainer/TopBar/PauseButton
 
 @onready var pause_menu: Control = $UI/PauseMenu
+@onready var result_screen: Control = get_node_or_null("UI/ResultScreen")
 @onready var death_panel: PanelContainer = $UI/DeathPanel
 @onready var death_kills_label: Label = $UI/DeathPanel/DeathMargin/DeathVBox/DeathKillsLabel
 @onready var restart_button: Button = $UI/DeathPanel/DeathMargin/DeathVBox/RestartButton
@@ -38,6 +43,9 @@ const ZombieScript = preload("res://scripts/zombie_basic.gd")
 var kills_count: int = 0
 var score_count: int = 0
 var total_spawned: int = 0
+var current_wave_num: int = 1
+var total_waves_count: int = 3
+var wave_remaining_count: int = 6
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 func _ready() -> void:
@@ -103,12 +111,32 @@ func _ready() -> void:
 		pause_menu.retry_requested.connect(_on_restart_pressed)
 		pause_menu.main_menu_requested.connect(_on_return_pressed)
 	
+	if result_screen:
+		result_screen.visible = false
+		result_screen.next_level_requested.connect(_on_next_level_requested)
+		result_screen.retry_requested.connect(_on_restart_pressed)
+		result_screen.main_menu_requested.connect(_on_return_pressed)
+	
 	if restart_button:
 		restart_button.pressed.connect(_on_restart_pressed)
 	if menu_button:
 		menu_button.pressed.connect(_on_return_pressed)
 	
-	if spawn_timer:
+	if level_controller:
+		level_controller.reset_state(level_id)
+		level_controller.level_won.connect(_on_level_won)
+		level_controller.level_lost.connect(_on_level_lost)
+	
+	if wave_director:
+		if not custom_waves.is_empty():
+			wave_director.setup_waves(custom_waves)
+		wave_director.wave_started.connect(_on_wave_started)
+		wave_director.enemy_spawn_requested.connect(_on_wave_enemy_spawn_requested)
+		wave_director.wave_enemies_updated.connect(_on_wave_enemies_updated)
+		wave_director.wave_completed.connect(_on_wave_completed)
+		wave_director.all_waves_completed.connect(_on_all_waves_completed)
+		wave_director.start_waves()
+	elif spawn_timer:
 		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
 		spawn_timer.start()
 	
@@ -278,10 +306,79 @@ func _apply_aoe_explosion(world_pos: Vector2, radius: float, damage: float, can_
 func _on_player_died() -> void:
 	if spawn_timer:
 		spawn_timer.stop()
+	if wave_director and wave_director.has_method("stop_waves"):
+		wave_director.stop_waves()
+	
+	if level_controller and level_controller.has_method("on_all_players_dead"):
+		level_controller.on_all_players_dead("OUTPOST OVERRUN")
+	else:
+		_on_level_lost(level_id, score_count, kills_count, "OUTPOST OVERRUN")
+
+func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) -> void:
+	current_wave_num = wave_num
+	total_waves_count = total_waves
+	wave_remaining_count = wave_total_enemies
+	_update_kills_display()
+	if is_instance_valid(player):
+		spawn_floating_text(player.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ===", Color(0.98, 0.78, 0.25))
+
+func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> void:
+	wave_remaining_count = remaining_in_wave
+	_update_kills_display()
+
+func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
+	if not is_instance_valid(player) or player.is_dead:
+		return
+	var spawn_ang := randf() * TAU
+	var spawn_dist := randf_range(640.0, 780.0)
+	var pos := player.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
+	var z := spawn_test_zombie_at(pos, enemy_type)
+	if is_instance_valid(z):
+		z.set_meta("is_wave_enemy", true)
+		if enemy_type == ZombieScript.ZombieType.TANK:
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
+		elif enemy_type == ZombieScript.ZombieType.WITCH:
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
+
+func _on_wave_completed(wave_num: int, total_waves: int) -> void:
+	if wave_num < total_waves and is_instance_valid(player):
+		spawn_floating_text(player.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " CLEARED — SUPPLY DROP! ===", Color(0.35, 0.95, 0.50))
+		var supply_pool: Array[String] = ["MEDKIT", "ARMOR", "AMMO", "ADRENALINE"]
+		var drop_offset := Vector2.from_angle(randf() * TAU) * 85.0
+		spawn_pickup_at(supply_pool[randi() % supply_pool.size()], player.global_position + drop_offset)
+
+func _on_all_waves_completed() -> void:
+	var hp_ratio := 1.0
+	if is_instance_valid(player):
+		hp_ratio = float(player.current_health) / maxf(1.0, float(player.max_health))
+	if level_controller and level_controller.has_method("on_all_waves_completed"):
+		level_controller.on_all_waves_completed(hp_ratio)
+
+func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
+	if result_screen and result_screen.has_method("show_victory"):
+		result_screen.show_victory(lvl, score, kills, stars)
+
+func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 	if death_panel:
 		death_panel.visible = true
 		if death_kills_label:
-			death_kills_label.text = "OUTPOST OVERRUN — ELIMINATED " + str(kills_count) + " INFECTED (SCORE: " + str(score_count) + ")"
+			death_kills_label.text = reason + " — ELIMINATED " + str(kills) + " INFECTED (SCORE: " + str(score) + ")"
+	if result_screen and result_screen.has_method("show_defeat"):
+		result_screen.show_defeat(lvl, score, kills, reason)
+		# Hide legacy DeathPanel visuals when ResultScreen is present so they don't overlap visually,
+		# while keeping death_panel.visible = true if ResultScreen is absent
+		if death_panel:
+			death_panel.modulate.a = 0.0
+
+func _on_next_level_requested(next_lvl: int) -> void:
+	get_tree().paused = false
+	var next_path := "res://scenes/levels/level_0" + str(next_lvl) + ".tscn"
+	if ResourceLoader.exists(next_path):
+		get_tree().change_scene_to_file(next_path)
+	elif ResourceLoader.exists("res://scenes/ui/level_select.tscn"):
+		get_tree().change_scene_to_file("res://scenes/ui/level_select.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
 func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1) -> Node2D:
 	if not zombie_scene or not zombie_container:
@@ -376,11 +473,15 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 	kills_count += 1
 	var pts: int = int(zombie.get("score_value")) if is_instance_valid(zombie) and zombie.get("score_value") != null else 10
 	score_count += pts
+	if level_controller and level_controller.has_method("record_kill"):
+		level_controller.record_kill(pts)
+	if wave_director and is_instance_valid(zombie) and zombie.has_meta("is_wave_enemy"):
+		wave_director.notify_enemy_killed()
 	_update_kills_display()
 
 func _update_kills_display() -> void:
 	if kills_label:
-		kills_label.text = "INFECTED KILLED: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
+		kills_label.text = "WAVE " + str(current_wave_num) + "/" + str(total_waves_count) + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
 
 func _on_pause_button_pressed() -> void:
 	if pause_menu and pause_menu.has_method("open_pause_menu"):

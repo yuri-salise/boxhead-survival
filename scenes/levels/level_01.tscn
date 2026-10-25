@@ -12,6 +12,9 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="10_vrcmr"]
 [ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="11_svp4f"]
 [ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="12_1b0o8"]
+[ext_resource type="Script" path="res://scripts/wave_director.gd" id="13_waved"]
+[ext_resource type="Script" path="res://scripts/level_controller.gd" id="14_lvlct"]
+[ext_resource type="PackedScene" path="res://scenes/ui/result_screen.tscn" id="15_ressc"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_w4kkx"]
 size = Vector2(20, 640)
@@ -67,9 +70,14 @@ position = Vector2(640, 360)
 
 [node name="FXContainer" type="Node2D" parent="." unique_id=1582904310]
 
+[node name="WaveDirector" type="Node" parent="." unique_id=981726354]
+script = ExtResource("13_waved")
+
+[node name="LevelController" type="Node" parent="." unique_id=871625349]
+script = ExtResource("14_lvlct")
+
 [node name="SpawnTimer" type="Timer" parent="." unique_id=529278762]
 wait_time = 1.65
-autostart = true
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1403276233]
 
@@ -179,6 +187,8 @@ theme_override_font_sizes/font_size = 20
 text = "|| PAUSE"
 
 [node name="PauseMenu" parent="UI" unique_id=857925483 instance=ExtResource("10_vrcmr")]
+
+[node name="ResultScreen" parent="UI" unique_id=948271625 instance=ExtResource("15_ressc")]
 
 [node name="DeathPanel" type="PanelContainer" parent="UI" unique_id=307100079]
 process_mode = 3

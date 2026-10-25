@@ -174,12 +174,14 @@ class ArenaCombatTestRunner extends Node2D:
 		tc.simulate_stick_input(Vector2.ZERO, Vector2.ZERO, false)
 		print("Mobile Twin-Stick & Touch Action HUD: PASS")
 		
-		# 7. Test Player Death triggers Death Panel
+		# 7. Test WaveDirector, LevelController & ResultScreen Integration on Defeat
+		assert(level.wave_director != null and level.level_controller != null and level.result_screen != null, "Phase 2 WaveDirector, LevelController, and ResultScreen must be present in Level01")
 		p.current_armor = 0.0
 		p.take_damage(p.max_health + 50.0)
 		assert(p.is_dead == true, "Player should be dead")
 		assert(level.death_panel.visible == true, "Death panel should be visible after player death")
-		print("Player death panel trigger: PASS")
+		assert(level.result_screen.visible == true and level.result_screen.is_victory == false, "ResultScreen should open in defeat mode on player death")
+		print("Phase 2 WaveDirector, LevelController & ResultScreen integration: PASS")
 		
 		level.queue_free()
 		
