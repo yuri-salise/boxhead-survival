@@ -48,19 +48,19 @@
 - Consumes: Initial position, direction (`Vector2`), speed (`float`), damage (`float`), shooter reference (`Node2D`).
 - Produces: `hit_target(target, damage)` signal or direct damage delivery; despawns on contact with walls/enemies or after `lifetime` timer.
 
-- [ ] **Step 1: Write headless unit test `tests/test_projectile.gd`**
+- [x] **Step 1: Write headless unit test `tests/test_projectile.gd`**
   Verify projectile moves along its normalized velocity vector, damages an `Area2D` target on overlap, does not harm its shooter, and self-terminates after expiry.
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
   Run: `& "C:\Users\Yuri\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe" -s tests/test_projectile.gd --headless`
   Expected: FAIL with missing projectile scene.
-- [ ] **Step 3: Implement `scripts/projectile.gd` and `scenes/actors/projectile.tscn`**
+- [x] **Step 3: Implement `scripts/projectile.gd` and `scenes/actors/projectile.tscn`**
   - Node: `Area2D` with `CollisionShape2D` (circle r=4), `ColorRect` visual (bright bullet streak `#f0c040`), lifetime timer (1.5s).
   - Methods: `init(pos: Vector2, dir: Vector2, bullet_speed: float, bullet_damage: float, shooter: Node2D) -> void`.
   - Collision masking: layer 3 (projectiles), mask 1 (environment) & 2 (enemies).
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
   Run: `& "C:\Users\Yuri\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe" -s tests/test_projectile.gd --headless`
   Expected: PASS with 0 errors.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git commit -m "feat(combat): implement projectile system with collision filtering"`
 
 ---
@@ -77,17 +77,17 @@
 - Consumes: Input vectors (`move_vector`, `aim_point`, `is_firing`), projectile scene.
 - Produces: `health_changed(current, max)`, `player_died()`, `CharacterBody2D` velocity movement.
 
-- [ ] **Step 1: Write headless unit test `tests/test_player.gd`**
+- [x] **Step 1: Write headless unit test `tests/test_player.gd`**
   Verify player responds to directional input, rotates toward target aim point, enforces weapon cooldown rate between shots, takes damage, and emits `player_died` when health reaches 0.
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
   Expected: FAIL with missing player scene.
-- [ ] **Step 3: Implement `WeaponController` and `Player`**
+- [x] **Step 3: Implement `WeaponController` and `Player`**
   - `weapon_controller.gd`: Exported `fire_rate: float = 0.2`, `damage: float = 25.0`, `projectile_speed: float = 850.0`, muzzle position marker.
   - `player.gd`: `max_health = 100.0`, `current_health`, `speed = 280.0`, `take_damage(amount: float) -> void`.
   - `scenes/actors/player.tscn`: `CharacterBody2D` with circular collision (r=18), stylized 2D survivor visual (slate jacket `#3d4538`, red headband accent, gun muzzle node).
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
   Expected: PASS.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git commit -m "feat(player): implement survivor CharacterBody2D and weapon controller"`
 
 ---
@@ -103,17 +103,17 @@
 - Consumes: Target player reference (`Node2D`), damage events from projectiles.
 - Produces: `zombie_killed(zombie)`, contact damage to player on proximity attack timer.
 
-- [ ] **Step 1: Write headless unit test `tests/test_zombie.gd`**
+- [x] **Step 1: Write headless unit test `tests/test_zombie.gd`**
   Verify zombie computes direction to nearest living player, advances via `move_and_slide()`, decrements health on `take_damage()`, triggers attack cooldown on contact, and emits `zombie_killed` once on death.
-- [ ] **Step 2: Run test to verify failure**
+- [x] **Step 2: Run test to verify failure**
   Expected: FAIL.
-- [ ] **Step 3: Implement `scripts/zombie_basic.gd` and `scenes/actors/zombie_basic.tscn`**
+- [x] **Step 3: Implement `scripts/zombie_basic.gd` and `scenes/actors/zombie_basic.tscn`**
   - `CharacterBody2D` with collision radius 16, collision layer 2 (enemies).
   - Health: 50.0. Speed: 140.0. Contact damage: 15.0 with 0.8s attack cooldown timer.
   - Silhouette: Distressed pale grey/decay flesh `#687063` with bloodied hands, distinct silhouette contrast against floor.
-- [ ] **Step 4: Run test to verify pass**
+- [x] **Step 4: Run test to verify pass**
   Expected: PASS.
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
   `git commit -m "feat(zombie): implement basic pursuing zombie actor with attack cooldown"`
 
 ---
@@ -129,12 +129,12 @@
 - Consumes: Player, Zombie spawner test timer, HUD health & kill display.
 - Produces: Fully playable combat sandbox where player moves with WASD, aims with mouse, shoots, kills zombies, takes damage, and can restart or return to menu.
 
-- [ ] **Step 1: Write integration test `tests/test_arena_combat.gd`**
+- [x] **Step 1: Write integration test `tests/test_arena_combat.gd`**
   Verify arena spawns player at center, confines movement inside arena walls, spawns test zombie, resolves bullet-zombie collisions, and updates kill counter.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Update `level_01.tscn` with StaticBody2D boundaries, Player instance, dynamic zombie spawner, and HUD (Health Bar, Kills counter)**
-- [ ] **Step 4: Run test to verify pass and manually verify desktop playability**
-- [ ] **Step 5: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Update `level_01.tscn` with StaticBody2D boundaries, Player instance, dynamic zombie spawner, and HUD (Health Bar, Kills counter)**
+- [x] **Step 4: Run test to verify pass and manually verify desktop playability**
+- [x] **Step 5: Commit**
   `git commit -m "feat(combat): integrate playable combat prototype vertical slice into level 1"`
 
 ---
