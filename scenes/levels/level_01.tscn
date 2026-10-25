@@ -1,82 +1,88 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://scenes/levels/level_01.gd" id="1_m802k"]
+[ext_resource type="Script" path="res://scenes/levels/level_01.gd" id="1_2djvx"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_uvc87"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_qdh5e"]
 
-[node name="Level01" type="Node2D" unique_id=1224176268]
-script = ExtResource("1_m802k")
+[node name="Level01" type="Node2D" unique_id=673855525]
+script = ExtResource("1_2djvx")
 
-[node name="ArenaFloor" type="ColorRect" parent="." unique_id=744324680]
+[node name="ArenaFloor" type="ColorRect" parent="." unique_id=435659426]
 offset_right = 1280.0
 offset_bottom = 720.0
-color = Color(0.12, 0.14, 0.16, 1)
+color = Color(0.08, 0.09, 0.11, 1)
 
-[node name="ArenaBoundary" type="ReferenceRect" parent="." unique_id=2085926322]
+[node name="ArenaBoundary" type="ReferenceRect" parent="." unique_id=47746294]
 offset_left = 40.0
 offset_top = 40.0
 offset_right = 1240.0
 offset_bottom = 680.0
-border_color = Color(0.4, 0.2, 0.2, 0.8)
+border_color = Color(0.6, 0.2, 0.2, 0.85)
 border_width = 4.0
 editor_only = false
 
-[node name="UI" type="CanvasLayer" parent="." unique_id=1819486287]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1105763625]
 
-[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=743751595]
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=1459959200]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 28
 
-[node name="TopBar" type="HBoxContainer" parent="UI/MarginContainer" unique_id=794485851]
+[node name="TopBar" type="HBoxContainer" parent="UI/MarginContainer" unique_id=1816542658]
 layout_mode = 2
 
-[node name="LevelLabel" type="Label" parent="UI/MarginContainer/TopBar" unique_id=2118782583]
+[node name="LevelLabel" type="Label" parent="UI/MarginContainer/TopBar" unique_id=632815446]
 layout_mode = 2
-theme_override_font_sizes/font_size = 18
-theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
-text = "LEVEL 01: QUARANTINE (TESTBED)"
+theme_override_fonts/font = ExtResource("2_uvc87")
+theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
+text = "LEVEL 01: QUARANTINE // SECTOR BREACH"
 
-[node name="Spacer" type="Control" parent="UI/MarginContainer/TopBar" unique_id=837395206]
+[node name="Spacer" type="Control" parent="UI/MarginContainer/TopBar" unique_id=1705569974]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="ReturnButton" type="Button" parent="UI/MarginContainer/TopBar" unique_id=1298702272]
-custom_minimum_size = Vector2(180, 44)
+[node name="ReturnButton" type="Button" parent="UI/MarginContainer/TopBar" unique_id=1331175429]
+custom_minimum_size = Vector2(200, 46)
 layout_mode = 2
-text = "RETURN TO MENU"
+text = "FALL BACK TO MENU"
 
-[node name="CenterContainer" type="CenterContainer" parent="UI" unique_id=869221098]
+[node name="CenterContainer" type="CenterContainer" parent="UI" unique_id=1730500173]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
 
-[node name="MessagePanel" type="PanelContainer" parent="UI/CenterContainer" unique_id=2119395880]
+[node name="MessagePanel" type="PanelContainer" parent="UI/CenterContainer" unique_id=634517409]
 layout_mode = 2
 
-[node name="PanelMargin" type="MarginContainer" parent="UI/CenterContainer/MessagePanel" unique_id=595865695]
+[node name="PanelMargin" type="MarginContainer" parent="UI/CenterContainer/MessagePanel" unique_id=645001925]
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 36
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 36
+theme_override_constants/margin_bottom = 28
 
-[node name="PanelVBox" type="VBoxContainer" parent="UI/CenterContainer/MessagePanel/PanelMargin" unique_id=6337919]
+[node name="PanelVBox" type="VBoxContainer" parent="UI/CenterContainer/MessagePanel/PanelMargin" unique_id=805756324]
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/separation = 10
 
-[node name="StatusLabel" type="Label" parent="UI/CenterContainer/MessagePanel/PanelMargin/PanelVBox" unique_id=478300828]
+[node name="StatusLabel" type="Label" parent="UI/CenterContainer/MessagePanel/PanelMargin/PanelVBox" unique_id=429770444]
 layout_mode = 2
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(0.85, 0.4, 0.35, 1)
-text = "ARENA TESTBED INITIALIZED"
+theme_override_fonts/font = ExtResource("2_uvc87")
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.85, 0.35, 0.35, 1)
+text = "ARENA PERIMETER SECURED"
 horizontal_alignment = 1
 
-[node name="SubLabel" type="Label" parent="UI/CenterContainer/MessagePanel/PanelMargin/PanelVBox" unique_id=48481280]
+[node name="SubLabel" type="Label" parent="UI/CenterContainer/MessagePanel/PanelMargin/PanelVBox" unique_id=780187717]
 layout_mode = 2
-text = "Phase 0 Setup Complete.
-Phase 1 will implement player movement, survivor aiming, and zombie waves."
+theme_override_fonts/font = ExtResource("3_qdh5e")
+theme_override_font_sizes/font_size = 14
+text = "Phase 0 Complete: The Walking Dead typography & modal occlusion deployed.
+Phase 1 will implement player movement, aiming controls, and zombie spawning."
 horizontal_alignment = 1
