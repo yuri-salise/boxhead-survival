@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/levels/level_01.tscn" id="1_base"]
+
+[node name="Level05" unique_id=859548075 instance=ExtResource("1_base")]
+level_id = 5
+force_night_mode = true
+max_alive_zombies = 26

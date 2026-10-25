@@ -70,7 +70,7 @@ func _hide_all_dialogs() -> void:
 	credits_dialog.visible = false
 
 func _on_play_button_pressed() -> void:
-	_show_dialog(play_dialog)
+	get_tree().change_scene_to_file("res://scenes/ui/mode_select.tscn")
 
 func _on_settings_button_pressed() -> void:
 	_show_dialog(settings_dialog)

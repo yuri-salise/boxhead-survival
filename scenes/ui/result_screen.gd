@@ -26,7 +26,7 @@ func _ready() -> void:
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
 
-func show_victory(level_id: int, score: int, kills: int, stars: int) -> void:
+func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_achs: Array = []) -> void:
 	current_level_id = level_id
 	is_victory = true
 	visible = true
@@ -48,11 +48,12 @@ func show_victory(level_id: int, score: int, kills: int, stars: int) -> void:
 		stats_label.text = "ZONE 0" + str(level_id) + "   ·   INFECTED KILLED: " + str(kills) + "   ·   SCORE: " + str(score)
 	
 	if unlock_banner:
-		if level_id < 5:
-			unlock_banner.text = "[ PROGRESS SAVED — SECTOR 0" + str(level_id + 1) + " UNLOCKED ]"
-		else:
-			unlock_banner.text = "[ CAMPAIGN COMPLETE — ALL QUARANTINE SECTORS CLEARED! ]"
-		unlock_banner.add_theme_color_override("font_color", Color(0.45, 0.88, 0.55, 1.0))
+		var base_msg := "[ PROGRESS SAVED — SECTOR 0" + str(level_id + 1) + " UNLOCKED ]" if level_id < 5 else "[ CAMPAIGN COMPLETE — ALL QUARANTINE SECTORS CLEARED! ]"
+		if not unlocked_achs.is_empty():
+			var ach_str := ", ".join(PackedStringArray(unlocked_achs))
+			base_msg += "\n★ ACHIEVEMENT UNLOCKED: " + ach_str + " ★"
+		unlock_banner.text = base_msg
+		unlock_banner.add_theme_color_override("font_color", Color(0.98, 0.82, 0.28, 1.0) if not unlocked_achs.is_empty() else Color(0.45, 0.88, 0.55, 1.0))
 	
 	if next_level_button:
 		next_level_button.visible = (level_id < 5)

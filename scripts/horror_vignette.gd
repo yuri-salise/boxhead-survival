@@ -5,12 +5,27 @@ var pulse_time: float = 0.0
 var bite_flash_alpha: float = 0.0
 var last_bite_dir: Vector2 = Vector2.RIGHT
 
+# Night Mode (Flashlight-Only Cone of Vision)
+var night_mode_enabled: bool = false
+var flashlight_screen_pos: Vector2 = Vector2(640.0, 360.0)
+var flashlight_angle: float = 0.0
+
 # POV blood splatters & dripping streaks on the screen lens when bitten
 var pov_blood_drops: Array[Dictionary] = []
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+
+func set_night_mode(enabled: bool) -> void:
+	night_mode_enabled = enabled
+	queue_redraw()
+
+func update_flashlight_transform(screen_pos: Vector2, angle_rad: float) -> void:
+	flashlight_screen_pos = screen_pos
+	flashlight_angle = angle_rad
+	if night_mode_enabled:
+		queue_redraw()
 
 func _process(delta: float) -> void:
 	pulse_time += delta
@@ -23,7 +38,6 @@ func _process(delta: float) -> void:
 		if float(drop["age"]) >= float(drop["lifetime"]):
 			pov_blood_drops.remove_at(i)
 		else:
-			# Viscous blood slowly drips down the screen glass
 			var cur_drip: float = float(drop["drip_len"])
 			var max_drip: float = float(drop["max_drip"])
 			if cur_drip < max_drip:
@@ -50,7 +64,6 @@ func trigger_bite_pov_splatter(hit_dir: Vector2 = Vector2.ZERO, damage: float = 
 	var center := vp * 0.5
 	
 	for i in range(count):
-		# Bias splatters toward the screen edge where the bite came from, plus some across the lens
 		var edge_bias := -last_bite_dir
 		var pos: Vector2
 		if i < int(count * 0.65) and edge_bias != Vector2.ZERO:
@@ -80,16 +93,100 @@ func trigger_bite_pov_splatter(hit_dir: Vector2 = Vector2.ZERO, damage: float = 
 			"sub_dots": sub_dots
 		})
 	
-	# Cap active lens drops for mobile performance
 	while pov_blood_drops.size() > 36:
 		pov_blood_drops.remove_at(0)
 	
 	queue_redraw()
 
+func _draw_night_mode_darkness() -> void:
+	var origin := flashlight_screen_pos
+	var cone_half := 0.44 # ~50-degree tactical flashlight cone
+	var inner_r := 52.0   # Immediate body ambient awareness ring
+	var beam_len := 430.0 # Flashlight beam reach
+	var outer_r := 1600.0 # Covers entire viewport
+	var dark_col := Color(0.01, 0.01, 0.02, 0.96)
+	var penumbra_col := Color(0.01, 0.01, 0.02, 0.56)
+	
+	# 1. Pitch-black 310-degree darkness shrouding everything outside the flashlight beam cone
+	var start_a := flashlight_angle + cone_half
+	var end_a := flashlight_angle + TAU - cone_half
+	var dark_steps := 36
+	for i in range(dark_steps):
+		var a0 := lerpf(start_a, end_a, float(i) / float(dark_steps))
+		var a1 := lerpf(start_a, end_a, float(i + 1) / float(dark_steps))
+		var d0 := Vector2.from_angle(a0)
+		var d1 := Vector2.from_angle(a1)
+		var quad := PackedVector2Array([
+			origin + d0 * inner_r,
+			origin + d0 * outer_r,
+			origin + d1 * outer_r,
+			origin + d1 * inner_r
+		])
+		draw_colored_polygon(quad, dark_col)
+	
+	# 2. Pitch-black darkness beyond the tip of the flashlight beam (distance > beam_len)
+	var cone_start := flashlight_angle - cone_half
+	var cone_end := flashlight_angle + cone_half
+	var cone_steps := 10
+	for i in range(cone_steps):
+		var a0 := lerpf(cone_start, cone_end, float(i) / float(cone_steps))
+		var a1 := lerpf(cone_start, cone_end, float(i + 1) / float(cone_steps))
+		var d0 := Vector2.from_angle(a0)
+		var d1 := Vector2.from_angle(a1)
+		var cap_quad := PackedVector2Array([
+			origin + d0 * beam_len,
+			origin + d0 * outer_r,
+			origin + d1 * outer_r,
+			origin + d1 * beam_len
+		])
+		draw_colored_polygon(cap_quad, dark_col)
+		
+		# Range falloff fade near tip of flashlight beam (340px -> 430px)
+		var tip_fade_quad := PackedVector2Array([
+			origin + d0 * (beam_len * 0.78),
+			origin + d0 * beam_len,
+			origin + d1 * beam_len,
+			origin + d1 * (beam_len * 0.78)
+		])
+		draw_colored_polygon(tip_fade_quad, penumbra_col)
+	
+	# 3. Soft penumbra feather wedges along left and right beam edges
+	var feather := 0.11
+	var left_outer := Vector2.from_angle(cone_start)
+	var left_inner := Vector2.from_angle(cone_start + feather)
+	draw_colored_polygon(PackedVector2Array([
+		origin + left_outer * inner_r,
+		origin + left_outer * beam_len,
+		origin + left_inner * beam_len,
+		origin + left_inner * inner_r
+	]), penumbra_col)
+	
+	var right_inner := Vector2.from_angle(cone_end - feather)
+	var right_outer := Vector2.from_angle(cone_end)
+	draw_colored_polygon(PackedVector2Array([
+		origin + right_inner * inner_r,
+		origin + right_inner * beam_len,
+		origin + right_outer * beam_len,
+		origin + right_outer * inner_r
+	]), penumbra_col)
+	
+	# 4. Warm halogen flashlight beam glow inside cone
+	var mid_dir := Vector2.from_angle(flashlight_angle)
+	draw_colored_polygon(PackedVector2Array([
+		origin + mid_dir * 16.0,
+		origin + left_inner * (beam_len * 0.85),
+		origin + mid_dir * (beam_len * 0.92),
+		origin + right_inner * (beam_len * 0.85)
+	]), Color(1.0, 0.95, 0.78, 0.075))
+
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	if vp == Vector2.ZERO:
 		vp = Vector2(1280, 720)
+	
+	# 0. Pitch-Black Night Mode (Flashlight-Only Cone of Vision)
+	if night_mode_enabled:
+		_draw_night_mode_darkness()
 	
 	# 1. Dark atmospheric horror border framing & corner shadows
 	var border_col := Color(0.01, 0.01, 0.02, 0.58)
@@ -114,23 +211,19 @@ func _draw() -> void:
 		var base_col := Color(0.46, 0.02, 0.03, 0.80 * fade) if drop["dark"] else Color(0.68, 0.05, 0.06, 0.76 * fade)
 		var core_col := Color(0.28, 0.01, 0.02, 0.88 * fade)
 		
-		# Main lens blood blotch
 		draw_circle(p, r, base_col)
 		draw_circle(p + Vector2(-r * 0.2, -r * 0.15), r * 0.65, core_col)
 		
-		# Satellite micro-splatter droplets on lens
 		var subs: Array = drop["sub_dots"]
 		for sv in subs:
 			var v3: Vector3 = sv
 			draw_circle(p + Vector2(v3.x, v3.y), v3.z, base_col)
 		
-		# Gravity-driven dripping blood trail down the screen
 		if drip > 2.0:
 			var drip_end := p + Vector2(0.0, r * 0.5 + drip)
 			draw_line(p + Vector2(0.0, r * 0.3), drip_end, base_col, maxf(3.0, r * 0.26), true)
 			draw_circle(drip_end, maxf(3.5, r * 0.22), core_col)
 		
-		# Visceral 3-claw / teeth slash across lens on primary bite drop
 		if drop["is_claw"]:
 			for c_idx in range(-1, 2):
 				var offset := Vector2(c_idx * 16.0, c_idx * 6.0)

@@ -1,0 +1,114 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/level_select.gd" id="1_lvlgd"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_bebas"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_elite"]
+
+[node name="LevelSelect" type="Control" unique_id=712839456]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lvlgd")
+
+[node name="Background" type="ColorRect" parent="." unique_id=612839455]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.06, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=512839454]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LevelPanel" type="PanelContainer" parent="CenterContainer" unique_id=412839453]
+custom_minimum_size = Vector2(880, 620)
+layout_mode = 2
+
+[node name="LevelMargin" type="MarginContainer" parent="CenterContainer/LevelPanel" unique_id=312839452]
+layout_mode = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 24
+
+[node name="LevelVBox" type="VBoxContainer" parent="CenterContainer/LevelPanel/LevelMargin" unique_id=212839451]
+layout_mode = 2
+theme_override_constants/separation = 11
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=112839450]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
+text = "SELECT QUARANTINE SECTOR"
+horizontal_alignment = 1
+
+[node name="AchievementsLabel" type="Label" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=987654321]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.95, 0.78, 0.25, 1)
+text = "MEDALS:  ☆ UNTOUCHABLE   ·   ☆ NIGHT STALKER   ·   ☆ ANATOMY LESSON   ·   ☆ APEX PREDATOR"
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=876543219]
+layout_mode = 2
+
+[node name="Level1Button" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=765432198]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+text = "SECTOR 01: OUTPOST QUARANTINE (3 WAVES)"
+
+[node name="Level2Button" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=654321987]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+disabled = true
+text = "[ LOCKED ]   SECTOR 02: THE DEAD HIGHWAY (4 WAVES)"
+
+[node name="Level3Button" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=543219876]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+disabled = true
+text = "[ LOCKED ]   SECTOR 03: INDUSTRIAL SLAUGHTERHOUSE (4 WAVES)"
+
+[node name="Level4Button" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=432198765]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+disabled = true
+text = "[ LOCKED ]   SECTOR 04: CONTAINMENT DEPOT (5 WAVES)"
+
+[node name="Level5Button" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=321987654]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+disabled = true
+text = "[ LOCKED ]   SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES)"
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=219876543]
+layout_mode = 2
+
+[node name="BottomRow" type="HBoxContainer" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox" unique_id=198765432]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="NightModeButton" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow" unique_id=891234567]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "NIGHT MODE (FLASHLIGHT ONLY): OFF"
+
+[node name="BackButton" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow" unique_id=781234567]
+custom_minimum_size = Vector2(240, 48)
+layout_mode = 2
+text = "BACK"

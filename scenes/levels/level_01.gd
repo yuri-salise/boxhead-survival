@@ -4,6 +4,7 @@ const BloodDecalScript = preload("res://scripts/blood_decal.gd")
 const ZombieScript = preload("res://scripts/zombie_basic.gd")
 
 @export var level_id: int = 1
+@export var force_night_mode: bool = false
 @export var zombie_scene: PackedScene = preload("res://scenes/actors/zombie_basic.tscn")
 @export var pickup_scene: PackedScene = preload("res://scenes/actors/pickup.tscn")
 @export var max_alive_zombies: int = 18
@@ -124,12 +125,24 @@ func _ready() -> void:
 	
 	if level_controller:
 		level_controller.reset_state(level_id)
+		level_controller.two_star_score = 220 * level_id
+		level_controller.three_star_score = 420 * level_id
 		level_controller.level_won.connect(_on_level_won)
 		level_controller.level_lost.connect(_on_level_lost)
 	
+	var gs := get_node_or_null("/root/GameState")
+	var initial_night := force_night_mode or (level_id == 5)
+	if gs:
+		if gs.get("night_mode_enabled") == true:
+			initial_night = true
+		if gs.has_signal("achievement_unlocked") and not gs.achievement_unlocked.is_connected(_on_achievement_unlocked):
+			gs.achievement_unlocked.connect(_on_achievement_unlocked)
+	set_night_mode_enabled(initial_night)
+	
 	if wave_director:
-		if not custom_waves.is_empty():
-			wave_director.setup_waves(custom_waves)
+		var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
+		if not waves_to_use.is_empty():
+			wave_director.setup_waves(waves_to_use)
 		wave_director.wave_started.connect(_on_wave_started)
 		wave_director.enemy_spawn_requested.connect(_on_wave_enemy_spawn_requested)
 		wave_director.wave_enemies_updated.connect(_on_wave_enemies_updated)
@@ -142,18 +155,69 @@ func _ready() -> void:
 	
 	_update_kills_display()
 
+func _get_preset_waves_for_level(lvl_id: int) -> Array[Dictionary]:
+	match lvl_id:
+		2:
+			return [
+				{"total_enemies": 8, "spawn_interval": 1.45, "max_concurrent": 7, "intermission": 2.2, "guaranteed_boss": -1},
+				{"total_enemies": 10, "spawn_interval": 1.25, "max_concurrent": 9, "intermission": 2.4, "guaranteed_boss": 5},
+				{"total_enemies": 12, "spawn_interval": 1.10, "max_concurrent": 11, "intermission": 2.4, "guaranteed_boss": 5},
+				{"total_enemies": 14, "spawn_interval": 0.95, "max_concurrent": 13, "intermission": 2.5, "guaranteed_boss": 3}
+			]
+		3:
+			return [
+				{"total_enemies": 10, "spawn_interval": 1.30, "max_concurrent": 8, "intermission": 2.2, "guaranteed_boss": -1},
+				{"total_enemies": 12, "spawn_interval": 1.15, "max_concurrent": 11, "intermission": 2.4, "guaranteed_boss": 3},
+				{"total_enemies": 15, "spawn_interval": 1.00, "max_concurrent": 13, "intermission": 2.4, "guaranteed_boss": 5},
+				{"total_enemies": 18, "spawn_interval": 0.88, "max_concurrent": 15, "intermission": 2.5, "guaranteed_boss": 3}
+			]
+		4:
+			return [
+				{"total_enemies": 10, "spawn_interval": 1.20, "max_concurrent": 10, "intermission": 2.0, "guaranteed_boss": -1},
+				{"total_enemies": 12, "spawn_interval": 1.05, "max_concurrent": 12, "intermission": 2.2, "guaranteed_boss": 5},
+				{"total_enemies": 14, "spawn_interval": 0.95, "max_concurrent": 14, "intermission": 2.2, "guaranteed_boss": 3},
+				{"total_enemies": 16, "spawn_interval": 0.85, "max_concurrent": 16, "intermission": 2.4, "guaranteed_boss": 5},
+				{"total_enemies": 20, "spawn_interval": 0.78, "max_concurrent": 18, "intermission": 2.5, "guaranteed_boss": 3}
+			]
+		5:
+			return [
+				{"total_enemies": 12, "spawn_interval": 1.10, "max_concurrent": 12, "intermission": 2.0, "guaranteed_boss": 5},
+				{"total_enemies": 15, "spawn_interval": 0.98, "max_concurrent": 14, "intermission": 2.2, "guaranteed_boss": 3},
+				{"total_enemies": 18, "spawn_interval": 0.88, "max_concurrent": 16, "intermission": 2.2, "guaranteed_boss": 5},
+				{"total_enemies": 20, "spawn_interval": 0.78, "max_concurrent": 18, "intermission": 2.4, "guaranteed_boss": 3},
+				{"total_enemies": 24, "spawn_interval": 0.70, "max_concurrent": 20, "intermission": 2.5, "guaranteed_boss": 3}
+			]
+		_:
+			return []
+
+func set_night_mode_enabled(enabled: bool) -> void:
+	if horror_vignette and horror_vignette.has_method("set_night_mode"):
+		horror_vignette.set_night_mode(enabled)
+	if level_controller:
+		level_controller.night_mode_active = enabled
+
+func _on_achievement_unlocked(_ach_id: String, title: String, _desc: String) -> void:
+	if is_instance_valid(player):
+		spawn_floating_text(player.global_position + Vector2(0, -78), "★ ACHIEVEMENT: " + title + " ★", Color(1.0, 0.85, 0.22))
+
 func _process(_delta: float) -> void:
-	if is_instance_valid(player) and is_instance_valid(arena_env):
-		if arena_env.has_method("set_focus_position"):
-			arena_env.set_focus_position(player.global_position)
+	if is_instance_valid(player):
+		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
+			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
+			var aim_rot: float = float(player.visuals.rotation) if player.visuals else 0.0
+			horror_vignette.update_flashlight_transform(screen_pos, aim_rot)
 		
-		# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
-		if is_instance_valid(zombie_container):
-			for z in zombie_container.get_children():
-				if is_instance_valid(z) and not z.get("is_dead"):
-					if z.global_position.distance_to(player.global_position) > 1450.0:
-						var ahead_ang := randf() * TAU
-						z.global_position = player.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+		if is_instance_valid(arena_env):
+			if arena_env.has_method("set_focus_position"):
+				arena_env.set_focus_position(player.global_position)
+			
+			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
+			if is_instance_valid(zombie_container):
+				for z in zombie_container.get_children():
+					if is_instance_valid(z) and not z.get("is_dead"):
+						if z.global_position.distance_to(player.global_position) > 1450.0:
+							var ahead_ang := randf() * TAU
+							z.global_position = player.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
 
 func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int = -1, scale_mult: float = 1.0, active_splash: bool = true) -> Node2D:
 	if not blood_container:
@@ -183,6 +247,10 @@ func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, sk
 	limb_decal.set_script(BloodDecalScript)
 	blood_container.add_child(limb_decal)
 	limb_decal.setup_severed_limb(world_pos, hit_dir, limb_kind, skin_color, scale_mult)
+	
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("record_limb_severed"):
+		gs.record_limb_severed()
 	return limb_decal
 
 func spawn_pickup_at(p_type: String, world_pos: Vector2) -> Node2D:
@@ -265,12 +333,18 @@ func _refresh_weapon_hud() -> void:
 func _on_player_pickup_collected(msg: String, col: Color) -> void:
 	if is_instance_valid(player):
 		spawn_floating_text(player.global_position, msg, col)
+		if player.weapon_controller and player.weapon_controller.unlocked_weapons.size() >= 5:
+			var gs := get_node_or_null("/root/GameState")
+			if gs and gs.has_method("unlock_achievement"):
+				gs.unlock_achievement("ARSENAL_MASTER")
 	_refresh_weapon_hud()
 
 func _on_player_damaged_at(world_pos: Vector2, hit_dir: Vector2) -> void:
 	spawn_blood_decal(world_pos, hit_dir, 0, 0.95, true)
 
 func _on_player_bitten(hit_dir: Vector2, damage: float) -> void:
+	if level_controller and level_controller.has_method("record_player_bitten"):
+		level_controller.record_player_bitten()
 	if horror_vignette and horror_vignette.has_method("trigger_bite_pov_splatter"):
 		horror_vignette.trigger_bite_pov_splatter(hit_dir, damage)
 
@@ -355,8 +429,16 @@ func _on_all_waves_completed() -> void:
 		level_controller.on_all_waves_completed(hp_ratio)
 
 func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
+	var achs: Array = []
+	if level_controller and level_controller.get("last_unlocked_achievements") != null:
+		achs = level_controller.last_unlocked_achievements.duplicate()
+	if achs.is_empty():
+		if level_controller and level_controller.bitten_count == 0:
+			achs.append("UNTOUCHABLE (NO BITES)")
+		if horror_vignette and horror_vignette.get("night_mode_enabled") == true:
+			achs.append("NIGHT STALKER (BLACKOUT)")
 	if result_screen and result_screen.has_method("show_victory"):
-		result_screen.show_victory(lvl, score, kills, stars)
+		result_screen.show_victory(lvl, score, kills, stars, achs)
 
 func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 	if death_panel:
@@ -473,6 +555,11 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 	kills_count += 1
 	var pts: int = int(zombie.get("score_value")) if is_instance_valid(zombie) and zombie.get("score_value") != null else 10
 	score_count += pts
+	if is_instance_valid(zombie) and zombie.has_method("get_type_name"):
+		var z_name: String = zombie.get_type_name()
+		var gs := get_node_or_null("/root/GameState")
+		if gs and gs.has_method("record_special_kill"):
+			gs.record_special_kill(z_name)
 	if level_controller and level_controller.has_method("record_kill"):
 		level_controller.record_kill(pts)
 	if wave_director and is_instance_valid(zombie) and zombie.has_meta("is_wave_enemy"):
@@ -495,10 +582,10 @@ func _on_save_progress_requested() -> void:
 	var saved_ok := false
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("save_checkpoint"):
-		saved_ok = gs.save_checkpoint(1, kills_count, score_count, hp, ap, weps)
+		saved_ok = gs.save_checkpoint(level_id, kills_count, score_count, hp, ap, weps)
 	else:
 		var temp_gs: Node = load("res://autoload/game_state.gd").new()
-		saved_ok = temp_gs.save_checkpoint(1, kills_count, score_count, hp, ap, weps)
+		saved_ok = temp_gs.save_checkpoint(level_id, kills_count, score_count, hp, ap, weps)
 		temp_gs.free()
 	
 	if pause_menu and pause_menu.has_method("show_save_confirmation"):
@@ -520,5 +607,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			else:
 				pause_menu.open_pause_menu()
 			get_viewport().set_input_as_handled()
-	elif event is InputEventKey and event.pressed and event.keycode == KEY_R and death_panel.visible:
-		_on_restart_pressed()
+	elif event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_R and death_panel.visible:
+			_on_restart_pressed()
+		elif event.keycode == KEY_N and horror_vignette:
+			var next_night := not bool(horror_vignette.get("night_mode_enabled"))
+			set_night_mode_enabled(next_night)
+			if is_instance_valid(player):
+				spawn_floating_text(player.global_position + Vector2(0, -56), "NIGHT MODE (FLASHLIGHT ONLY): " + ("ON" if next_night else "OFF"), Color(0.95, 0.85, 0.35))

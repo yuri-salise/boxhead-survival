@@ -1,0 +1,86 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/mode_select.gd" id="1_modgd"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_bebas"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_elite"]
+
+[node name="ModeSelect" type="Control" unique_id=819273645]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_modgd")
+
+[node name="Background" type="ColorRect" parent="." unique_id=718293645]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.06, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=617283945]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ModePanel" type="PanelContainer" parent="CenterContainer" unique_id=516273849]
+custom_minimum_size = Vector2(580, 460)
+layout_mode = 2
+
+[node name="ModeMargin" type="MarginContainer" parent="CenterContainer/ModePanel" unique_id=415263748]
+layout_mode = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 28
+
+[node name="ModeVBox" type="VBoxContainer" parent="CenterContainer/ModePanel/ModeMargin" unique_id=314253647]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=213243546]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 38
+theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
+text = "DEPLOYMENT PROTOCOL"
+horizontal_alignment = 1
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=112233445]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.55, 0.22, 1)
+text = "[ SELECT SOLO CAMPAIGN OR 2-PLAYER WI-FI / HOTSPOT CO-OP ]"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=918273123]
+layout_mode = 2
+
+[node name="SoloCampaignButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=827364512]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "SOLO CAMPAIGN (OFFLINE)"
+
+[node name="CoopLobbyButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=736451289]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "2-PLAYER CO-OP (LAN / HOTSPOT)"
+
+[node name="NightModeButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=645128934]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+text = "NIGHT MODE (FLASHLIGHT ONLY): OFF [STANDARD]"
+
+[node name="BackButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=554123987]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "RETURN TO MAIN MENU"
