@@ -1,11 +1,11 @@
 extends Control
 
 const LEVEL_NAMES: Dictionary = {
-	1: "SECTOR 01: OUTPOST QUARANTINE (3 WAVES)",
-	2: "SECTOR 02: THE DEAD HIGHWAY (4 WAVES)",
-	3: "SECTOR 03: INDUSTRIAL SLAUGHTERHOUSE (4 WAVES)",
-	4: "SECTOR 04: CONTAINMENT DEPOT (5 WAVES)",
-	5: "SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES)"
+	1: "SECTOR 01: OUTPOST QUARANTINE (3 WAVES · DAY -> DUSK)",
+	2: "SECTOR 02: THE DEAD HIGHWAY (4 WAVES · AFTERNOON -> NIGHT)",
+	3: "SECTOR 03: INDUSTRIAL SLAUGHTERHOUSE (4 WAVES · SUNSET -> NIGHT)",
+	4: "SECTOR 04: CONTAINMENT DEPOT (5 WAVES · DUSK -> MIDNIGHT)",
+	5: "SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES · MIDNIGHT -> DAWN)"
 }
 
 @onready var level_buttons: Array[Button] = [
@@ -15,7 +15,6 @@ const LEVEL_NAMES: Dictionary = {
 	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level4Button,
 	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level5Button
 ]
-@onready var night_button: Button = $CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow/NightModeButton
 @onready var back_button: Button = $CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow/BackButton
 @onready var achievements_label: Label = $CenterContainer/LevelPanel/LevelMargin/LevelVBox/AchievementsLabel
 
@@ -28,8 +27,6 @@ func _ready() -> void:
 		if btn:
 			btn.pressed.connect(func(): _on_level_selected(lvl_id))
 	
-	if night_button:
-		night_button.pressed.connect(_on_night_mode_toggled)
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
 	
@@ -67,10 +64,6 @@ func refresh_ui() -> void:
 		else:
 			btn.text = "[ LOCKED ]   " + base_title
 	
-	if night_button:
-		var is_night := bool(gs.get("night_mode_enabled")) if gs else false
-		night_button.text = "NIGHT MODE (FLASHLIGHT ONLY): " + ("ON" if is_night else "OFF")
-	
 	if achievements_label:
 		if gs and gs.get("ACHIEVEMENT_DEFS") != null:
 			var defs: Dictionary = gs.ACHIEVEMENT_DEFS
@@ -97,13 +90,6 @@ func _on_level_selected(level_id: int) -> void:
 		get_tree().change_scene_to_file(scene_path)
 	else:
 		get_tree().change_scene_to_file("res://scenes/levels/level_01.tscn")
-
-func _on_night_mode_toggled() -> void:
-	var gs := _get_game_state()
-	if gs:
-		gs.night_mode_enabled = not bool(gs.get("night_mode_enabled"))
-		gs.save_progress()
-	refresh_ui()
 
 func _on_back_pressed() -> void:
 	if ResourceLoader.exists("res://scenes/ui/mode_select.tscn"):

@@ -102,13 +102,8 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="NightModeButton" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow" unique_id=891234567]
-custom_minimum_size = Vector2(0, 48)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "NIGHT MODE (FLASHLIGHT ONLY): OFF"
-
 [node name="BackButton" type="Button" parent="CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow" unique_id=781234567]
 custom_minimum_size = Vector2(240, 48)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "BACK"

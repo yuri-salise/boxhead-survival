@@ -5,8 +5,10 @@ var pulse_time: float = 0.0
 var bite_flash_alpha: float = 0.0
 var last_bite_dir: Vector2 = Vector2.RIGHT
 
-# Night Mode (Flashlight-Only Cone of Vision)
+# Continuous Gradual Day/Dusk/Night Cycle (0.0 = Daylight, 0.5 = Dusk/Dawn, 1.0 = Pitch-Black Night)
+var night_factor: float = 0.0
 var night_mode_enabled: bool = false
+var is_dusk_phase: bool = true
 var flashlight_screen_pos: Vector2 = Vector2(640.0, 360.0)
 var flashlight_angle: float = 0.0
 
@@ -17,14 +19,19 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 
-func set_night_mode(enabled: bool) -> void:
-	night_mode_enabled = enabled
+func set_night_factor(factor: float, dusk_warming: bool = true) -> void:
+	night_factor = clampf(factor, 0.0, 1.0)
+	night_mode_enabled = (night_factor >= 0.45)
+	is_dusk_phase = dusk_warming
 	queue_redraw()
+
+func set_night_mode(enabled: bool) -> void:
+	set_night_factor(1.0 if enabled else 0.0, true)
 
 func update_flashlight_transform(screen_pos: Vector2, angle_rad: float) -> void:
 	flashlight_screen_pos = screen_pos
 	flashlight_angle = angle_rad
-	if night_mode_enabled:
+	if night_factor > 0.01:
 		queue_redraw()
 
 func _process(delta: float) -> void:
@@ -98,16 +105,24 @@ func trigger_bite_pov_splatter(hit_dir: Vector2 = Vector2.ZERO, damage: float = 
 	
 	queue_redraw()
 
-func _draw_night_mode_darkness() -> void:
+func _draw_gradual_night_darkness(vp: Vector2) -> void:
+	# 1. Atmospheric Sunset/Dusk (warm amber-crimson) or Dawn (cold slate-blue) glaze during twilight transition
+	var twilight_bell := sin(clampf(night_factor, 0.0, 1.0) * PI)
+	if twilight_bell > 0.02:
+		var tint_col := Color(0.26, 0.09, 0.03, twilight_bell * 0.22) if is_dusk_phase else Color(0.06, 0.12, 0.24, twilight_bell * 0.20)
+		draw_rect(Rect2(Vector2.ZERO, vp), tint_col, true)
+	
+	# 2. Gradual darkness mask outside the player's directional flashlight cone
 	var origin := flashlight_screen_pos
 	var cone_half := 0.44 # ~50-degree tactical flashlight cone
-	var inner_r := 52.0   # Immediate body ambient awareness ring
-	var beam_len := 430.0 # Flashlight beam reach
-	var outer_r := 1600.0 # Covers entire viewport
-	var dark_col := Color(0.01, 0.01, 0.02, 0.96)
-	var penumbra_col := Color(0.01, 0.01, 0.02, 0.56)
+	var inner_r := lerpf(90.0, 52.0, night_factor) # Ambient awareness ring shrinks smoothly as night deepens
+	var beam_len := 430.0
+	var outer_r := 1600.0
+	var dark_alpha := 0.96 * night_factor
+	var dark_col := Color(0.01, 0.01, 0.02, dark_alpha)
+	var penumbra_col := Color(0.01, 0.01, 0.02, 0.56 * night_factor)
 	
-	# 1. Pitch-black 310-degree darkness shrouding everything outside the flashlight beam cone
+	# 310-degree darkness shrouding everything outside the flashlight beam cone
 	var start_a := flashlight_angle + cone_half
 	var end_a := flashlight_angle + TAU - cone_half
 	var dark_steps := 36
@@ -124,7 +139,7 @@ func _draw_night_mode_darkness() -> void:
 		])
 		draw_colored_polygon(quad, dark_col)
 	
-	# 2. Pitch-black darkness beyond the tip of the flashlight beam (distance > beam_len)
+	# Darkness beyond the tip of the flashlight beam (distance > beam_len)
 	var cone_start := flashlight_angle - cone_half
 	var cone_end := flashlight_angle + cone_half
 	var cone_steps := 10
@@ -141,7 +156,6 @@ func _draw_night_mode_darkness() -> void:
 		])
 		draw_colored_polygon(cap_quad, dark_col)
 		
-		# Range falloff fade near tip of flashlight beam (340px -> 430px)
 		var tip_fade_quad := PackedVector2Array([
 			origin + d0 * (beam_len * 0.78),
 			origin + d0 * beam_len,
@@ -150,7 +164,7 @@ func _draw_night_mode_darkness() -> void:
 		])
 		draw_colored_polygon(tip_fade_quad, penumbra_col)
 	
-	# 3. Soft penumbra feather wedges along left and right beam edges
+	# Soft penumbra feather wedges along left and right beam edges
 	var feather := 0.11
 	var left_outer := Vector2.from_angle(cone_start)
 	var left_inner := Vector2.from_angle(cone_start + feather)
@@ -170,30 +184,30 @@ func _draw_night_mode_darkness() -> void:
 		origin + right_outer * inner_r
 	]), penumbra_col)
 	
-	# 4. Warm halogen flashlight beam glow inside cone
+	# Warm halogen flashlight beam glow inside cone (brightens as night deepens)
 	var mid_dir := Vector2.from_angle(flashlight_angle)
 	draw_colored_polygon(PackedVector2Array([
 		origin + mid_dir * 16.0,
 		origin + left_inner * (beam_len * 0.85),
 		origin + mid_dir * (beam_len * 0.92),
 		origin + right_inner * (beam_len * 0.85)
-	]), Color(1.0, 0.95, 0.78, 0.075))
+	]), Color(1.0, 0.95, 0.78, 0.085 * night_factor))
 
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	if vp == Vector2.ZERO:
 		vp = Vector2(1280, 720)
 	
-	# 0. Pitch-Black Night Mode (Flashlight-Only Cone of Vision)
-	if night_mode_enabled:
-		_draw_night_mode_darkness()
+	# 0. Gradual Time-Based Day/Dusk/Night Cycle & Flashlight Cone
+	if night_factor > 0.01:
+		_draw_gradual_night_darkness(vp)
 	
 	# 1. Dark atmospheric horror border framing & corner shadows
 	var border_col := Color(0.01, 0.01, 0.02, 0.58)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(vp.x, 34)), border_col, true)
-	draw_rect(Rect2(Vector2(0, vp.y - 34), Vector2(vp.x, 34)), border_col, true)
+	draw_rect(Rect2(0, vp.y - 34, vp.x, 34), border_col, true)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(38, vp.y)), border_col, true)
-	draw_rect(Rect2(Vector2(vp.x - 38, 0), Vector2(38, vp.y)), border_col, true)
+	draw_rect(Rect2(vp.x - 38, 0, 38, vp.y), border_col, true)
 	
 	# 2. Immediate crimson bite shockwave border flash
 	if bite_flash_alpha > 0.01:

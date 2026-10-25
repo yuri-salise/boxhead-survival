@@ -75,11 +75,6 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 text = "2-PLAYER CO-OP (LAN / HOTSPOT)"
 
-[node name="NightModeButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=645128934]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-text = "NIGHT MODE (FLASHLIGHT ONLY): OFF [STANDARD]"
-
 [node name="BackButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=554123987]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2

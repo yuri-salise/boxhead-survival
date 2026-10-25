@@ -5,10 +5,15 @@ const SHADOW_VEC: Vector2 = Vector2(14.0, 18.0)
 
 var focus_position: Vector2 = Vector2(640.0, 360.0)
 var beacon_time: float = 0.0
+var night_factor: float = 0.0
 var chunk_cache: Dictionary = {}
 
 func set_focus_position(pos: Vector2) -> void:
 	focus_position = pos
+	queue_redraw()
+
+func set_night_factor(factor: float) -> void:
+	night_factor = clampf(factor, 0.0, 1.0)
 	queue_redraw()
 
 func get_chunk_coords(world_pos: Vector2) -> Vector2i:
@@ -138,30 +143,33 @@ func _draw_chunk(chunk: Dictionary, flicker: float) -> void:
 		for i in range(c.size() - 1):
 			draw_line(c[i], c[i + 1], Color(0.03, 0.03, 0.04, 0.85), 1.8)
 	
-	# 6. Props with Realistic Directional Cast Shadows
+	# 6. Props with Realistic Directional Cast Shadows (lengthening at sunset/dusk, glowing lamps at night)
+	var shadow_stretch := 1.0 + 0.55 * sin(night_factor * PI)
+	var dyn_shadow := SHADOW_VEC * shadow_stretch
+	var lamp_boost := 1.0 + night_factor * 1.35
 	var props: Array = chunk["props"]
 	for p in props:
 		var pos: Vector2 = p["pos"]
 		var kind: int = p["kind"]
 		if kind == 0:
 			# Rusted Biohazard Drum + elongated cast shadow
-			draw_circle(pos + SHADOW_VEC * 0.85, 14.0, Color(0.0, 0.0, 0.0, 0.38))
-			draw_circle(pos + SHADOW_VEC * 0.45, 13.5, Color(0.0, 0.0, 0.0, 0.50))
+			draw_circle(pos + dyn_shadow * 0.85, 14.0, Color(0.0, 0.0, 0.0, 0.38))
+			draw_circle(pos + dyn_shadow * 0.45, 13.5, Color(0.0, 0.0, 0.0, 0.50))
 			draw_circle(pos, 13.0, Color(0.36, 0.18, 0.12, 1.0))
 			draw_arc(pos, 13.0, 0.0, TAU, 20, Color(0.18, 0.10, 0.08, 1.0), 2.2)
 			draw_circle(pos + Vector2(-3, -3), 4.0, Color(0.68, 0.52, 0.14, 0.80))
 		elif kind == 1:
 			# Weathered Concrete Roadblock Barrier + directional polygon shadow
 			var b_rect := Rect2(pos - Vector2(26, 8), Vector2(52, 16))
-			var s_rect := Rect2(pos - Vector2(26, 8) + SHADOW_VEC * 0.75, Vector2(54, 18))
+			var s_rect := Rect2(pos - Vector2(26, 8) + dyn_shadow * 0.75, Vector2(54, 18))
 			draw_rect(s_rect, Color(0.0, 0.0, 0.0, 0.48), true)
 			draw_rect(b_rect, Color(0.24, 0.25, 0.27, 1.0), true)
 			draw_rect(b_rect, Color(0.12, 0.13, 0.15, 1.0), false, 2.0)
 			draw_line(pos - Vector2(20, 0), pos + Vector2(20, 0), Color(0.65, 0.20, 0.16, 0.75), 3.0)
 		else:
 			# Flickering Quarantine Lamp Post + long pole shadow + eerie crimson/amber light pool
-			draw_line(pos, pos + SHADOW_VEC * 1.9, Color(0.0, 0.0, 0.0, 0.52), 5.0)
-			draw_circle(pos, 52.0, Color(0.78, 0.18, 0.12, 0.08 * flicker))
-			draw_circle(pos, 20.0, Color(0.92, 0.25, 0.15, 0.16 * flicker))
+			draw_line(pos, pos + dyn_shadow * 1.9, Color(0.0, 0.0, 0.0, 0.52), 5.0)
+			draw_circle(pos, 52.0 + night_factor * 24.0, Color(0.78, 0.18, 0.12, 0.08 * flicker * lamp_boost))
+			draw_circle(pos, 20.0 + night_factor * 10.0, Color(0.92, 0.25, 0.15, 0.16 * flicker * lamp_boost))
 			draw_circle(pos, 6.0, Color(0.18, 0.20, 0.22, 1.0))
-			draw_circle(pos, 3.8, Color(1.0, 0.38, 0.20, 0.90 * flicker))
+			draw_circle(pos, 3.8, Color(1.0, 0.38, 0.20, clampf(0.90 * flicker * lamp_boost, 0.0, 1.0)))

@@ -11,7 +11,8 @@ class LevelSelectTestRunner extends Node:
 		assert(mode_scene != null, "Failed to load res://scenes/ui/mode_select.tscn")
 		var mode_ui = mode_scene.instantiate()
 		add_child(mode_ui)
-		assert(mode_ui.solo_button != null and mode_ui.coop_button != null and mode_ui.night_button != null, "ModeSelect buttons must exist")
+		assert(mode_ui.solo_button != null and mode_ui.coop_button != null and mode_ui.back_button != null, "ModeSelect buttons must exist")
+		assert(mode_ui.get_node_or_null("CenterContainer/ModePanel/ModeMargin/ModeVBox/NightModeButton") == null, "Manual NightModeButton must be removed (night is time-based)")
 		mode_ui.queue_free()
 		print("ModeSelect instantiation & controls: PASS")
 		
@@ -31,22 +32,16 @@ class LevelSelectTestRunner extends Node:
 		assert(lvl_ui.level_buttons[0].disabled == false, "Level 1 button must be enabled when unlocked_level == 1")
 		assert(lvl_ui.level_buttons[1].disabled == true, "Level 2 button must be disabled when unlocked_level == 1")
 		assert(lvl_ui.level_buttons[4].disabled == true, "Level 5 button must be disabled when unlocked_level == 1")
+		assert(lvl_ui.get_node_or_null("CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow/NightModeButton") == null, "Manual NightModeButton must be removed from LevelSelect")
 		
 		# 2. Complete Level 1 without getting bit -> unlocks Level 2 & UNTOUCHABLE medal
 		gs.complete_level(1, 480, 3, true, false)
 		lvl_ui.refresh_ui()
 		assert(lvl_ui.level_buttons[1].disabled == false, "Level 2 button must be enabled after completing Level 1")
 		assert("★ UNTOUCHABLE" in lvl_ui.achievements_label.text, "Achievements label must show unlocked ★ UNTOUCHABLE medal")
-		
-		# 3. Toggle Night Mode button in LevelSelect
-		assert(gs.night_mode_enabled == false, "Night mode starts false")
-		lvl_ui._on_night_mode_toggled()
-		assert(gs.night_mode_enabled == true, "Toggling NightModeButton must set night_mode_enabled=true")
-		assert("ON" in lvl_ui.night_button.text, "NightModeButton text must show ON")
-		print("LevelSelect locks, ★ UNTOUCHABLE medal display & Night Mode toggle: PASS")
+		print("LevelSelect locks, ★ UNTOUCHABLE medal display & dynamic sector time-of-day labels: PASS")
 		
 		gs.reset_progress()
-		gs.night_mode_enabled = false
 		gs.save_progress()
 		lvl_ui.queue_free()
 		gs.queue_free()

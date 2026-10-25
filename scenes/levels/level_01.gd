@@ -5,6 +5,7 @@ const ZombieScript = preload("res://scripts/zombie_basic.gd")
 
 @export var level_id: int = 1
 @export var force_night_mode: bool = false
+@export var day_night_cycle_duration: float = 64.0
 @export var zombie_scene: PackedScene = preload("res://scenes/actors/zombie_basic.tscn")
 @export var pickup_scene: PackedScene = preload("res://scenes/actors/pickup.tscn")
 @export var max_alive_zombies: int = 18
@@ -47,6 +48,9 @@ var total_spawned: int = 0
 var current_wave_num: int = 1
 var total_waves_count: int = 3
 var wave_remaining_count: int = 6
+var day_night_time: float = 0.0
+var current_night_factor: float = 0.0
+var current_time_phase_name: String = "DAYLIGHT"
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 func _ready() -> void:
@@ -131,13 +135,15 @@ func _ready() -> void:
 		level_controller.level_lost.connect(_on_level_lost)
 	
 	var gs := get_node_or_null("/root/GameState")
-	var initial_night := force_night_mode or (level_id == 5)
-	if gs:
-		if gs.get("night_mode_enabled") == true:
-			initial_night = true
-		if gs.has_signal("achievement_unlocked") and not gs.achievement_unlocked.is_connected(_on_achievement_unlocked):
-			gs.achievement_unlocked.connect(_on_achievement_unlocked)
-	set_night_mode_enabled(initial_night)
+	if gs and gs.has_signal("achievement_unlocked") and not gs.achievement_unlocked.is_connected(_on_achievement_unlocked):
+		gs.achievement_unlocked.connect(_on_achievement_unlocked)
+	
+	# Initialize dynamic per-sector starting time of day (gradually progresses through Day -> Dusk -> Night -> Dawn)
+	var start_phase: float = _get_initial_phase_for_level(level_id)
+	if force_night_mode:
+		start_phase = 0.45
+	day_night_time = start_phase * maxf(10.0, day_night_cycle_duration)
+	advance_day_night_cycle(0.0, true)
 	
 	if wave_director:
 		var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
@@ -190,9 +196,75 @@ func _get_preset_waves_for_level(lvl_id: int) -> Array[Dictionary]:
 		_:
 			return []
 
+func _get_initial_phase_for_level(lvl_id: int) -> float:
+	# Each sector begins at a progressive time of day and continuously cycles through Day -> Dusk -> Night -> Dawn
+	match lvl_id:
+		1:
+			return 0.08 # Afternoon Daylight -> gradually transitions into Sunset & Nightfall
+		2:
+			return 0.16 # Late Afternoon -> Golden Hour -> Dusk
+		3:
+			return 0.24 # Sunset / Dusk -> Nightfall approaching fast
+		4:
+			return 0.34 # Deep Twilight -> Nightfall
+		5:
+			return 0.45 # Midnight Blackout -> Pre-Dawn
+		_:
+			return 0.08
+
+func advance_day_night_cycle(delta: float, silent: bool = false) -> void:
+	var duration := maxf(10.0, day_night_cycle_duration)
+	day_night_time = fposmod(day_night_time + maxf(0.0, delta), duration)
+	var phase := day_night_time / duration # 0.0 = Noon, 0.25 = Sunset/Dusk, 0.50 = Midnight, 0.75 = Dawn
+	
+	# Smooth cosine wave (0.0 in daylight -> 0.5 at dusk -> 1.0 at midnight -> 0.5 at dawn -> 0.0 in daylight)
+	current_night_factor = clampf(0.5 - 0.5 * cos(phase * TAU), 0.0, 1.0)
+	var is_dusk_warming := (phase < 0.5)
+	
+	if is_instance_valid(horror_vignette):
+		if horror_vignette.has_method("set_night_factor"):
+			horror_vignette.set_night_factor(current_night_factor, is_dusk_warming)
+		elif horror_vignette.has_method("set_night_mode"):
+			horror_vignette.set_night_mode(current_night_factor >= 0.45)
+	
+	if is_instance_valid(arena_env) and arena_env.has_method("set_night_factor"):
+		arena_env.set_night_factor(current_night_factor)
+	
+	# Mark level_controller.night_mode_active once the player fights in significant darkness
+	if level_controller and current_night_factor >= 0.60:
+		level_controller.night_mode_active = true
+	
+	var next_phase_name := get_time_of_day_label()
+	if next_phase_name != current_time_phase_name:
+		var prev_phase := current_time_phase_name
+		current_time_phase_name = next_phase_name
+		_update_kills_display()
+		if not silent and is_instance_valid(player) and prev_phase != "":
+			if next_phase_name == "DUSK":
+				spawn_floating_text(player.global_position + Vector2(0, -64), "SUNSET — DUSK APPROACHING...", Color(0.96, 0.62, 0.24))
+			elif next_phase_name == "NIGHTFALL":
+				spawn_floating_text(player.global_position + Vector2(0, -64), "NIGHTFALL — FLASHLIGHT CONE ACTIVE", Color(0.95, 0.85, 0.35))
+			elif next_phase_name == "DAWN":
+				spawn_floating_text(player.global_position + Vector2(0, -64), "FIRST LIGHT — DAWN BREAKING...", Color(0.55, 0.82, 0.98))
+			elif next_phase_name == "DAYLIGHT":
+				spawn_floating_text(player.global_position + Vector2(0, -64), "DAYLIGHT RESTORED", Color(0.95, 0.95, 0.78))
+
+func get_time_of_day_label() -> String:
+	var duration := maxf(10.0, day_night_cycle_duration)
+	var phase := fposmod(day_night_time / duration, 1.0)
+	if current_night_factor < 0.24:
+		return "DAYLIGHT"
+	elif current_night_factor >= 0.65:
+		return "NIGHTFALL"
+	elif phase < 0.5:
+		return "DUSK"
+	else:
+		return "DAWN"
+
 func set_night_mode_enabled(enabled: bool) -> void:
-	if horror_vignette and horror_vignette.has_method("set_night_mode"):
-		horror_vignette.set_night_mode(enabled)
+	var duration := maxf(10.0, day_night_cycle_duration)
+	day_night_time = (0.5 * duration) if enabled else 0.0
+	advance_day_night_cycle(0.0, true)
 	if level_controller:
 		level_controller.night_mode_active = enabled
 
@@ -200,7 +272,8 @@ func _on_achievement_unlocked(_ach_id: String, title: String, _desc: String) -> 
 	if is_instance_valid(player):
 		spawn_floating_text(player.global_position + Vector2(0, -78), "★ ACHIEVEMENT: " + title + " ★", Color(1.0, 0.85, 0.22))
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	advance_day_night_cycle(delta)
 	if is_instance_valid(player):
 		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
 			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
@@ -568,7 +641,7 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 
 func _update_kills_display() -> void:
 	if kills_label:
-		kills_label.text = "WAVE " + str(current_wave_num) + "/" + str(total_waves_count) + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
+		kills_label.text = "WAVE " + str(current_wave_num) + "/" + str(total_waves_count) + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
 
 func _on_pause_button_pressed() -> void:
 	if pause_menu and pause_menu.has_method("open_pause_menu"):
@@ -610,8 +683,3 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_R and death_panel.visible:
 			_on_restart_pressed()
-		elif event.keycode == KEY_N and horror_vignette:
-			var next_night := not bool(horror_vignette.get("night_mode_enabled"))
-			set_night_mode_enabled(next_night)
-			if is_instance_valid(player):
-				spawn_floating_text(player.global_position + Vector2(0, -56), "NIGHT MODE (FLASHLIGHT ONLY): " + ("ON" if next_night else "OFF"), Color(0.95, 0.85, 0.35))
