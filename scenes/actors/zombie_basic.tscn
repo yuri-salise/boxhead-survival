@@ -1,0 +1,44 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/zombie_basic.gd" id="1_k04rd"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_pan8r"]
+radius = 16.0
+
+[node name="ZombieBasic" type="CharacterBody2D" unique_id=1626866191]
+collision_layer = 2
+collision_mask = 9
+script = ExtResource("1_k04rd")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1129998842]
+shape = SubResource("CircleShape2D_pan8r")
+
+[node name="Visuals" type="Node2D" parent="." unique_id=1955096770]
+
+[node name="Torso" type="ColorRect" parent="Visuals" unique_id=68395579]
+offset_left = -12.0
+offset_top = -14.0
+offset_right = 12.0
+offset_bottom = 14.0
+color = Color(0.36, 0.4, 0.34, 1)
+
+[node name="Head" type="ColorRect" parent="Visuals" unique_id=153827569]
+offset_left = -7.0
+offset_top = -7.0
+offset_right = 7.0
+offset_bottom = 7.0
+color = Color(0.56, 0.62, 0.52, 1)
+
+[node name="LeftHand" type="ColorRect" parent="Visuals" unique_id=1800482424]
+offset_left = 8.0
+offset_top = -12.0
+offset_right = 18.0
+offset_bottom = -6.0
+color = Color(0.55, 0.18, 0.18, 1)
+
+[node name="RightHand" type="ColorRect" parent="Visuals" unique_id=1596630782]
+offset_left = 8.0
+offset_top = 6.0
+offset_right = 18.0
+offset_bottom = 12.0
+color = Color(0.55, 0.18, 0.18, 1)
