@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_ru62r"]
+[ext_resource type="Script" path="res://scripts/weapon_controller.gd" id="2_ktjr4"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_7wueq"]
+radius = 18.0
+
+[node name="Player" type="CharacterBody2D" unique_id=59910373]
+collision_layer = 8
+collision_mask = 3
+script = ExtResource("1_ru62r")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=247064278]
+shape = SubResource("CircleShape2D_7wueq")
+
+[node name="Visuals" type="Node2D" parent="." unique_id=990471532]
+
+[node name="Torso" type="ColorRect" parent="Visuals" unique_id=885119640]
+offset_left = -12.0
+offset_top = -14.0
+offset_right = 12.0
+offset_bottom = 14.0
+color = Color(0.28, 0.33, 0.26, 1)
+
+[node name="Head" type="ColorRect" parent="Visuals" unique_id=1970960512]
+offset_left = -7.0
+offset_top = -7.0
+offset_right = 7.0
+offset_bottom = 7.0
+color = Color(0.82, 0.72, 0.62, 1)
+
+[node name="Headband" type="ColorRect" parent="Visuals" unique_id=564008137]
+offset_left = -7.0
+offset_top = -7.0
+offset_right = 7.0
+offset_bottom = -2.0
+color = Color(0.65, 0.18, 0.18, 1)
+
+[node name="Gun" type="ColorRect" parent="Visuals" unique_id=603138118]
+offset_left = 8.0
+offset_top = 1.0
+offset_right = 26.0
+offset_bottom = 7.0
+color = Color(0.14, 0.15, 0.17, 1)
+
+[node name="MuzzlePoint" type="Marker2D" parent="Visuals" unique_id=1089350347]
+position = Vector2(26, 4)
+
+[node name="WeaponController" type="Node" parent="." unique_id=1354235684]
+script = ExtResource("2_ktjr4")
