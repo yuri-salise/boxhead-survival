@@ -458,6 +458,9 @@ func _on_player_bitten(hit_dir: Vector2, damage: float) -> void:
 		horror_vignette.trigger_bite_pov_splatter(hit_dir, damage)
 
 func _on_grenade_detonated(world_pos: Vector2, radius: float, damage: float) -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_explosion")
 	spawn_blood_decal(world_pos, Vector2.RIGHT, 7, 1.35, true) # Scorch crater + debris
 	spawn_floating_text(world_pos, "FRAG BLAST!", Color(1.0, 0.62, 0.20))
 	if is_instance_valid(player) and player.has_method("add_camera_shake"):
@@ -517,6 +520,9 @@ func _handle_all_players_dead() -> void:
 		_on_level_lost(level_id, score_count, kills_count, "OUTPOST OVERRUN")
 
 func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_wave_start")
 	current_wave_num = wave_num
 	total_waves_count = total_waves
 	wave_remaining_count = wave_total_enemies
@@ -557,6 +563,10 @@ func _on_all_waves_completed() -> void:
 		level_controller.on_all_waves_completed(hp_ratio)
 
 func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_victory")
+	
 	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_match_result.rpc(true, lvl, score, kills, stars, "")
 	
@@ -572,6 +582,10 @@ func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
 		result_screen.show_victory(lvl, score, kills, stars, achs)
 
 func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_defeat")
+	
 	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_match_result.rpc(false, lvl, score, kills, 0, reason)
 	

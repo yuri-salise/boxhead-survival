@@ -31,6 +31,11 @@ var is_fullscreen: bool = false
 func _ready() -> void:
 	_hide_all_dialogs()
 	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		sfx_enabled = bool(audio_mgr.sfx_enabled)
+		music_enabled = bool(audio_mgr.music_enabled)
+	
 	# Wire main menu buttons
 	play_button.pressed.connect(_on_play_button_pressed)
 	settings_button.pressed.connect(_on_settings_button_pressed)
@@ -90,10 +95,18 @@ func _on_start_level_pressed() -> void:
 
 func _on_sfx_toggle_pressed() -> void:
 	sfx_enabled = not sfx_enabled
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.set_sfx_enabled(sfx_enabled)
+		if sfx_enabled:
+			audio_mgr.play_sfx("sfx_pistol")
 	_update_settings_ui()
 
 func _on_music_toggle_pressed() -> void:
 	music_enabled = not music_enabled
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.set_music_enabled(music_enabled)
 	_update_settings_ui()
 
 func _on_screen_mode_toggle_pressed() -> void:

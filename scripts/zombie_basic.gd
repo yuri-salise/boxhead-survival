@@ -86,6 +86,7 @@ const ZOMBIE_CONFIGS: Dictionary = {
 @export var attack_damage: float = 15.0
 @export var attack_cooldown: float = 0.8
 @export var projectile_scene: PackedScene = preload("res://scenes/actors/projectile.tscn")
+@export var blood_splatter_scene: PackedScene = preload("res://scenes/effects/blood_splatter.tscn")
 
 var current_health: float = 50.0
 var is_dead: bool = false
@@ -222,6 +223,9 @@ func _trigger_witch_enrage() -> void:
 		return
 	is_enraged = true
 	speed = 305.0
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_witch")
 	witch_startled.emit(self)
 
 func _fire_acid_spit(dir: Vector2) -> void:
@@ -251,6 +255,10 @@ func try_attack_target(target: Node2D) -> bool:
 	
 	can_attack = false
 	attack_timer = attack_cooldown
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_bite")
 	
 	if target.has_method("take_damage_from"):
 		target.take_damage_from(attack_damage, global_position)
@@ -306,6 +314,10 @@ func take_damage(amount: float) -> void:
 	
 	var prev_ratio := current_health / maxf(1.0, max_health)
 	hurt_flash_timer = 0.10
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_zombie_hit")
+	
 	if zombie_type == ZombieType.WITCH and not is_enraged:
 		_trigger_witch_enrage()
 	
@@ -325,6 +337,12 @@ func take_damage(amount: float) -> void:
 	# Emit active blood splash on hit
 	var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
 	blood_splashed.emit(global_position, last_hit_dir, s_type, 0.85)
+	if blood_splatter_scene and get_parent():
+		var b_fx = blood_splatter_scene.instantiate()
+		b_fx.global_position = global_position
+		var b_col := Color(0.45, 0.82, 0.20) if zombie_type == ZombieType.BOOMER else Color(0.68, 0.08, 0.08)
+		b_fx.setup(last_hit_dir, b_col, 8)
+		get_parent().add_child(b_fx)
 	
 	if current_health <= 0.0:
 		die()
@@ -336,6 +354,13 @@ func die() -> void:
 	velocity = Vector2.ZERO
 	if collision_shape:
 		collision_shape.set_deferred("disabled", true)
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		if zombie_type == ZombieType.BOOMER:
+			audio_mgr.play_sfx("sfx_boomer")
+		else:
+			audio_mgr.play_sfx("sfx_zombie_death")
 	
 	var sc := get_scale_factor()
 	var skin := get_skin_color()

@@ -31,3 +31,4 @@ This document tracks all external, licensed, and original assets and technologie
 | **Project UI Theme & Layout** | Dead Block: Survival Team | MIT License | Custom procedural UI themes, styleboxes, layouts, and menus. |
 | **Scene Templates** | Dead Block: Survival Team | MIT License | Initial project architecture, Main Menu, Settings, Credits, and Arena scenes. |
 | **Project Icon** (`icon.svg`) | Godot Engine / Project Team | MIT License | Default engine icon used for early development testing. |
+| **Procedural SFX Suite** (`assets/audio/*.wav`) | Dead Block: Survival Team | MIT License | Original 16-bit 22kHz PCM sound effects for firearms (Pistol, Shotgun, SMG, Rifle, Magnum, Dry Fire), special infected (Groan, Hit, Death, Bite, Boomer, Witch), survivor actions (Hurt, Dash, Frag Explosion, Supply Pickup), and mission events (Wave Horn, Victory, Defeat). |

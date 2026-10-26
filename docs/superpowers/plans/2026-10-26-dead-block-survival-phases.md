@@ -292,13 +292,13 @@
 - Produces: Left virtual stick -> `move_vector: Vector2`, Right aim pad -> `aim_direction: Vector2`, `is_firing: bool`.
 - Responsive: Only visible on mobile (`OS.has_feature("mobile")`) or when forced in test mode.
 
-- [ ] **Step 1: Write test `tests/test_touch_controls.gd`**
+- [x] **Step 1: Write test `tests/test_touch_controls.gd`**
   Simulate touch events on left stick and right aim zone; verify corresponding move and aim vectors are normalized and bounded.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Implement `touch_controls.gd` with touch area clamps, deadzones, and thumb-friendly sizing (64dp minimum)**
-- [ ] **Step 4: Integrate into player actor without breaking desktop WASD/Mouse input**
-- [ ] **Step 5: Run test to verify pass**
-- [ ] **Step 6: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Implement `touch_controls.gd` with touch area clamps, deadzones, and thumb-friendly sizing (64dp minimum)**
+- [x] **Step 4: Integrate into player actor without breaking desktop WASD/Mouse input**
+- [x] **Step 5: Run test to verify pass**
+- [x] **Step 6: Commit**
   `git commit -m "feat(mobile): add dual virtual stick touch controls and unified input abstraction"`
 
 ---
@@ -315,12 +315,12 @@
 - Produces: `play_sfx(sound_name)`, `play_music(track_name)`, `set_sfx_enabled(bool)`, `set_music_enabled(bool)`.
 - Persists: Audio preferences via `GameState`.
 
-- [ ] **Step 1: Write test `tests/test_audio_manager.gd`**
+- [x] **Step 1: Write test `tests/test_audio_manager.gd`**
   Verify toggling sound and music updates AudioServer bus volume or muting, and setting persists across simulate restart.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Implement `AudioManager` and link with Settings menu**
-- [ ] **Step 4: Run test to verify pass**
-- [ ] **Step 5: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Implement `AudioManager` and link with Settings menu**
+- [x] **Step 4: Run test to verify pass**
+- [x] **Step 5: Commit**
   `git commit -m "feat(audio): implement AudioManager autoload and persistent bus volume settings"`
 
 ---
@@ -403,10 +403,10 @@
 - Modify: [`docs/CREDITS.md`](file:///c:/Users/Yuri/Desktop/Game%20Dev/boxhead-survival/docs/CREDITS.md) (document all sound sources and licenses)
 - Test: `tests/test_audio_playback.gd`
 
-- [ ] **Step 1: Add sound assets and update `docs/CREDITS.md`**
-- [ ] **Step 2: Wire audio triggers into `WeaponController`, `ZombieBasic`, `Player`, and `LevelController`**
-- [ ] **Step 3: Verify all audio hooks trigger without missing resource errors**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Add sound assets and update `docs/CREDITS.md`**
+- [x] **Step 2: Wire audio triggers into `WeaponController`, `ZombieBasic`, `Player`, and `LevelController`**
+- [x] **Step 3: Verify all audio hooks trigger without missing resource errors**
+- [x] **Step 4: Commit**
   `git commit -m "feat(audio): add sound effects for combat, zombies, and match transitions"`
 
 ---
@@ -419,10 +419,10 @@
 - Modify: [`scripts/player.gd`](file:///c:/Users/Yuri/Desktop/Game%20Dev/boxhead-survival/scripts/player.gd) and [`scripts/zombie_basic.gd`](file:///c:/Users/Yuri/Desktop/Game%20Dev/boxhead-survival/scripts/zombie_basic.gd)
 - Test: `tests/test_vfx_lifecycle.gd`
 
-- [ ] **Step 1: Write test verifying VFX nodes auto-free after emission**
-- [ ] **Step 2: Build lightweight 2D particles / sprite flashes optimized for mobile fill rate**
-- [ ] **Step 3: Verify performance and absence of memory leaks**
-- [ ] **Step 4: Commit**
+- [x] **Step 1: Write test verifying VFX nodes auto-free after emission**
+- [x] **Step 2: Build lightweight 2D particles / sprite flashes optimized for mobile fill rate**
+- [x] **Step 3: Verify performance and absence of memory leaks**
+- [x] **Step 4: Commit**
   `git commit -m "feat(vfx): add muzzle flashes and blood impact decals"`
 
 ---

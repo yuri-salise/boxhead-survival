@@ -88,12 +88,19 @@ func _ready() -> void:
 	if weapon_controller and weapon_controller.has_signal("shot_fired"):
 		weapon_controller.shot_fired.connect(_on_weapon_shot_fired)
 
+var muzzle_flash_scene: PackedScene = preload("res://scenes/effects/muzzle_flash.tscn")
+
 func add_camera_shake(intensity: float) -> void:
 	camera_shake_strength = minf(18.0, camera_shake_strength + intensity)
 
 func _on_weapon_shot_fired(_proj: Node2D) -> void:
 	muzzle_flash_timer = 0.06
 	add_camera_shake(2.2)
+	if muzzle_flash_scene and get_parent():
+		var flash := muzzle_flash_scene.instantiate() as Node2D
+		flash.global_position = get_muzzle_position()
+		flash.rotation = visuals.rotation if visuals else 0.0
+		get_parent().add_child(flash)
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
@@ -275,6 +282,10 @@ func try_dash(move_vec: Vector2 = Vector2.ZERO, aim_pos: Vector2 = Vector2.ZERO)
 	dash_time_left = dash_duration
 	dash_cooldown_left = dash_cooldown
 	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_dash")
+	
 	if move_vec.length() > 0.1:
 		dash_direction = move_vec.normalized()
 	elif aim_pos != Vector2.ZERO and aim_pos != global_position:
@@ -298,6 +309,10 @@ func try_throw_grenade(target_pos: Vector2) -> bool:
 	return true
 
 func apply_pickup(pickup_type: String) -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_pickup")
+	
 	match pickup_type:
 		"MEDKIT":
 			heal(35.0)
@@ -349,6 +364,9 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 	
 	hurt_flash_timer = 0.14
 	add_camera_shake(9.5)
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_player_hurt")
 	var remaining_dmg := amount
 	
 	# Kevlar armor absorbs 70% of damage while active
