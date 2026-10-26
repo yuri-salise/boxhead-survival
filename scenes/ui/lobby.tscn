@@ -1,0 +1,177 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/lobby.gd" id="1_lobgd"]
+[ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_bebas"]
+[ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_elite"]
+
+[node name="Lobby" type="Control" unique_id=987123456]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lobgd")
+
+[node name="Background" type="ColorRect" parent="." unique_id=887123455]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.06, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=787123454]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="LobbyPanel" type="PanelContainer" parent="CenterContainer" unique_id=687123453]
+custom_minimum_size = Vector2(880, 620)
+layout_mode = 2
+
+[node name="LobbyMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel" unique_id=587123452]
+layout_mode = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 22
+
+[node name="LobbyVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin" unique_id=487123451]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=387123450]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
+text = "SURVIVOR CO-OP LOBBY"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=287123449]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.55, 0.22, 1)
+text = "[ 2-PLAYER LAN / MOBILE HOTSPOT PROTOCOL ]"
+horizontal_alignment = 1
+
+[node name="LocalIpLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123448]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.40, 0.75, 0.95, 1)
+text = "YOUR LOCAL IP(S):  DETECTING..."
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="HSeparator1" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=977123447]
+layout_mode = 2
+
+[node name="HostRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=877123446]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="HostLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostRow" unique_id=777123445]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+text = "HOST SESSION:"
+
+[node name="HostButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostRow" unique_id=677123444]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "HOST CO-OP MATCH (BECOME HOST)"
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=577123443]
+layout_mode = 2
+
+[node name="JoinRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=477123442]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="JoinLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=377123441]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+text = "JOIN SESSION:"
+
+[node name="IpInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=277123440]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Enter Host IP (e.g. 192.168.1.100)"
+
+[node name="PortInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=177123439]
+custom_minimum_size = Vector2(80, 48)
+layout_mode = 2
+text = "7777"
+placeholder_text = "7777"
+
+[node name="JoinButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=966123438]
+custom_minimum_size = Vector2(180, 48)
+layout_mode = 2
+text = "CONNECT TO HOST"
+
+[node name="HSeparator3" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=866123437]
+layout_mode = 2
+
+[node name="SectorRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=766123436]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SectorLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow" unique_id=666123435]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+text = "TARGET SECTOR:"
+
+[node name="SectorOption" type="OptionButton" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow" unique_id=566123434]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=466123433]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.85, 0.85, 0.88, 1)
+text = "[ STATUS: READY TO HOST OR JOIN ]"
+horizontal_alignment = 1
+
+[node name="PlayersLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=366123432]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
+text = "SURVIVORS READY: 0 / 2"
+horizontal_alignment = 1
+
+[node name="HSeparator4" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=266123431]
+layout_mode = 2
+
+[node name="ActionRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=166123430]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="StartButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow" unique_id=955123429]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+size_flags_horizontal = 3
+disabled = true
+text = "WAITING FOR 2ND SURVIVOR..."
+
+[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow" unique_id=855123428]
+custom_minimum_size = Vector2(220, 52)
+layout_mode = 2
+text = "RETURN TO MENU"

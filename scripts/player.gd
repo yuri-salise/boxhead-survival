@@ -16,6 +16,9 @@ signal player_died()
 @export var dash_speed: float = 760.0
 @export var dash_duration: float = 0.18
 @export var dash_cooldown: float = 1.40
+@export var peer_id: int = 1
+@export var player_index: int = 1
+@export var is_coop_mode: bool = false
 
 var current_health: float = 100.0
 var current_armor: float = 0.0
@@ -51,6 +54,13 @@ var touch_controls: Control = null
 @onready var muzzle_marker: Marker2D = $Visuals/MuzzlePoint
 @onready var weapon_controller: Node = $WeaponController
 
+func is_local_player() -> bool:
+	if not is_coop_mode:
+		return true
+	if multiplayer and multiplayer.has_multiplayer_peer():
+		return multiplayer.get_unique_id() == peer_id
+	return peer_id == 1
+
 func _ready() -> void:
 	current_health = max_health
 	is_dead = false
@@ -63,7 +73,11 @@ func _ready() -> void:
 		player_camera.position_smoothing_enabled = true
 		player_camera.position_smoothing_speed = 8.5
 		add_child(player_camera)
-	player_camera.make_current()
+	
+	if is_local_player():
+		player_camera.make_current()
+	else:
+		player_camera.enabled = false
 	
 	# Hide legacy blocky ColorRects inside Visuals so our detailed custom _draw() renders cleanly
 	if visuals:
@@ -121,7 +135,11 @@ func _physics_process(delta: float) -> void:
 	var aim_pos: Vector2
 	var shooting: bool
 	
-	if input_override_enabled:
+	if is_coop_mode and not is_local_player():
+		move_vec = override_move_vec
+		aim_pos = override_aim_pos
+		shooting = override_is_shooting
+	elif input_override_enabled:
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting
@@ -151,6 +169,9 @@ func _physics_process(delta: float) -> void:
 		# Dash trigger on Space or Shift
 		if Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT):
 			try_dash(move_vec, aim_pos)
+		
+		if is_coop_mode and is_local_player() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() != 1:
+			sync_input_to_host.rpc_id(1, move_vec, aim_pos, shooting)
 	
 	# Handle active dash or standard movement
 	if is_dashing:
@@ -182,10 +203,41 @@ func _physics_process(delta: float) -> void:
 			var muzzle_global := get_muzzle_position()
 			weapon_controller.try_fire(muzzle_global, aim_dir, self)
 	
+	if is_coop_mode and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		sync_state_to_peers.rpc(global_position, visuals.rotation if visuals else 0.0, velocity, current_health, current_armor, weapon_controller.current_weapon_id if weapon_controller else "PISTOL")
+	
 	queue_redraw()
 
+@rpc("any_peer", "call_local", "unreliable")
+func sync_input_to_host(p_move: Vector2, p_aim: Vector2, p_shooting: bool) -> void:
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != peer_id:
+		return
+	input_override_enabled = true
+	override_move_vec = p_move
+	override_aim_pos = p_aim
+	override_is_shooting = p_shooting
+
+@rpc("authority", "call_remote", "unreliable")
+func sync_state_to_peers(p_pos: Vector2, p_rot: float, p_vel: Vector2, p_hp: float, p_ap: float, p_wep: String) -> void:
+	if is_local_player():
+		current_health = p_hp
+		current_armor = p_ap
+		return
+	global_position = p_pos
+	if visuals:
+		visuals.rotation = p_rot
+	velocity = p_vel
+	current_health = p_hp
+	current_armor = p_ap
+	if weapon_controller and weapon_controller.current_weapon_id != p_wep:
+		if weapon_controller.has_method("unlock_or_add_weapon"):
+			weapon_controller.unlock_or_add_weapon(p_wep)
+		else:
+			weapon_controller.equip_weapon(p_wep)
+
 func _unhandled_input(event: InputEvent) -> void:
-	if is_dead or input_override_enabled:
+	if is_dead or input_override_enabled or not is_local_player():
 		return
 	
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -383,8 +435,9 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(-5 + leg_stride, -12), Vector2(10, 6)), Color(0.14, 0.13, 0.12, 1.0), true)
 	draw_rect(Rect2(Vector2(-5 - leg_stride, 6), Vector2(10, 6)), Color(0.14, 0.13, 0.12, 1.0), true)
 	
-	# 3. Survivor Shoulders & Weathered Field Jacket
-	var jacket_col := Color(0.28, 0.34, 0.24, 1.0) if hurt_flash_timer <= 0.0 else Color(0.92, 0.25, 0.25, 1.0)
+	# 3. Survivor Shoulders & Weathered Field Jacket (Olive Slate for P1, Navy Charcoal for P2)
+	var base_jacket := Color(0.28, 0.34, 0.24, 1.0) if player_index == 1 else Color(0.22, 0.27, 0.38, 1.0)
+	var jacket_col := base_jacket if hurt_flash_timer <= 0.0 else Color(0.92, 0.25, 0.25, 1.0)
 	var shoulder_pts := PackedVector2Array([
 		Vector2(-10, -15),
 		Vector2(7, -14),
@@ -446,13 +499,20 @@ func _draw() -> void:
 		draw_circle(Vector2(31, 3), 5.0, Color(1.0, 0.98, 0.85, 0.95))
 	
 	# 6. Survivor Head, Bandana & Cap
-	# Trailing red bandana knot
-	draw_line(Vector2(-8, -2), Vector2(-15, -6 - sin(walk_cycle) * 2.0), Color(0.72, 0.16, 0.16, 1.0), 3.0)
-	draw_line(Vector2(-8, 2), Vector2(-15, 5 + cos(walk_cycle) * 2.0), Color(0.72, 0.16, 0.16, 1.0), 2.5)
+	var bandana_col := Color(0.75, 0.16, 0.16, 1.0) if player_index == 1 else Color(0.20, 0.55, 0.88, 1.0)
+	# Trailing bandana knot
+	draw_line(Vector2(-8, -2), Vector2(-15, -6 - sin(walk_cycle) * 2.0), bandana_col.darkened(0.12), 3.0)
+	draw_line(Vector2(-8, 2), Vector2(-15, 5 + cos(walk_cycle) * 2.0), bandana_col.darkened(0.12), 2.5)
 	# Head skin & hair
 	draw_circle(Vector2(0, 0), 8.5, Color(0.84, 0.70, 0.58, 1.0))
 	draw_arc(Vector2(-1, 0), 8.2, PI * 0.55, PI * 1.45, 14, Color(0.18, 0.14, 0.11, 1.0), 3.5)
-	# Crimson Survivor Bandana across forehead
-	draw_arc(Vector2(0, 0), 8.4, -PI * 0.65, PI * 0.65, 14, Color(0.75, 0.16, 0.16, 1.0), 3.2)
+	# Survivor Bandana across forehead
+	draw_arc(Vector2(0, 0), 8.4, -PI * 0.65, PI * 0.65, 14, bandana_col, 3.2)
 	
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	
+	# Overhead squad tag in co-op mode
+	if is_coop_mode:
+		var tag_txt := "SURVIVOR 1 (HOST)" if player_index == 1 else "SURVIVOR 2 (PARTNER)"
+		var tag_col := Color(0.95, 0.45, 0.40) if player_index == 1 else Color(0.40, 0.75, 0.95)
+		draw_string(ThemeDB.fallback_font, Vector2(-60, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 120, 11, tag_col)

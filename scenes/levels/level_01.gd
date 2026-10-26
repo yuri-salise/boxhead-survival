@@ -51,6 +51,7 @@ var wave_remaining_count: int = 6
 var day_night_time: float = 0.0
 var current_night_factor: float = 0.0
 var current_time_phase_name: String = "DAYLIGHT"
+var player2: CharacterBody2D = null
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 func _ready() -> void:
@@ -107,6 +108,41 @@ func _ready() -> void:
 		_on_player_health_changed(player.current_health, player.max_health)
 		_on_player_armor_changed(player.current_armor, player.max_armor)
 		_refresh_weapon_hud()
+	
+	# Initialize 2-player co-op if connected via NetworkManager
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and player:
+		player.is_coop_mode = true
+		player.peer_id = 1
+		player.player_index = 1
+		
+		var client_id := 2
+		for p in net_mgr.connected_peers:
+			if p != 1:
+				client_id = p
+				break
+		
+		var player_scene: PackedScene = load("res://scenes/actors/player.tscn")
+		player2 = player_scene.instantiate()
+		player2.name = "Player2"
+		player2.position = player.position + Vector2(70, 0)
+		player2.is_coop_mode = true
+		player2.peer_id = client_id
+		player2.player_index = 2
+		add_child(player2)
+		player2.add_to_group("players")
+		
+		player2.player_died.connect(_on_player2_died)
+		if player2.has_signal("player_bitten"):
+			player2.player_bitten.connect(_on_player_bitten)
+		player2.pickup_collected.connect(func(msg, col): _on_player_pickup_collected(msg, col))
+		player2.grenade_detonated.connect(_on_grenade_detonated)
+		
+		if not net_mgr.peer_disconnected.is_connected(_on_coop_peer_disconnected):
+			net_mgr.peer_disconnected.connect(_on_coop_peer_disconnected)
+		if not net_mgr.server_disconnected.is_connected(_on_coop_server_disconnected):
+			net_mgr.server_disconnected.connect(_on_coop_server_disconnected)
 	
 	if pause_button:
 		pause_button.pressed.connect(_on_pause_button_pressed)
@@ -451,6 +487,25 @@ func _apply_aoe_explosion(world_pos: Vector2, radius: float, damage: float, can_
 			player.take_damage(damage * 0.75)
 
 func _on_player_died() -> void:
+	if _check_all_players_dead():
+		_handle_all_players_dead()
+	else:
+		if is_instance_valid(player):
+			spawn_floating_text(player.global_position, "! SURVIVOR 1 INCAPACITATED !", Color(1.0, 0.25, 0.20))
+
+func _on_player2_died() -> void:
+	if _check_all_players_dead():
+		_handle_all_players_dead()
+	else:
+		if is_instance_valid(player2):
+			spawn_floating_text(player2.global_position, "! SURVIVOR 2 INCAPACITATED !", Color(1.0, 0.25, 0.20))
+
+func _check_all_players_dead() -> bool:
+	var p1_dead: bool = (not is_instance_valid(player) or player.is_dead)
+	var p2_dead: bool = (not is_instance_valid(player2) or player2.is_dead)
+	return p1_dead and p2_dead
+
+func _handle_all_players_dead() -> void:
 	if spawn_timer:
 		spawn_timer.stop()
 	if wave_director and wave_director.has_method("stop_waves"):
@@ -502,6 +557,9 @@ func _on_all_waves_completed() -> void:
 		level_controller.on_all_waves_completed(hp_ratio)
 
 func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
+	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_match_result.rpc(true, lvl, score, kills, stars, "")
+	
 	var achs: Array = []
 	if level_controller and level_controller.get("last_unlocked_achievements") != null:
 		achs = level_controller.last_unlocked_achievements.duplicate()
@@ -514,6 +572,9 @@ func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
 		result_screen.show_victory(lvl, score, kills, stars, achs)
 
 func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
+	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_match_result.rpc(false, lvl, score, kills, 0, reason)
+	
 	if death_panel:
 		death_panel.visible = true
 		if death_kills_label:
@@ -524,6 +585,27 @@ func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 		# while keeping death_panel.visible = true if ResultScreen is absent
 		if death_panel:
 			death_panel.modulate.a = 0.0
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_match_result(is_victory: bool, lvl: int, score: int, kills: int, stars: int, reason: String) -> void:
+	if is_victory:
+		_on_level_won(lvl, score, kills, stars)
+	else:
+		_on_level_lost(lvl, score, kills, reason)
+
+func _on_coop_peer_disconnected(id: int) -> void:
+	if is_instance_valid(player2) and player2.peer_id == id:
+		if is_instance_valid(player):
+			spawn_floating_text(player.global_position, "CO-OP SURVIVOR DISCONNECTED", Color(1.0, 0.65, 0.25))
+		player2.queue_free()
+		player2 = null
+
+func _on_coop_server_disconnected() -> void:
+	get_tree().paused = false
+	if ResourceLoader.exists("res://scenes/ui/lobby.tscn"):
+		get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn")
+	else:
+		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
 func _on_next_level_requested(next_lvl: int) -> void:
 	get_tree().paused = false
