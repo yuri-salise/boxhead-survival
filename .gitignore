@@ -1,22 +1,156 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
+# ==============================================================================
+# Godot 4.x - Production Git Ignore Configuration
+# Project: Dead Block: Survival (Godot 4.x Standard Edition / GDScript)
+# Targets: Android (Primary), Desktop (Windows / macOS / Linux)
+# ==============================================================================
 
-# Exported binaries and packages
+# ------------------------------------------------------------------------------
+# Godot Engine Caches and Temporary Files
+# ------------------------------------------------------------------------------
+# Godot 4.x cache, imported binary assets, and editor state
+.godot/
+
+# Godot 3.x legacy import directory (for migration safety)
+.import/
+
+# Godot binary imported translations (source .po / .csv files should be tracked)
+*.translation
+
+# Godot editor temporary files, crash dumps, and engine logs
+project.godot*.tmp
+godot.log
+crash.*.log
+*.log
+*.tmp
+*.temp
+*.bak
+
+# ------------------------------------------------------------------------------
+# Export Presets & Sensitive Credentials
+# NOTE: export_presets.cfg is tracked for project presets, but keystores,
+# credentials, and local export overrides must NEVER be committed.
+# ------------------------------------------------------------------------------
+*.keystore
+*.jks
+local.properties
+.export_credentials.cfg
+
+# ------------------------------------------------------------------------------
+# Android Build & Export Artifacts
+# ------------------------------------------------------------------------------
+/android/
+**/android/build/
+**/android/.gradle/
+**/android/captures/
+**/android/assets/
+.gradle/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# ------------------------------------------------------------------------------
+# iOS / Apple Export Artifacts
+# ------------------------------------------------------------------------------
+**/ios/build/
+*.ipa
+*.xcarchive
+*.dSYM/
+*.dSYM.zip
+
+# ------------------------------------------------------------------------------
+# Desktop & Web Binaries / Export Packages
+# ------------------------------------------------------------------------------
 /build/
 /builds/
 /bin/
-*.apk
-*.aab
+/dist/
+/out/
 *.exe
+*.bin
+*.pck
+*.tpk
 *.zip
+*.tar.gz
+*.7z
+*.app/
+*.dmg
+*.pkg
+*.so
+*.dylib
+*.dll
+*.wasm
+*.html
+*.js
 
-# Mono / C# (if ever generated)
+# ------------------------------------------------------------------------------
+# Mono / .NET / C# (Safety fallback if opened in C# tools)
+# ------------------------------------------------------------------------------
 .mono/
 data_*/
 mono_crash.*.json
+*.csproj
+*.sln
 
-# System and OS files
-.DS_Store
+# ------------------------------------------------------------------------------
+# IDEs and Code Editors
+# ------------------------------------------------------------------------------
+# Visual Studio Code: ignore editor state but keep shared configurations if present
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains (Rider, CLion, IDEA)
+.idea/
+*.iml
+cmake-build-*/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim / Emacs
+*.swp
+*.swo
+*~
+.#*
+\#*\#
+
+# ------------------------------------------------------------------------------
+# Operating System Artifacts
+# ------------------------------------------------------------------------------
+# Windows
 Thumbs.db
-*.tmp
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Linux
+.directory
+.Trash-*
