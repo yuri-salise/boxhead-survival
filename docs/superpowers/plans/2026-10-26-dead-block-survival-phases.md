@@ -338,13 +338,13 @@
 - Produces: `host_game(port: int) -> Error`, `join_game(address: String, port: int) -> Error`, `leave_game() -> void`, signals: `connection_succeeded`, `connection_failed`, `peer_connected(id)`, `peer_disconnected(id)`, `server_disconnected`.
 - Safety: Releases peer and sets `multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()` on disconnect.
 
-- [ ] **Step 1: Write test `tests/test_network_manager.gd`**
+- [x] **Step 1: Write test `tests/test_network_manager.gd`**
   Verify host creates ENet server, invalid IP throws timeout error without crashing, and `leave_game()` cleans up state to `OfflineMultiplayerPeer`.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Implement `autoload/network_manager.gd` with 10-second connection timeout timer**
-- [ ] **Step 4: Register `NetworkManager` in `project.godot`**
-- [ ] **Step 5: Run test to verify pass**
-- [ ] **Step 6: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Implement `autoload/network_manager.gd` with 10-second connection timeout timer**
+- [x] **Step 4: Register `NetworkManager` in `project.godot`**
+- [x] **Step 5: Run test to verify pass**
+- [x] **Step 6: Commit**
   `git commit -m "feat(net): implement NetworkManager ENet session lifecycle and timeout recovery"`
 
 ---
@@ -359,12 +359,12 @@
 **Interfaces:**
 - UI: Display local IP address (for Wi-Fi/hotspot sharing), Port input (default 7777), Host Button, Join IP text input, Join Button, Status Label, Error Dialog.
 
-- [ ] **Step 1: Write test `tests/test_lobby_ui.gd`**
+- [x] **Step 1: Write test `tests/test_lobby_ui.gd`**
   Verify lobby displays local IP, updates status to "Waiting for Peer...", shows error modal on failed connection with a Return button.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Build `lobby.tscn` using Walking Dead theme**
-- [ ] **Step 4: Run test to verify pass**
-- [ ] **Step 5: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Build `lobby.tscn` using Walking Dead theme**
+- [x] **Step 4: Run test to verify pass**
+- [x] **Step 5: Commit**
   `git commit -m "feat(ui): implement host/join co-op lobby with connection state feedback"`
 
 ---
@@ -382,12 +382,12 @@
 - Host calculates zombie collisions and broadcasts health changes via `@rpc("authority", "call_local", "reliable")`.
 - Victory occurs when all waves cleared and at least one player lives. Defeat occurs when both players die.
 
-- [ ] **Step 1: Write headless two-peer test `tests/test_multiplayer_gameplay.gd`**
+- [x] **Step 1: Write headless two-peer test `tests/test_multiplayer_gameplay.gd`**
   Simulate two peers connecting locally on port 7778; verify both players spawn, client input moves client avatar, host authoritative damage applies to both peers, and match ends correctly.
-- [ ] **Step 2: Run test to verify failure**
-- [ ] **Step 3: Implement RPC sync and authority validation**
-- [ ] **Step 4: Run test to verify pass**
-- [ ] **Step 5: Commit**
+- [x] **Step 2: Run test to verify failure**
+- [x] **Step 3: Implement RPC sync and authority validation**
+- [x] **Step 4: Run test to verify pass**
+- [x] **Step 5: Commit**
   `git commit -m "feat(net): implement host-authoritative co-op replication and damage validation"`
 
 ---
