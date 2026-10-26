@@ -2,6 +2,7 @@ extends Node
 
 signal progress_saved()
 signal achievement_unlocked(achievement_id: String, title: String, description: String)
+signal settings_changed(setting_name: String, value: Variant)
 
 const SAVE_PATH: String = "user://save.cfg"
 const SAVE_VERSION: int = 1
@@ -236,16 +237,19 @@ func reset_progress() -> void:
 func set_graphics_quality(quality: int) -> void:
 	graphics_quality = clampi(quality, 0, 2)
 	save_progress()
+	settings_changed.emit("graphics_quality", graphics_quality)
 
 func cycle_graphics_quality() -> int:
 	graphics_quality = (graphics_quality + 1) % 3
 	save_progress()
+	settings_changed.emit("graphics_quality", graphics_quality)
 	return graphics_quality
 
 func set_resolution_scale(scale: float) -> void:
 	resolution_scale = clampf(scale, 0.5, 1.5)
 	apply_display_settings()
 	save_progress()
+	settings_changed.emit("resolution_scale", resolution_scale)
 
 func cycle_resolution_scale() -> float:
 	if is_equal_approx(resolution_scale, 0.75):
@@ -256,17 +260,20 @@ func cycle_resolution_scale() -> float:
 		resolution_scale = 0.75
 	apply_display_settings()
 	save_progress()
+	settings_changed.emit("resolution_scale", resolution_scale)
 	return resolution_scale
 
 func set_fullscreen(enabled: bool) -> void:
 	fullscreen = enabled
 	apply_display_settings()
 	save_progress()
+	settings_changed.emit("fullscreen", fullscreen)
 
 func toggle_fullscreen() -> bool:
 	fullscreen = not fullscreen
 	apply_display_settings()
 	save_progress()
+	settings_changed.emit("fullscreen", fullscreen)
 	return fullscreen
 
 func apply_display_settings() -> void:

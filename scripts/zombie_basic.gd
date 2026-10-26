@@ -112,6 +112,8 @@ var anim_time: float = 0.0
 var hurt_flash_timer: float = 0.0
 var knockback_velocity: Vector2 = Vector2.ZERO
 var last_hit_dir: Vector2 = Vector2.RIGHT
+var terrain_speed_mult: float = 1.0
+var terrain_check_timer: float = 999.0
 
 @onready var visuals: Node2D = $Visuals
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -198,13 +200,15 @@ func _physics_process(delta: float) -> void:
 				visuals.rotation = dir.angle()
 			
 			var move_spd := speed
-			var env_mult: float = 1.0
-			var z_parent := get_parent()
-			if z_parent and z_parent.get_parent():
-				var arena = z_parent.get_parent().get_node_or_null("ArenaEnvironment")
-				if arena and arena.has_method("get_speed_multiplier_at"):
-					env_mult = arena.get_speed_multiplier_at(global_position)
-			move_spd *= env_mult
+			terrain_check_timer += delta
+			if terrain_check_timer >= 0.20:
+				terrain_check_timer = randf_range(-0.04, 0.04)
+				var z_parent := get_parent()
+				if z_parent and z_parent.get_parent():
+					var arena = z_parent.get_parent().get_node_or_null("ArenaEnvironment")
+					if arena and arena.has_method("get_speed_multiplier_at"):
+						terrain_speed_mult = arena.get_speed_multiplier_at(global_position)
+			move_spd *= terrain_speed_mult
 			if zombie_type == ZombieType.SPITTER and dist < 210.0:
 				move_spd = speed * 0.35
 			if is_crawling:

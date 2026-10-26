@@ -49,6 +49,8 @@ var override_move_vec: Vector2 = Vector2.ZERO
 var override_aim_pos: Vector2 = Vector2.ZERO
 var override_is_shooting: bool = false
 var touch_controls: Control = null
+var terrain_speed_mult: float = 1.0
+var terrain_check_timer: float = 999.0
 
 @onready var visuals: Node2D = $Visuals
 @onready var muzzle_marker: Marker2D = $Visuals/MuzzlePoint
@@ -193,13 +195,15 @@ func _physics_process(delta: float) -> void:
 			is_dashing = false
 	else:
 		var spd_mult := 1.32 if adrenaline_time_left > 0.0 else 1.0
-		var env_mult: float = 1.0
-		var p_parent := get_parent()
-		if p_parent:
-			var arena = p_parent.get_node_or_null("ArenaEnvironment")
-			if arena and arena.has_method("get_speed_multiplier_at"):
-				env_mult = arena.get_speed_multiplier_at(global_position)
-		velocity = move_vec.normalized() * (speed * spd_mult * env_mult)
+		terrain_check_timer += delta
+		if terrain_check_timer >= 0.20:
+			terrain_check_timer = 0.0
+			var p_parent := get_parent()
+			if p_parent:
+				var arena = p_parent.get_node_or_null("ArenaEnvironment")
+				if arena and arena.has_method("get_speed_multiplier_at"):
+					terrain_speed_mult = arena.get_speed_multiplier_at(global_position)
+		velocity = move_vec.normalized() * (speed * spd_mult * terrain_speed_mult)
 	
 	move_and_slide()
 	

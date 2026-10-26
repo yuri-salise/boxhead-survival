@@ -45,6 +45,17 @@ func _ready() -> void:
 		add_child(collider_container)
 	current_collider_center = get_chunk_coords(focus_position)
 	_update_active_colliders()
+	
+	var gs = get_node_or_null("/root/GameState")
+	if gs and gs.has_signal("settings_changed"):
+		if not gs.settings_changed.is_connected(_on_global_settings_changed):
+			gs.settings_changed.connect(_on_global_settings_changed)
+		if "graphics_quality" in gs:
+			graphics_quality = int(gs.graphics_quality)
+
+func _on_global_settings_changed(setting_name: String, value: Variant) -> void:
+	if setting_name == "graphics_quality":
+		set_graphics_quality(int(value))
 
 func clear_colliders() -> void:
 	for k in active_colliders.keys():
@@ -64,17 +75,12 @@ func set_focus_position(pos: Vector2) -> void:
 		current_collider_center = center_chunk
 		if is_inside_tree():
 			_update_active_colliders()
-	
-	var move_dist_sq := focus_position.distance_squared_to(last_redraw_pos)
-	var threshold := 144.0 if graphics_quality == 0 else (49.0 if graphics_quality == 1 else 16.0)
-	if move_dist_sq >= threshold:
-		last_redraw_pos = focus_position
 		queue_redraw()
 
 func set_night_factor(factor: float) -> void:
 	var old := night_factor
 	night_factor = clampf(factor, 0.0, 1.0)
-	if absf(night_factor - old) > 0.03:
+	if absf(night_factor - old) > 0.08:
 		queue_redraw()
 
 func set_graphics_quality(quality: int) -> void:
@@ -355,13 +361,6 @@ func _spawn_chunk_colliders(cx: int, cy: int) -> Array[StaticBody2D]:
 
 func _process(delta: float) -> void:
 	beacon_time += delta
-	redraw_timer += delta
-	
-	# Performance optimization: throttle redraw interval based on graphics quality
-	var interval := 0.35 if graphics_quality == 0 else (0.16 if graphics_quality == 1 else 0.06)
-	if redraw_timer >= interval:
-		redraw_timer = 0.0
-		queue_redraw()
 
 func _get_chunk_data(cx: int, cy: int) -> Dictionary:
 	var key := str(sector_type) + "_" + str(cx) + "_" + str(cy)

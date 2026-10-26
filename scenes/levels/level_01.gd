@@ -54,6 +54,10 @@ var current_time_phase_name: String = "DAYLIGHT"
 var player2: CharacterBody2D = null
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
+# Mobile performance caching for flashlight occluders
+var cached_occluders: Array = []
+var last_occluder_query_pos: Vector2 = Vector2(-9999.0, -9999.0)
+
 func _ready() -> void:
 	get_tree().paused = false
 	if death_panel:
@@ -326,8 +330,11 @@ func _process(delta: float) -> void:
 			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
 			var aim_rot: float = float(player.visuals.rotation) if player.visuals else 0.0
 			var occluders: Array = []
-			if is_instance_valid(arena_env) and arena_env.has_method("get_nearby_obstacles"):
-				occluders = arena_env.get_nearby_obstacles(player.global_position, 550.0)
+			if current_night_factor > 0.02 and is_instance_valid(arena_env) and arena_env.has_method("get_nearby_obstacles"):
+				if player.global_position.distance_squared_to(last_occluder_query_pos) >= 256.0 or cached_occluders.is_empty():
+					last_occluder_query_pos = player.global_position
+					cached_occluders = arena_env.get_nearby_obstacles(player.global_position, 550.0)
+				occluders = cached_occluders
 			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, player.global_position)
 			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind

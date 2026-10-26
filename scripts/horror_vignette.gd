@@ -30,31 +30,48 @@ func set_night_factor(factor: float, dusk_warming: bool = true) -> void:
 func set_night_mode(enabled: bool) -> void:
 	set_night_factor(1.0 if enabled else 0.0, true)
 
+var last_drawn_flashlight_pos: Vector2 = Vector2(-9999.0, -9999.0)
+var last_drawn_flashlight_angle: float = -9999.0
+
 func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluders: Array = [], player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	flashlight_screen_pos = screen_pos
 	flashlight_angle = angle_rad
 	flashlight_occluders = occluders
 	flashlight_player_world_pos = player_world_pos
 	if night_factor > 0.01:
-		queue_redraw()
+		var pos_dist := flashlight_screen_pos.distance_squared_to(last_drawn_flashlight_pos)
+		var ang_diff := absf(wrapf(flashlight_angle - last_drawn_flashlight_angle, -PI, PI))
+		if pos_dist >= 4.0 or ang_diff >= 0.015:
+			last_drawn_flashlight_pos = flashlight_screen_pos
+			last_drawn_flashlight_angle = flashlight_angle
+			queue_redraw()
 
 func _process(delta: float) -> void:
 	pulse_time += delta
+	var needs_redraw: bool = false
+	
 	if bite_flash_alpha > 0.0:
 		bite_flash_alpha = maxf(0.0, bite_flash_alpha - delta * 2.2)
+		needs_redraw = true
 	
-	for i in range(pov_blood_drops.size() - 1, -1, -1):
-		var drop: Dictionary = pov_blood_drops[i]
-		drop["age"] = float(drop["age"]) + delta
-		if float(drop["age"]) >= float(drop["lifetime"]):
-			pov_blood_drops.remove_at(i)
-		else:
-			var cur_drip: float = float(drop["drip_len"])
-			var max_drip: float = float(drop["max_drip"])
-			if cur_drip < max_drip:
-				drop["drip_len"] = minf(max_drip, cur_drip + float(drop["drip_speed"]) * delta)
+	if low_health_ratio < 0.35:
+		needs_redraw = true
 	
-	queue_redraw()
+	if pov_blood_drops.size() > 0:
+		needs_redraw = true
+		for i in range(pov_blood_drops.size() - 1, -1, -1):
+			var drop: Dictionary = pov_blood_drops[i]
+			drop["age"] = float(drop["age"]) + delta
+			if float(drop["age"]) >= float(drop["lifetime"]):
+				pov_blood_drops.remove_at(i)
+			else:
+				var cur_drip: float = float(drop["drip_len"])
+				var max_drip: float = float(drop["max_drip"])
+				if cur_drip < max_drip:
+					drop["drip_len"] = minf(max_drip, cur_drip + float(drop["drip_speed"]) * delta)
+	
+	if needs_redraw:
+		queue_redraw()
 
 func set_health_ratio(ratio: float) -> void:
 	low_health_ratio = clampf(ratio, 0.0, 1.0)

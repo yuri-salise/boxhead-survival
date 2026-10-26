@@ -59,10 +59,7 @@ func _refresh_settings_buttons() -> void:
 func _on_graphics_pressed() -> void:
 	var gs = get_node_or_null("/root/GameState")
 	if gs and gs.has_method("cycle_graphics_quality"):
-		var new_q: int = gs.cycle_graphics_quality()
-		var arena = get_tree().root.find_child("ArenaEnvironment", true, false)
-		if arena and arena.has_method("set_graphics_quality"):
-			arena.set_graphics_quality(new_q)
+		gs.cycle_graphics_quality()
 	_refresh_settings_buttons()
 
 func _on_resolution_pressed() -> void:
