@@ -193,7 +193,13 @@ func _physics_process(delta: float) -> void:
 			is_dashing = false
 	else:
 		var spd_mult := 1.32 if adrenaline_time_left > 0.0 else 1.0
-		velocity = move_vec.normalized() * (speed * spd_mult)
+		var env_mult: float = 1.0
+		var p_parent := get_parent()
+		if p_parent:
+			var arena = p_parent.get_node_or_null("ArenaEnvironment")
+			if arena and arena.has_method("get_speed_multiplier_at"):
+				env_mult = arena.get_speed_multiplier_at(global_position)
+		velocity = move_vec.normalized() * (speed * spd_mult * env_mult)
 	
 	move_and_slide()
 	

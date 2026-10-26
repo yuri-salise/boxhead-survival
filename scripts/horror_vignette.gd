@@ -11,6 +11,8 @@ var night_mode_enabled: bool = false
 var is_dusk_phase: bool = true
 var flashlight_screen_pos: Vector2 = Vector2(640.0, 360.0)
 var flashlight_angle: float = 0.0
+var flashlight_occluders: Array = []
+var flashlight_player_world_pos: Vector2 = Vector2.ZERO
 
 # POV blood splatters & dripping streaks on the screen lens when bitten
 var pov_blood_drops: Array[Dictionary] = []
@@ -28,9 +30,11 @@ func set_night_factor(factor: float, dusk_warming: bool = true) -> void:
 func set_night_mode(enabled: bool) -> void:
 	set_night_factor(1.0 if enabled else 0.0, true)
 
-func update_flashlight_transform(screen_pos: Vector2, angle_rad: float) -> void:
+func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluders: Array = [], player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	flashlight_screen_pos = screen_pos
 	flashlight_angle = angle_rad
+	flashlight_occluders = occluders
+	flashlight_player_world_pos = player_world_pos
 	if night_factor > 0.01:
 		queue_redraw()
 
@@ -192,6 +196,57 @@ func _draw_gradual_night_darkness(vp: Vector2) -> void:
 		origin + mid_dir * (beam_len * 0.92),
 		origin + right_inner * (beam_len * 0.85)
 	]), Color(1.0, 0.95, 0.78, 0.085 * night_factor))
+	
+	# 3. Dynamic Obstacle Shadows: Solid obstacles inside the flashlight beam block light and cast realistic shadows
+	if night_factor > 0.05 and flashlight_occluders.size() > 0:
+		for obs in flashlight_occluders:
+			var world_pos: Vector2 = obs["world_pos"]
+			var radius: float = float(obs.get("radius", 16.0))
+			var obs_screen_pos: Vector2 = flashlight_screen_pos + (world_pos - flashlight_player_world_pos)
+			
+			var to_obs: Vector2 = obs_screen_pos - origin
+			var dist := to_obs.length()
+			if dist < radius or dist > (beam_len + 60.0):
+				continue
+			
+			var ang := to_obs.angle()
+			var diff := absf(wrapf(ang - flashlight_angle, -PI, PI))
+			var angular_radius := clampf(atan2(radius, dist), 0.05, 0.60)
+			
+			if diff < (cone_half + angular_radius):
+				var a_left := ang - angular_radius
+				var a_right := ang + angular_radius
+				var dir_left := Vector2.from_angle(a_left)
+				var dir_right := Vector2.from_angle(a_right)
+				
+				var perp := Vector2(-to_obs.y, to_obs.x).normalized()
+				var p_near_left := obs_screen_pos - perp * (radius * 0.85)
+				var p_near_right := obs_screen_pos + perp * (radius * 0.85)
+				
+				var shadow_reach := outer_r
+				var p_far_left := obs_screen_pos + dir_left * shadow_reach
+				var p_far_right := obs_screen_pos + dir_right * shadow_reach
+				
+				# Main dark shadow polygon (blocks light completely behind the obstacle)
+				var shadow_poly := PackedVector2Array([p_near_left, p_far_left, p_far_right, p_near_right])
+				draw_colored_polygon(shadow_poly, dark_col)
+				
+				# Soft penumbra edges for cinematic realism
+				var pen_feather := 0.05
+				var dir_pen_left := Vector2.from_angle(a_left - pen_feather)
+				var dir_pen_right := Vector2.from_angle(a_right + pen_feather)
+				
+				draw_colored_polygon(PackedVector2Array([
+					p_near_left,
+					obs_screen_pos + dir_pen_left * shadow_reach,
+					p_far_left
+				]), penumbra_col)
+				
+				draw_colored_polygon(PackedVector2Array([
+					p_near_right,
+					p_far_right,
+					obs_screen_pos + dir_pen_right * shadow_reach
+				]), penumbra_col)
 
 func _draw() -> void:
 	var vp := get_viewport_rect().size

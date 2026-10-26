@@ -59,6 +59,13 @@ func _ready() -> void:
 	if death_panel:
 		death_panel.visible = false
 	
+	if is_instance_valid(arena_env):
+		if "sector_type" in arena_env:
+			arena_env.sector_type = level_id
+		var gs = get_node_or_null("/root/GameState")
+		if gs and "graphics_quality" in gs and "graphics_quality" in arena_env:
+			arena_env.graphics_quality = gs.graphics_quality
+	
 	# Pre-splatter a few weathered blood stains in the quarantine yard for atmosphere
 	for i in range(8):
 		var rand_pos := Vector2(randf_range(120, 1160), randf_range(120, 600))
@@ -311,14 +318,17 @@ func _on_achievement_unlocked(_ach_id: String, title: String, _desc: String) -> 
 func _process(delta: float) -> void:
 	advance_day_night_cycle(delta)
 	if is_instance_valid(player):
-		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
-			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
-			var aim_rot: float = float(player.visuals.rotation) if player.visuals else 0.0
-			horror_vignette.update_flashlight_transform(screen_pos, aim_rot)
-		
 		if is_instance_valid(arena_env):
 			if arena_env.has_method("set_focus_position"):
 				arena_env.set_focus_position(player.global_position)
+		
+		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
+			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
+			var aim_rot: float = float(player.visuals.rotation) if player.visuals else 0.0
+			var occluders: Array = []
+			if is_instance_valid(arena_env) and arena_env.has_method("get_nearby_obstacles"):
+				occluders = arena_env.get_nearby_obstacles(player.global_position, 550.0)
+			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, player.global_position)
 			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
 			if is_instance_valid(zombie_container):

@@ -17,6 +17,8 @@ extends Control
 @onready var start_level_button: Button = $ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox/StartLevelButton
 @onready var play_back_button: Button = $ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox/PlayBackButton
 
+@onready var graphics_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/GraphicsToggle
+@onready var resolution_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/ResolutionToggle
 @onready var sfx_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/SFXToggle
 @onready var music_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/MusicToggle
 @onready var screen_mode_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/ScreenModeToggle
@@ -46,6 +48,10 @@ func _ready() -> void:
 	start_level_button.pressed.connect(_on_start_level_pressed)
 	play_back_button.pressed.connect(_hide_all_dialogs)
 	
+	if graphics_toggle_button:
+		graphics_toggle_button.pressed.connect(_on_graphics_toggle_pressed)
+	if resolution_toggle_button:
+		resolution_toggle_button.pressed.connect(_on_resolution_toggle_pressed)
 	sfx_toggle_button.pressed.connect(_on_sfx_toggle_pressed)
 	music_toggle_button.pressed.connect(_on_music_toggle_pressed)
 	screen_mode_button.pressed.connect(_on_screen_mode_toggle_pressed)
@@ -109,15 +115,44 @@ func _on_music_toggle_pressed() -> void:
 		audio_mgr.set_music_enabled(music_enabled)
 	_update_settings_ui()
 
+func _on_graphics_toggle_pressed() -> void:
+	var gs = get_node_or_null("/root/GameState")
+	if gs and gs.has_method("cycle_graphics_quality"):
+		gs.cycle_graphics_quality()
+	_update_settings_ui()
+
+func _on_resolution_toggle_pressed() -> void:
+	var gs = get_node_or_null("/root/GameState")
+	if gs and gs.has_method("cycle_resolution_scale"):
+		gs.cycle_resolution_scale()
+	_update_settings_ui()
+
 func _on_screen_mode_toggle_pressed() -> void:
-	is_fullscreen = not is_fullscreen
-	if is_fullscreen:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	var gs = get_node_or_null("/root/GameState")
+	if gs and gs.has_method("toggle_fullscreen"):
+		is_fullscreen = gs.toggle_fullscreen()
 	else:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		is_fullscreen = not is_fullscreen
+		if is_fullscreen:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	_update_settings_ui()
 
 func _update_settings_ui() -> void:
+	var gs = get_node_or_null("/root/GameState")
+	if gs:
+		var q_names: Array[String] = ["BATTERY SAVER (LOW)", "BALANCED (MED)", "ULTRA (HIGH)"]
+		var q_idx: int = clampi(int(gs.graphics_quality), 0, 2)
+		if graphics_toggle_button:
+			graphics_toggle_button.text = "GRAPHICS: " + q_names[q_idx]
+		
+		var scale_pct := int(roundf(float(gs.resolution_scale) * 100.0))
+		if resolution_toggle_button:
+			resolution_toggle_button.text = "RESOLUTION: " + str(scale_pct) + "%"
+		
+		is_fullscreen = bool(gs.fullscreen)
+	
 	sfx_toggle_button.text = "SOUND FX: " + ("ENABLED" if sfx_enabled else "MUTED")
 	music_toggle_button.text = "MUSIC: " + ("ENABLED" if music_enabled else "MUTED")
 	screen_mode_button.text = "DISPLAY: " + ("FULLSCREEN" if is_fullscreen else "WINDOWED")

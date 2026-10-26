@@ -33,7 +33,7 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="PausePanel" type="PanelContainer" parent="CenterContainer" unique_id=930376248]
-custom_minimum_size = Vector2(520, 420)
+custom_minimum_size = Vector2(520, 520)
 layout_mode = 2
 
 [node name="PauseMargin" type="MarginContainer" parent="CenterContainer/PausePanel" unique_id=788358536]
@@ -45,7 +45,7 @@ theme_override_constants/margin_bottom = 28
 
 [node name="PauseVBox" type="VBoxContainer" parent="CenterContainer/PausePanel/PauseMargin" unique_id=233606933]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
 [node name="PauseTitle" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=168063289]
 layout_mode = 2
@@ -67,21 +67,31 @@ horizontal_alignment = 1
 layout_mode = 2
 
 [node name="ResumeButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012932]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "RESUME SURVIVAL"
 
+[node name="GraphicsButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012933]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "GRAPHICS: BALANCED"
+
+[node name="ResolutionButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012934]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "RESOLUTION: 100%"
+
 [node name="SaveButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1852370492]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "SAVE PROGRESS"
 
 [node name="RetryButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1681719678]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "RETRY ZONE"
 
 [node name="MainMenuButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1292362883]
-custom_minimum_size = Vector2(0, 50)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "RETURN TO MAIN"

@@ -53,6 +53,9 @@ var killed_tank: bool = false
 
 var sfx_enabled: bool = true
 var music_enabled: bool = true
+var graphics_quality: int = 1 # 0 = LOW (Battery Saver), 1 = MEDIUM (Balanced), 2 = HIGH (Ultra)
+var resolution_scale: float = 1.0 # 0.75, 1.0, 1.25
+var fullscreen: bool = false
 var last_saved_checkpoint: Dictionary = {}
 
 func _ready() -> void:
@@ -163,6 +166,9 @@ func save_progress() -> bool:
 	config.set_value("settings", "sfx_enabled", sfx_enabled)
 	config.set_value("settings", "music_enabled", music_enabled)
 	config.set_value("settings", "night_mode_enabled", night_mode_enabled)
+	config.set_value("settings", "graphics_quality", graphics_quality)
+	config.set_value("settings", "resolution_scale", resolution_scale)
+	config.set_value("settings", "fullscreen", fullscreen)
 	
 	if not last_saved_checkpoint.is_empty():
 		for key in last_saved_checkpoint.keys():
@@ -198,6 +204,10 @@ func load_progress() -> void:
 	sfx_enabled = bool(config.get_value("settings", "sfx_enabled", true))
 	music_enabled = bool(config.get_value("settings", "music_enabled", true))
 	night_mode_enabled = bool(config.get_value("settings", "night_mode_enabled", false))
+	graphics_quality = clampi(int(config.get_value("settings", "graphics_quality", 1)), 0, 2)
+	resolution_scale = clampf(float(config.get_value("settings", "resolution_scale", 1.0)), 0.5, 1.5)
+	fullscreen = bool(config.get_value("settings", "fullscreen", false))
+	apply_display_settings()
 	
 	if config.has_section("checkpoint"):
 		last_saved_checkpoint = {
@@ -222,3 +232,52 @@ func reset_progress() -> void:
 		best_stars_by_level[lvl] = 0
 	last_saved_checkpoint.clear()
 	save_progress()
+
+func set_graphics_quality(quality: int) -> void:
+	graphics_quality = clampi(quality, 0, 2)
+	save_progress()
+
+func cycle_graphics_quality() -> int:
+	graphics_quality = (graphics_quality + 1) % 3
+	save_progress()
+	return graphics_quality
+
+func set_resolution_scale(scale: float) -> void:
+	resolution_scale = clampf(scale, 0.5, 1.5)
+	apply_display_settings()
+	save_progress()
+
+func cycle_resolution_scale() -> float:
+	if is_equal_approx(resolution_scale, 0.75):
+		resolution_scale = 1.0
+	elif is_equal_approx(resolution_scale, 1.0):
+		resolution_scale = 1.25
+	else:
+		resolution_scale = 0.75
+	apply_display_settings()
+	save_progress()
+	return resolution_scale
+
+func set_fullscreen(enabled: bool) -> void:
+	fullscreen = enabled
+	apply_display_settings()
+	save_progress()
+
+func toggle_fullscreen() -> bool:
+	fullscreen = not fullscreen
+	apply_display_settings()
+	save_progress()
+	return fullscreen
+
+func apply_display_settings() -> void:
+	if fullscreen:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var target_size := Vector2i(int(1280.0 * resolution_scale), int(720.0 * resolution_scale))
+		if not OS.has_feature("mobile"):
+			DisplayServer.window_set_size(target_size)
+	
+	var root_viewport := get_tree().root if get_tree() else null
+	if root_viewport:
+		root_viewport.content_scale_factor = 1.0

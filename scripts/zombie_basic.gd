@@ -198,6 +198,13 @@ func _physics_process(delta: float) -> void:
 				visuals.rotation = dir.angle()
 			
 			var move_spd := speed
+			var env_mult: float = 1.0
+			var z_parent := get_parent()
+			if z_parent and z_parent.get_parent():
+				var arena = z_parent.get_parent().get_node_or_null("ArenaEnvironment")
+				if arena and arena.has_method("get_speed_multiplier_at"):
+					env_mult = arena.get_speed_multiplier_at(global_position)
+			move_spd *= env_mult
 			if zombie_type == ZombieType.SPITTER and dist < 210.0:
 				move_spd = speed * 0.35
 			if is_crawling:

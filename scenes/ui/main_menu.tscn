@@ -253,7 +253,7 @@ text = "ABORT / BACK"
 
 [node name="SettingsDialog" type="PanelContainer" parent="ModalLayer/ModalsCenter" unique_id=1465910217]
 visible = false
-custom_minimum_size = Vector2(560, 400)
+custom_minimum_size = Vector2(560, 490)
 layout_mode = 2
 
 [node name="SettingsMargin" type="MarginContainer" parent="ModalLayer/ModalsCenter/SettingsDialog" unique_id=1962669901]
@@ -265,7 +265,7 @@ theme_override_constants/margin_bottom = 28
 
 [node name="SettingsVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin" unique_id=649494993]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
 [node name="SettingsTitle" type="Label" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=399339282]
 layout_mode = 2
@@ -283,18 +283,28 @@ text = "[ CONFIGURATION // LOCAL STORAGE ]"
 [node name="SetSeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=1172630146]
 layout_mode = 2
 
+[node name="GraphicsToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=184920485]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "GRAPHICS: BALANCED"
+
+[node name="ResolutionToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=184920486]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "RESOLUTION: 100%"
+
 [node name="SFXToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=873859855]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "SOUND FX: ENABLED"
 
 [node name="MusicToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=843423324]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "MUSIC: ENABLED"
 
 [node name="ScreenModeToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=744075807]
-custom_minimum_size = Vector2(0, 48)
+custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "DISPLAY: WINDOWED"
 
