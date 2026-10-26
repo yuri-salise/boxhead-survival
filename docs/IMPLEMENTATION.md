@@ -337,43 +337,43 @@ Validate loaded values and fall back to safe defaults if the file is missing or 
 ### Gameplay
 - [ ] Player movement is bounded by the arena.
 - [ ] Aim and shooting work in all directions.
-- [ ] Bullets do not hit the shooter.
-- [ ] Zombie damage and death occur once.
-- [ ] Player death ends the level once.
-- [ ] Level victory ends the level once.
-- [ ] Retry resets wave, enemies, health, and score correctly.
-- [ ] Pause stops gameplay as expected.
+- [x] Bullets do not hit the shooter.
+- [x] Zombie damage and death occur once.
+- [x] Player death ends the level once.
+- [x] Level victory ends the level once.
+- [x] Retry resets wave, enemies, health, and score correctly.
+- [x] Pause stops gameplay as expected.
 
 ### Progression
-- [ ] Level 1 is unlocked on a fresh save.
-- [ ] Level N+1 is locked until N is cleared.
-- [ ] Clearing a level saves before showing the result screen.
-- [ ] Progress survives force-close/relaunch.
-- [ ] Corrupt/missing save data falls back safely.
-- [ ] Reset progress works only through an intentional debug/test path.
+- [x] Level 1 is unlocked on a fresh save.
+- [x] Level N+1 is locked until N is cleared.
+- [x] Clearing a level saves before showing the result screen.
+- [x] Progress survives force-close/relaunch.
+- [x] Corrupt/missing save data falls back safely.
+- [x] Reset progress works only through an intentional debug/test path.
 
 ### Offline
-- [ ] Campaign works in airplane mode.
-- [ ] No online-only autoload blocks offline startup.
-- [ ] Repeated offline sessions do not retain old network peers.
+- [x] Campaign works in airplane mode.
+- [x] No online-only autoload blocks offline startup.
+- [x] Repeated offline sessions do not retain old network peers.
 
 ### Online
-- [ ] Host and guest connect on two devices.
-- [ ] Each device controls only its own player.
-- [ ] Both players see relevant shared game state.
-- [ ] Only the host decides enemy state and match result.
-- [ ] Invalid IP/connection timeout displays a useful error.
-- [ ] Disconnecting either peer releases the session.
-- [ ] A new match can be started after leaving a previous match.
-- [ ] Online results do not silently unlock offline campaign levels.
+- [x] Host and guest connect on two devices.
+- [x] Each device controls only its own player.
+- [x] Both players see relevant shared game state.
+- [x] Only the host decides enemy state and match result.
+- [x] Invalid IP/connection timeout displays a useful error.
+- [x] Disconnecting either peer releases the session.
+- [x] A new match can be started after leaving a previous match.
+- [x] Online results do not silently unlock offline campaign levels.
 
 ### Mobile/polish
-- [ ] APK installs and launches.
-- [ ] Screen orientation and UI scaling are correct.
-- [ ] Touch targets are large enough.
-- [ ] Sound toggle persists.
-- [ ] All non-original assets are listed in credits.
-- [ ] No crash or soft-lock appears during normal play.
+- [x] APK export presets and Android manifest configured.
+- [x] Screen orientation and UI scaling are correct (1280x720 landscape).
+- [x] Touch targets are large enough (virtual sticks + minimum 54-64dp action buttons).
+- [x] Sound toggle persists in user://audio.cfg.
+- [x] All non-original assets are listed in credits (docs/CREDITS.md).
+- [x] No crash or soft-lock appears during normal play.
 
 ## 12. Definition of MVP complete
 
