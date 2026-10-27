@@ -163,6 +163,19 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		assert(turret_act == true, "turret.interact() must succeed")
 		assert(turret.is_active == true, "SentryTurret must be active")
 		assert(turret.active_time_left > 0.0, "active_time_left must be positive")
+		
+		# Test gunfire light
+		assert(turret.has_method("get_light_data"), "turret must implement get_light_data()")
+		assert(turret.get_light_data().is_empty(), "turret light data must be empty when idle")
+		turret._fire_shot()
+		assert(turret.muzzle_flash_timer > 0.0, "muzzle_flash_timer must be active after firing")
+		var flash_light: Dictionary = turret.get_light_data()
+		assert(not flash_light.is_empty(), "turret get_light_data() must return light when firing")
+		assert(flash_light.has("world_pos"), "flash_light must have world_pos")
+		assert(float(flash_light["radius"]) >= 150.0, "flash_light radius must be at least 150px")
+		turret._process(0.12)
+		assert(turret.muzzle_flash_timer == 0.0, "muzzle_flash_timer must decay to 0")
+		assert(turret.get_light_data().is_empty(), "turret light data must be empty after flash decays")
 		turret.queue_free()
 		
 		# 3. Touch Controls Interact Button

@@ -153,7 +153,7 @@ func _acquire_target() -> void:
 				current_target = z
 
 func _fire_shot() -> void:
-	muzzle_flash_timer = 0.06
+	muzzle_flash_timer = 0.09
 	var audio_mgr = get_node_or_null("/root/AudioManager")
 	if audio_mgr and audio_mgr.has_method("play_sfx"):
 		audio_mgr.play_sfx("sfx_rifle", 1.35, -2.0)
@@ -165,6 +165,17 @@ func _fire_shot() -> void:
 		var proj = projectile_scene.instantiate()
 		get_parent().add_child(proj)
 		proj.init(spawn_pos, dir, 820.0, bullet_damage, self, 0, Color(0.98, 0.85, 0.25), false)
+
+func get_light_data() -> Dictionary:
+	if muzzle_flash_timer > 0.0:
+		var flash_ratio: float = muzzle_flash_timer / 0.09
+		var flash_pos: Vector2 = global_position + Vector2.from_angle(aim_angle) * 32.0
+		return {
+			"world_pos": flash_pos,
+			"radius": 240.0 * (0.65 + 0.35 * flash_ratio),
+			"color": Color(1.0, 0.92, 0.45, 0.96 * flash_ratio)
+		}
+	return {}
 
 func _on_interaction_body_entered(body: Node2D) -> void:
 	if body.is_in_group("players"):
@@ -226,10 +237,30 @@ func _draw() -> void:
 		draw_line(Vector2.ZERO, laser_end, Color(0.15, 0.95, 0.25, 0.28), 1.5)
 		draw_circle(Vector2.ZERO, 3.5, Color(0.2, 0.95, 0.3, 1.0)) # Green active LED
 		
-		# Muzzle flash on shot
+		# Muzzle flash on shot — dynamic lighting on turret chassis & surrounding ground
 		if muzzle_flash_timer > 0.0:
-			draw_circle(perp * 4.0 + aim_dir * (barrel_len + 4.0), 7.0, Color(1.0, 0.92, 0.40, 0.95))
-			draw_circle(-perp * 4.0 + aim_dir * (barrel_len + 4.0), 7.0, Color(1.0, 0.92, 0.40, 0.95))
+			var flash_ratio: float = muzzle_flash_timer / 0.09
+			# Radial ambient ground & turret body illumination
+			draw_circle(Vector2.ZERO, 58.0, Color(1.0, 0.85, 0.30, 0.34 * flash_ratio))
+			draw_circle(aim_dir * 18.0, 42.0, Color(1.0, 0.90, 0.40, 0.45 * flash_ratio))
+			
+			# Twin muzzle flash flares
+			var tip1 := perp * 4.0 + aim_dir * (barrel_len + 4.0)
+			var tip2 := -perp * 4.0 + aim_dir * (barrel_len + 4.0)
+			
+			# Outer bloom circles
+			draw_circle(tip1, 20.0, Color(1.0, 0.80, 0.20, 0.52 * flash_ratio))
+			draw_circle(tip2, 20.0, Color(1.0, 0.80, 0.20, 0.52 * flash_ratio))
+			
+			# White-hot inner core
+			draw_circle(tip1, 8.5, Color(1.0, 0.98, 0.88, 0.98 * flash_ratio))
+			draw_circle(tip2, 8.5, Color(1.0, 0.98, 0.88, 0.98 * flash_ratio))
+			
+			# Burst spike rays
+			for spike_ang in [-0.28, 0.0, 0.28]:
+				var sdir := Vector2.from_angle(aim_angle + spike_ang)
+				draw_line(tip1, tip1 + sdir * 18.0, Color(1.0, 0.95, 0.60, 0.85 * flash_ratio), 2.5)
+				draw_line(tip2, tip2 + sdir * 18.0, Color(1.0, 0.95, 0.60, 0.85 * flash_ratio), 2.5)
 	else:
 		# Standby yellow LED
 		var led_pulse := 0.5 + 0.5 * sin(anim_time * 5.0)

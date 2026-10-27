@@ -61,6 +61,7 @@ var ambient_query_timer: float = 0.0
 var cached_ambient_lights: Array = []
 var witch_query_timer: float = 0.0
 var cached_witch_eyes: Array = []
+var has_turret_flash_active: bool = false
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -385,8 +386,25 @@ func _process(delta: float) -> void:
 						if not ldata.is_empty():
 							ambients.append(ldata)
 				cached_ambient_lights = ambients
-				if horror_vignette.has_method("update_ambient_lights"):
+				if not has_turret_flash_active and horror_vignette.has_method("update_ambient_lights"):
 					horror_vignette.update_ambient_lights(cached_ambient_lights, player.global_position)
+			
+			# Dynamic turret gunfire muzzle flash lights
+			var turret_flash_lights: Array = []
+			var turrets := get_tree().get_nodes_in_group("turrets")
+			for t in turrets:
+				if is_instance_valid(t) and t.has_method("get_light_data"):
+					var tdata: Dictionary = t.get_light_data()
+					if not tdata.is_empty():
+						turret_flash_lights.append(tdata)
+			
+			var is_turret_flashing := not turret_flash_lights.is_empty()
+			if is_turret_flashing or has_turret_flash_active:
+				has_turret_flash_active = is_turret_flashing
+				var combined_lights := cached_ambient_lights.duplicate()
+				combined_lights.append_array(turret_flash_lights)
+				if horror_vignette.has_method("update_ambient_lights"):
+					horror_vignette.update_ambient_lights(combined_lights, player.global_position)
 			
 			witch_query_timer += delta
 			if witch_query_timer >= 0.12 or cached_witch_eyes.is_empty():
