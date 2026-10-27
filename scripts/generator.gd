@@ -19,14 +19,16 @@ func _ready() -> void:
 	collision_mask = 0
 	add_to_group("obstacles")
 	add_to_group("generators")
+	add_to_group("interactables")
 	
 	if interaction_area:
+		interaction_area.collision_mask = 255
 		interaction_area.body_entered.connect(_on_interaction_body_entered)
 		interaction_area.body_exited.connect(_on_interaction_body_exited)
 	
 	if prompt_label:
 		prompt_label.visible = false
-		prompt_label.text = "[E] START GENERATOR"
+		prompt_label.text = "[E] / [TAP] START GENERATOR"
 
 func _process(delta: float) -> void:
 	anim_time += delta
@@ -61,6 +63,28 @@ func _process(delta: float) -> void:
 	if needs_redraw:
 		queue_redraw()
 
+func can_interact() -> bool:
+	return not is_running
+
+func interact() -> bool:
+	return start_generator()
+
+func get_interaction_prompt() -> String:
+	return "START GENERATOR"
+
+func _input(event: InputEvent) -> void:
+	if is_running:
+		return
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var mpos := get_global_mouse_position()
+		if global_position.distance_to(mpos) <= 85.0 or (is_player_nearby and global_position.distance_to(mpos) <= 130.0):
+			start_generator()
+	elif event is InputEventScreenTouch and event.pressed:
+		var tpos: Vector2 = event.position
+		var canvas_pos := get_global_transform_with_canvas().origin
+		if canvas_pos.distance_to(tpos) <= 90.0 or (is_player_nearby and canvas_pos.distance_to(tpos) <= 150.0):
+			start_generator()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_player_nearby or is_running:
 		return
@@ -76,6 +100,13 @@ func start_generator() -> bool:
 	is_running = true
 	if prompt_label:
 		prompt_label.visible = false
+	
+	# Clear touch button prompt
+	var tree := get_tree()
+	if tree:
+		for p in tree.get_nodes_in_group("players"):
+			if "touch_controls" in p and p.touch_controls and p.touch_controls.has_method("set_interact_prompt"):
+				p.touch_controls.set_interact_prompt(false, "", null)
 	
 	# Audio feedback
 	var audio_mgr = get_node_or_null("/root/AudioManager")
@@ -105,6 +136,8 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 		player_proximity_changed.emit(true)
 		if not is_running and prompt_label:
 			prompt_label.visible = true
+		if not is_running and "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
+			body.touch_controls.set_interact_prompt(true, "START GENERATOR", self)
 		queue_redraw()
 
 func _on_interaction_body_exited(body: Node2D) -> void:
@@ -113,9 +146,16 @@ func _on_interaction_body_exited(body: Node2D) -> void:
 		player_proximity_changed.emit(false)
 		if prompt_label:
 			prompt_label.visible = false
+		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
+			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()
 
 func _draw() -> void:
+	# 0. Interaction radius ring when player is nearby and generator is off
+	if is_player_nearby and not is_running:
+		var pulse := 0.6 + 0.4 * sin(anim_time * 6.0)
+		draw_arc(Vector2.ZERO, 65.0, 0.0, TAU, 32, Color(1.0, 0.85, 0.25, 0.35 * pulse), 2.0)
+	
 	# 1. Industrial cast shadow
 	var s_rect := Rect2(Vector2(-24, -14) + Vector2(10, 14), Vector2(48, 30))
 	draw_rect(s_rect, Color(0.0, 0.0, 0.0, 0.42), true)

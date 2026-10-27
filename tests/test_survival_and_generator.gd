@@ -12,6 +12,8 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		
 		_test_ambient_lights_and_horror_vignette()
 		_test_generator_mechanics()
+		_test_blood_decal_decay()
+		_test_new_interactables()
 		_test_endless_survival_and_herd_swarms()
 		_test_game_state_survival_persistence()
 		_test_mode_select_survival_button()
@@ -78,20 +80,28 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		
 		assert(gen.is_in_group("obstacles"), "Generator must be in obstacles group")
 		assert(gen.is_in_group("generators"), "Generator must be in generators group")
+		assert(gen.is_in_group("interactables"), "Generator must be in interactables group")
 		assert(gen.collision_layer == 1, "Generator must have physical collision on layer 1")
 		assert(gen.is_running == false, "Generator starts powered off")
+		assert(gen.can_interact() == true, "can_interact must be true initially")
+		
+		# Interaction area collision mask must detect player on layer 8
+		var area: Area2D = gen.get_node_or_null("InteractionArea")
+		assert(area != null, "Generator must have InteractionArea")
+		assert((area.collision_mask & 8) != 0, "InteractionArea must detect player on layer 8")
 		
 		# Prior to start, light data is empty
 		var off_light: Dictionary = gen.get_light_data()
 		assert(off_light.is_empty(), "Turned-off generator must not emit light")
 		
-		# Start generator
+		# Start generator via interact()
 		var started_emitted := [false]
 		gen.generator_started.connect(func(_pos): started_emitted[0] = true)
 		
-		var success: bool = gen.start_generator()
-		assert(success == true, "start_generator() should return true on first activation")
+		var success: bool = gen.interact()
+		assert(success == true, "interact() should return true on first activation")
 		assert(gen.is_running == true, "Generator is_running must be true")
+		assert(gen.can_interact() == false, "can_interact must be false when running")
 		assert(started_emitted[0] == true, "generator_started signal must be emitted")
 		
 		var on_light: Dictionary = gen.get_light_data()
@@ -104,8 +114,77 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		gen.queue_free()
 		print("  -> Generator Activation & Floodlight: PASS")
 
+	func _test_blood_decal_decay() -> void:
+		print("Test 3: Blood Decal & Severed Limb Lifetime Decay...")
+		var DecalScript = load("res://scripts/blood_decal.gd")
+		assert(DecalScript != null, "blood_decal.gd must load")
+		
+		var decal = Node2D.new()
+		decal.set_script(DecalScript)
+		add_child(decal)
+		decal.setup(Vector2(100, 100), Vector2.RIGHT, 0, 1.0, false)
+		assert(decal.decay_lifetime > 0.0, "Decal must have positive decay_lifetime")
+		
+		decal.set_lifetime(0.2)
+		assert(decal.decay_lifetime == 2.0, "decay_lifetime clamp must prevent underflow")
+		
+		decal.queue_free()
+		print("  -> Blood Decal & Severed Limb Lifetime Decay: PASS")
+
+	func _test_new_interactables() -> void:
+		print("Test 4: Supply Crate, Sentry Turret & Touch Controls Interact Button...")
+		# 1. Supply Crate
+		var CrateScene = load("res://scenes/actors/supply_crate.tscn")
+		assert(CrateScene != null, "supply_crate.tscn must load")
+		var crate = CrateScene.instantiate()
+		add_child(crate)
+		
+		assert(crate.is_in_group("interactables"), "SupplyCrate must be in interactables")
+		assert(crate.can_interact() == true, "SupplyCrate must be interactable before opening")
+		assert(crate.is_opened == false, "SupplyCrate starts unopened")
+		var crate_opened: bool = crate.interact()
+		assert(crate_opened == true, "crate.interact() must succeed")
+		assert(crate.is_opened == true, "SupplyCrate is_opened must be true")
+		assert(crate.can_interact() == false, "SupplyCrate can_interact must be false after opening")
+		crate.queue_free()
+		
+		# 2. Sentry Turret
+		var TurretScene = load("res://scenes/actors/sentry_turret.tscn")
+		assert(TurretScene != null, "sentry_turret.tscn must load")
+		var turret = TurretScene.instantiate()
+		add_child(turret)
+		
+		assert(turret.is_in_group("interactables"), "SentryTurret must be in interactables")
+		assert(turret.is_in_group("turrets"), "SentryTurret must be in turrets")
+		assert(turret.can_interact() == true, "SentryTurret must be interactable before activation")
+		assert(turret.is_active == false, "SentryTurret starts offline")
+		
+		var turret_act: bool = turret.interact()
+		assert(turret_act == true, "turret.interact() must succeed")
+		assert(turret.is_active == true, "SentryTurret must be active")
+		assert(turret.active_time_left > 0.0, "active_time_left must be positive")
+		turret.queue_free()
+		
+		# 3. Touch Controls Interact Button
+		var TouchScene = load("res://scenes/ui/touch_controls.tscn")
+		assert(TouchScene != null, "touch_controls.tscn must load")
+		var touch = TouchScene.instantiate()
+		add_child(touch)
+		
+		assert(touch.has_node("InteractButton"), "TouchControls must have InteractButton")
+		var btn: Button = touch.get_node("InteractButton")
+		assert(btn.visible == false, "InteractButton starts hidden")
+		touch.set_interact_prompt(true, "START GENERATOR", null)
+		assert(btn.visible == true, "InteractButton becomes visible when prompted")
+		assert("START GENERATOR" in btn.text, "InteractButton text must update")
+		touch.set_interact_prompt(false)
+		assert(btn.visible == false, "InteractButton hides when prompt ends")
+		touch.queue_free()
+		
+		print("  -> Supply Crate, Sentry Turret & Touch Controls Interact: PASS")
+
 	func _test_endless_survival_and_herd_swarms() -> void:
-		print("Test 3: Endless Survival Wave Progression & Herd Swarm Rushes...")
+		print("Test 5: Endless Survival Wave Progression & Herd Swarm Rushes...")
 		var WaveDirScript = load("res://scripts/wave_director.gd")
 		assert(WaveDirScript != null, "wave_director.gd must load")
 		var director = WaveDirScript.new()
@@ -147,7 +226,7 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		print("  -> Endless Survival Scaling & Herd Rushes: PASS")
 
 	func _test_game_state_survival_persistence() -> void:
-		print("Test 4: GameState Survival Records & Achievements...")
+		print("Test 6: GameState Survival Records & Achievements...")
 		var GameStateScript = load("res://autoload/game_state.gd")
 		var gs = GameStateScript.new()
 		add_child(gs)
@@ -174,7 +253,7 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		print("  -> GameState Survival Records & Achievements: PASS")
 
 	func _test_mode_select_survival_button() -> void:
-		print("Test 5: Mode Select UI Survival Option...")
+		print("Test 7: Mode Select UI Survival Option...")
 		var ModeSelectScene = load("res://scenes/ui/mode_select.tscn")
 		assert(ModeSelectScene != null, "mode_select.tscn must load")
 		var mode_select = ModeSelectScene.instantiate()

@@ -272,7 +272,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_Q:
 				if weapon_controller: weapon_controller.cycle_weapon(-1)
 			KEY_E:
-				if weapon_controller: weapon_controller.cycle_weapon(1)
+				if not try_interact():
+					if weapon_controller: weapon_controller.cycle_weapon(1)
+			KEY_F:
+				try_interact()
 			KEY_G:
 				try_throw_grenade(get_global_mouse_position())
 	
@@ -317,6 +320,25 @@ func try_throw_grenade(target_pos: Vector2) -> bool:
 	var impact_pos := global_position + (throw_dir.normalized() * dist if dist > 1.0 else Vector2.RIGHT * 120.0)
 	grenade_detonated.emit(impact_pos, 135.0, 165.0)
 	return true
+
+func try_interact() -> bool:
+	if is_dead:
+		return false
+	var tree := get_tree()
+	if not tree:
+		return false
+	var interactables := tree.get_nodes_in_group("interactables")
+	var closest: Node = null
+	var min_d := 130.0
+	for item in interactables:
+		if is_instance_valid(item) and item.has_method("can_interact") and item.can_interact():
+			var d := global_position.distance_to(item.global_position)
+			if d < min_d:
+				min_d = d
+				closest = item
+	if closest and closest.has_method("interact"):
+		return closest.interact()
+	return false
 
 func apply_pickup(pickup_type: String) -> void:
 	var audio_mgr := get_node_or_null("/root/AudioManager")

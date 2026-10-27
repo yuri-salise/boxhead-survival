@@ -227,7 +227,8 @@ func _physics_process(delta: float) -> void:
 				if is_instance_valid(collider) and collider.is_in_group("players"):
 					try_attack_target(collider)
 	
-	queue_redraw()
+	if not is_dead and (velocity.length_squared() > 4.0 or hurt_flash_timer > 0.0 or is_enraged or not has_legs):
+		queue_redraw()
 
 func _trigger_witch_enrage() -> void:
 	if is_enraged:

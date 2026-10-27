@@ -3,6 +3,7 @@ extends Control
 signal dash_pressed()
 signal grenade_pressed()
 signal switch_weapon_pressed()
+signal interact_pressed()
 
 @export var joystick_radius: float = 68.0
 @export var knob_radius: float = 28.0
@@ -23,8 +24,10 @@ var is_firing: bool = false
 var dash_cooldown_ratio: float = 0.0
 var grenade_count: int = 2
 var current_weapon_label: String = "9MM PISTOL [INF]"
+var current_interactable: Node = null
 
 @onready var dash_btn: Button = $DashButton
+@onready var interact_btn: Button = get_node_or_null("InteractButton")
 @onready var grenade_btn: Button = $GrenadeButton
 @onready var weapon_btn: Button = $WeaponSwitchButton
 
@@ -34,12 +37,25 @@ func _ready() -> void:
 	
 	if dash_btn:
 		dash_btn.pressed.connect(func(): dash_pressed.emit())
+	if interact_btn:
+		interact_btn.visible = false
+		interact_btn.pressed.connect(func():
+			interact_pressed.emit()
+			if is_instance_valid(current_interactable) and current_interactable.has_method("interact"):
+				current_interactable.interact()
+		)
 	if grenade_btn:
 		grenade_btn.pressed.connect(func(): grenade_pressed.emit())
 	if weapon_btn:
 		weapon_btn.pressed.connect(func(): switch_weapon_pressed.emit())
 	
 	_update_button_labels()
+
+func set_interact_prompt(visible_flag: bool, prompt_text: String = "USE", target: Node = null) -> void:
+	current_interactable = target if visible_flag else null
+	if interact_btn:
+		interact_btn.visible = visible_flag
+		interact_btn.text = "⚡ " + prompt_text
 
 func set_dash_cooldown(cd_left: float, cd_max: float) -> void:
 	dash_cooldown_ratio = clampf(cd_left / maxf(0.01, cd_max), 0.0, 1.0)
@@ -106,8 +122,8 @@ func _input(event: InputEvent) -> void:
 			_update_aim_stick(drag.position)
 
 func _is_point_on_action_buttons(pt: Vector2) -> bool:
-	for btn in [dash_btn, grenade_btn, weapon_btn]:
-		if is_instance_valid(btn) and btn.get_global_rect().has_point(pt):
+	for btn in [dash_btn, interact_btn, grenade_btn, weapon_btn]:
+		if is_instance_valid(btn) and btn.visible and btn.get_global_rect().has_point(pt):
 			return true
 	return false
 

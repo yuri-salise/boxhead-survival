@@ -35,13 +35,13 @@ uniform float u_cone_half = 0.44;
 uniform float u_beam_len = 430.0;
 uniform float u_inner_radius = 60.0;
 
-const int MAX_LIGHTS = 16;
+const int MAX_LIGHTS = 8;
 uniform int u_light_count = 0;
 uniform vec2 u_light_pos[MAX_LIGHTS];
 uniform float u_light_radius[MAX_LIGHTS];
 uniform vec4 u_light_color[MAX_LIGHTS];
 
-const int MAX_SHADOWS = 16;
+const int MAX_SHADOWS = 8;
 uniform int u_shadow_count = 0;
 uniform vec2 u_shadow_obs_pos[MAX_SHADOWS];
 uniform float u_shadow_obs_radius[MAX_SHADOWS];
@@ -150,22 +150,22 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 		darkness_mat.set_shader_parameter("u_flashlight_angle", angle_rad)
 		darkness_mat.set_shader_parameter("u_inner_radius", lerpf(90.0, 52.0, night_factor))
 		
-		# Pass occluder shadows to shader
+		# Pass occluder shadows to shader (capped to 8 closest for high mobile FPS)
 		var shadow_positions: Array[Vector2] = []
 		var shadow_radii: Array[float] = []
 		for obs in occluders:
-			if shadow_positions.size() >= 16:
+			if shadow_positions.size() >= 8:
 				break
 			var world_pos: Vector2 = obs["world_pos"]
 			var obs_spos: Vector2 = screen_pos + (world_pos - player_world_pos)
 			shadow_positions.append(obs_spos)
 			shadow_radii.append(float(obs.get("radius", 16.0)))
 		
-		while shadow_positions.size() < 16:
+		while shadow_positions.size() < 8:
 			shadow_positions.append(Vector2(-9999, -9999))
 			shadow_radii.append(0.0)
 		
-		darkness_mat.set_shader_parameter("u_shadow_count", mini(occluders.size(), 16))
+		darkness_mat.set_shader_parameter("u_shadow_count", mini(occluders.size(), 8))
 		darkness_mat.set_shader_parameter("u_shadow_obs_pos", shadow_positions)
 		darkness_mat.set_shader_parameter("u_shadow_obs_radius", shadow_radii)
 	
@@ -185,7 +185,7 @@ func update_ambient_lights(lights: Array, player_world_pos: Vector2 = Vector2.ZE
 		var light_colors: Array[Vector4] = []
 		
 		for l in lights:
-			if light_positions.size() >= 16:
+			if light_positions.size() >= 8:
 				break
 			var wpos: Vector2 = l["world_pos"]
 			var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
@@ -194,12 +194,12 @@ func update_ambient_lights(lights: Array, player_world_pos: Vector2 = Vector2.ZE
 			var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
 			light_colors.append(Vector4(col.r, col.g, col.b, col.a))
 		
-		while light_positions.size() < 16:
+		while light_positions.size() < 8:
 			light_positions.append(Vector2(-9999, -9999))
 			light_radii.append(0.0)
 			light_colors.append(Vector4(0, 0, 0, 0))
 		
-		darkness_mat.set_shader_parameter("u_light_count", mini(lights.size(), 16))
+		darkness_mat.set_shader_parameter("u_light_count", mini(lights.size(), 8))
 		darkness_mat.set_shader_parameter("u_light_pos", light_positions)
 		darkness_mat.set_shader_parameter("u_light_radius", light_radii)
 		darkness_mat.set_shader_parameter("u_light_color", light_colors)
@@ -227,9 +227,6 @@ func _process(delta: float) -> void:
 	
 	if low_health_ratio < 0.35:
 		needs_redraw = true
-	
-	if active_witches.size() > 0 and night_factor > 0.02:
-		needs_redraw = true # Pulsing eye glint
 	
 	if pov_blood_drops.size() > 0:
 		needs_redraw = true

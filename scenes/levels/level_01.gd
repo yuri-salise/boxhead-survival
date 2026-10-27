@@ -54,9 +54,13 @@ var current_time_phase_name: String = "DAYLIGHT"
 var player2: CharacterBody2D = null
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
-# Mobile performance caching for flashlight occluders
+# Mobile performance caching for flashlight occluders & lights
 var cached_occluders: Array = []
 var last_occluder_query_pos: Vector2 = Vector2(-9999.0, -9999.0)
+var ambient_query_timer: float = 0.0
+var cached_ambient_lights: Array = []
+var witch_query_timer: float = 0.0
+var cached_witch_eyes: Array = []
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -82,13 +86,25 @@ func _ready() -> void:
 	spawn_pickup_at("ARMOR", Vector2(820, 470))
 	spawn_pickup_at("MEDKIT", Vector2(640, 210))
 	
-	# Spawn interactive emergency generator at quarantine substation
+	# Spawn interactive world elements at the outpost
 	var gen_scene: PackedScene = load("res://scenes/actors/generator.tscn")
 	if gen_scene:
 		var generator := gen_scene.instantiate()
 		generator.position = Vector2(740, 240)
 		generator.generator_started.connect(_on_generator_started)
 		add_child(generator)
+	
+	var sentry_scene: PackedScene = load("res://scenes/actors/sentry_turret.tscn")
+	if sentry_scene:
+		var sentry := sentry_scene.instantiate()
+		sentry.position = Vector2(640, 440)
+		add_child(sentry)
+	
+	var crate_scene: PackedScene = load("res://scenes/actors/supply_crate.tscn")
+	if crate_scene:
+		var crate := crate_scene.instantiate()
+		crate.position = Vector2(530, 260)
+		add_child(crate)
 	
 	if player:
 		player.add_to_group("players")
@@ -123,6 +139,11 @@ func _ready() -> void:
 				if is_instance_valid(player) and player.weapon_controller:
 					player.weapon_controller.cycle_weapon(1)
 			)
+			if touch_controls.has_signal("interact_pressed"):
+				touch_controls.interact_pressed.connect(func():
+					if is_instance_valid(player):
+						player.try_interact()
+				)
 		
 		_on_player_health_changed(player.current_health, player.max_health)
 		_on_player_armor_changed(player.current_armor, player.max_armor)
@@ -351,7 +372,9 @@ func _process(delta: float) -> void:
 				occluders = cached_occluders
 			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, player.global_position)
 			
-			if horror_vignette.has_method("update_ambient_lights"):
+			ambient_query_timer += delta
+			if ambient_query_timer >= 0.20 or cached_ambient_lights.is_empty():
+				ambient_query_timer = 0.0
 				var ambients: Array = []
 				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
 					ambients.append_array(arena_env.get_ambient_lights(player.global_position, 850.0))
@@ -361,9 +384,13 @@ func _process(delta: float) -> void:
 						var ldata: Dictionary = g.get_light_data()
 						if not ldata.is_empty():
 							ambients.append(ldata)
-				horror_vignette.update_ambient_lights(ambients, player.global_position)
+				cached_ambient_lights = ambients
+				if horror_vignette.has_method("update_ambient_lights"):
+					horror_vignette.update_ambient_lights(cached_ambient_lights, player.global_position)
 			
-			if horror_vignette.has_method("update_witch_eyes"):
+			witch_query_timer += delta
+			if witch_query_timer >= 0.12 or cached_witch_eyes.is_empty():
+				witch_query_timer = 0.0
 				var witches: Array = []
 				if is_instance_valid(zombie_container):
 					for z in zombie_container.get_children():
@@ -373,7 +400,9 @@ func _process(delta: float) -> void:
 								"rot": z.rotation,
 								"is_enraged": bool(z.get("is_enraged"))
 							})
-				horror_vignette.update_witch_eyes(witches, player.global_position)
+				cached_witch_eyes = witches
+				if horror_vignette.has_method("update_witch_eyes"):
+					horror_vignette.update_witch_eyes(cached_witch_eyes, player.global_position)
 			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
 			if is_instance_valid(zombie_container):
@@ -387,7 +416,11 @@ func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int 
 	if not blood_container:
 		return null
 	
-	if blood_container.get_child_count() >= max_blood_decals:
+	var gs := get_node_or_null("/root/GameState")
+	var is_survival: bool = (gs != null and gs.selected_mode == "survival")
+	var decal_limit := 48 if is_survival else 75
+	
+	if blood_container.get_child_count() >= decal_limit:
 		var oldest := blood_container.get_child(0)
 		if is_instance_valid(oldest):
 			oldest.queue_free()
@@ -396,13 +429,19 @@ func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int 
 	decal.set_script(BloodDecalScript)
 	blood_container.add_child(decal)
 	decal.setup(world_pos, hit_dir, splatter_type, scale_mult, active_splash)
+	if is_survival and decal.has_method("set_lifetime"):
+		decal.set_lifetime(7.5)
 	return decal
 
 func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, skin_color: Color, scale_mult: float = 1.0) -> Node2D:
 	if not blood_container:
 		return null
 	
-	if blood_container.get_child_count() >= max_blood_decals:
+	var gs := get_node_or_null("/root/GameState")
+	var is_survival: bool = (gs != null and gs.selected_mode == "survival")
+	var decal_limit := 48 if is_survival else 75
+	
+	if blood_container.get_child_count() >= decal_limit:
 		var oldest := blood_container.get_child(0)
 		if is_instance_valid(oldest):
 			oldest.queue_free()
@@ -411,8 +450,9 @@ func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, sk
 	limb_decal.set_script(BloodDecalScript)
 	blood_container.add_child(limb_decal)
 	limb_decal.setup_severed_limb(world_pos, hit_dir, limb_kind, skin_color, scale_mult)
+	if is_survival and limb_decal.has_method("set_lifetime"):
+		limb_decal.set_lifetime(9.0)
 	
-	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("record_limb_severed"):
 		gs.record_limb_severed()
 	return limb_decal

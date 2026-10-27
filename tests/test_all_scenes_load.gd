@@ -22,6 +22,8 @@ func _init() -> void:
 		"res://scenes/actors/projectile.tscn",
 		"res://scenes/actors/pickup.tscn",
 		"res://scenes/actors/generator.tscn",
+		"res://scenes/actors/supply_crate.tscn",
+		"res://scenes/actors/sentry_turret.tscn",
 		"res://scenes/effects/blood_splatter.tscn"
 	]
 	

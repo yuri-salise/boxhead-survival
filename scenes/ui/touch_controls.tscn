@@ -49,6 +49,18 @@ offset_bottom = 560.0
 theme_override_font_sizes/font_size = 20
 text = "DASH"
 
+[node name="InteractButton" type="Button" parent="." unique_id=948271038]
+visible = false
+custom_minimum_size = Vector2(130, 60)
+layout_mode = 0
+offset_left = 770.0
+offset_top = 560.0
+offset_right = 900.0
+offset_bottom = 620.0
+theme_override_colors/font_color = Color(1, 0.9, 0.25, 1)
+theme_override_font_sizes/font_size = 18
+text = "⚡ USE"
+
 [node name="GrenadeButton" type="Button" parent="." unique_id=1365109803]
 custom_minimum_size = Vector2(102, 54)
 layout_mode = 0

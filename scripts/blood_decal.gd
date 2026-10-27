@@ -42,6 +42,18 @@ var limb_ang_vel: float = 0.0
 var limb_z: float = 0.0
 var limb_z_vel: float = 0.0
 var limb_settled: bool = true
+var decay_lifetime: float = 12.0
+
+func set_lifetime(duration: float) -> void:
+	decay_lifetime = maxf(2.0, duration)
+	_start_decay_tween()
+
+func _start_decay_tween() -> void:
+	var tween := create_tween()
+	if tween:
+		tween.tween_interval(decay_lifetime)
+		tween.tween_property(self, "modulate:a", 0.0, 2.0)
+		tween.tween_callback(queue_free)
 
 func setup(p_pos: Vector2, p_dir: Vector2, p_type: int = -1, p_scale: float = 1.0, with_active_splash: bool = true) -> void:
 	global_position = p_pos
@@ -49,6 +61,7 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_type: int = -1, p_scale: float = 1.
 	base_scale = p_scale * randf_range(0.85, 1.25)
 	seed_val = randi()
 	has_limb_part = false
+	decay_lifetime = 11.0
 	
 	if p_type < 0:
 		var roll := randf()
@@ -68,6 +81,7 @@ func setup(p_pos: Vector2, p_dir: Vector2, p_type: int = -1, p_scale: float = 1.
 		splatter_type = p_type
 	
 	_generate_splatter_geometry(with_active_splash)
+	_start_decay_tween()
 	set_process(is_animating_splash or not limb_settled)
 	queue_redraw()
 
@@ -77,6 +91,7 @@ func setup_severed_limb(p_pos: Vector2, p_dir: Vector2, p_limb_kind: int, p_skin
 	base_scale = p_scale
 	seed_val = randi()
 	splatter_type = SplatterType.SEVERED_LIMB
+	decay_lifetime = 14.0
 	
 	has_limb_part = true
 	limb_kind = p_limb_kind
@@ -91,6 +106,7 @@ func setup_severed_limb(p_pos: Vector2, p_dir: Vector2, p_limb_kind: int, p_skin
 	limb_settled = false
 	
 	_generate_splatter_geometry(true)
+	_start_decay_tween()
 	set_process(true)
 	queue_redraw()
 
@@ -143,8 +159,10 @@ func _process(delta: float) -> void:
 						"color": Color(0.34, 0.02, 0.03, 0.88)
 					})
 	
-	queue_redraw()
-	if not needs_update and not is_animating_splash and limb_settled:
+	if needs_update:
+		queue_redraw()
+	elif not is_animating_splash and limb_settled:
+		queue_redraw()
 		set_process(false)
 
 func _pick_blood_color(rng: RandomNumberGenerator, is_dark: bool = false) -> Color:
