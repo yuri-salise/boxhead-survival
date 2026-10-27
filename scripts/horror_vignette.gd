@@ -14,17 +14,123 @@ var flashlight_angle: float = 0.0
 var flashlight_occluders: Array = []
 var flashlight_player_world_pos: Vector2 = Vector2.ZERO
 
+# Ambient Lights (Streetlights, beacon lamps, emergency generators)
+var ambient_lights: Array = []
+# Witch glowing eyes in darkness
+var active_witches: Array = []
+
 # POV blood splatters & dripping streaks on the screen lens when bitten
 var pov_blood_drops: Array[Dictionary] = []
+
+var darkness_rect: ColorRect = null
+var darkness_mat: ShaderMaterial = null
+
+const DARKNESS_SHADER_CODE: String = """
+shader_type canvas_item;
+
+uniform float u_night_factor : hint_range(0.0, 1.0) = 0.0;
+uniform vec2 u_player_screen_pos = vec2(640.0, 360.0);
+uniform float u_flashlight_angle = 0.0;
+uniform float u_cone_half = 0.44;
+uniform float u_beam_len = 430.0;
+uniform float u_inner_radius = 60.0;
+
+const int MAX_LIGHTS = 16;
+uniform int u_light_count = 0;
+uniform vec2 u_light_pos[MAX_LIGHTS];
+uniform float u_light_radius[MAX_LIGHTS];
+uniform vec4 u_light_color[MAX_LIGHTS];
+
+const int MAX_SHADOWS = 16;
+uniform int u_shadow_count = 0;
+uniform vec2 u_shadow_obs_pos[MAX_SHADOWS];
+uniform float u_shadow_obs_radius[MAX_SHADOWS];
+
+void fragment() {
+	if (u_night_factor <= 0.005) {
+		COLOR = vec4(0.0);
+	} else {
+		vec2 p = FRAGCOORD.xy;
+		vec2 to_pixel = p - u_player_screen_pos;
+		float dist = length(to_pixel);
+		float angle = atan(to_pixel.y, to_pixel.x);
+		float diff = abs(mod(angle - u_flashlight_angle + 3.14159265, 6.2831853) - 3.14159265);
+		
+		float player_light = 0.0;
+		if (dist < u_inner_radius) {
+			player_light = smoothstep(u_inner_radius, u_inner_radius * 0.45, dist);
+		}
+		if (diff < u_cone_half && dist < u_beam_len) {
+			float cone_fade = smoothstep(u_cone_half, u_cone_half - 0.09, diff);
+			float beam_fade = smoothstep(u_beam_len, u_beam_len * 0.78, dist);
+			float flash = cone_fade * beam_fade;
+			for (int i = 0; i < u_shadow_count; i++) {
+				vec2 to_obs = u_shadow_obs_pos[i] - u_player_screen_pos;
+				float obs_dist = length(to_obs);
+				if (dist > obs_dist && obs_dist > 8.0) {
+					float obs_angle = atan(to_obs.y, to_obs.x);
+					float obs_diff = abs(mod(angle - obs_angle + 3.14159265, 6.2831853) - 3.14159265);
+					float shadow_w = atan(u_shadow_obs_radius[i], obs_dist);
+					if (obs_diff < shadow_w) {
+						float shadow_edge = smoothstep(shadow_w, shadow_w * 0.82, obs_diff);
+						flash *= (1.0 - shadow_edge);
+					}
+				}
+			}
+			player_light = max(player_light, flash);
+		}
+		
+		float ambient_light = 0.0;
+		vec3 ambient_tint = vec3(0.0);
+		for (int i = 0; i < u_light_count; i++) {
+			float d = distance(p, u_light_pos[i]);
+			float r = u_light_radius[i];
+			if (d < r) {
+				float l = smoothstep(r, r * 0.22, d) * u_light_color[i].a;
+				ambient_light = max(ambient_light, l);
+				ambient_tint += u_light_color[i].rgb * (l * 0.35);
+			}
+		}
+		
+		float total_light = clamp(player_light + ambient_light, 0.0, 1.0);
+		float dark_alpha = (1.0 - total_light) * 0.96 * u_night_factor;
+		vec3 dark_col = vec3(0.01, 0.01, 0.02) + ambient_tint;
+		COLOR = vec4(dark_col, dark_alpha);
+	}
+}
+"""
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	_setup_darkness_shader()
+
+func _setup_darkness_shader() -> void:
+	if darkness_rect == null:
+		darkness_rect = ColorRect.new()
+		darkness_rect.name = "DarknessShaderRect"
+		darkness_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		darkness_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		
+		darkness_mat = ShaderMaterial.new()
+		var shader := Shader.new()
+		shader.code = DARKNESS_SHADER_CODE
+		darkness_mat.shader = shader
+		darkness_rect.material = darkness_mat
+		darkness_rect.visible = false
+		add_child(darkness_rect)
+		move_child(darkness_rect, 0)
 
 func set_night_factor(factor: float, dusk_warming: bool = true) -> void:
 	night_factor = clampf(factor, 0.0, 1.0)
 	night_mode_enabled = (night_factor >= 0.45)
 	is_dusk_phase = dusk_warming
+	
+	if darkness_mat:
+		darkness_mat.set_shader_parameter("u_night_factor", night_factor)
+	if darkness_rect:
+		darkness_rect.visible = (night_factor > 0.005)
+	
 	queue_redraw()
 
 func set_night_mode(enabled: bool) -> void:
@@ -38,6 +144,31 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 	flashlight_angle = angle_rad
 	flashlight_occluders = occluders
 	flashlight_player_world_pos = player_world_pos
+	
+	if darkness_mat and night_factor > 0.005:
+		darkness_mat.set_shader_parameter("u_player_screen_pos", screen_pos)
+		darkness_mat.set_shader_parameter("u_flashlight_angle", angle_rad)
+		darkness_mat.set_shader_parameter("u_inner_radius", lerpf(90.0, 52.0, night_factor))
+		
+		# Pass occluder shadows to shader
+		var shadow_positions: Array[Vector2] = []
+		var shadow_radii: Array[float] = []
+		for obs in occluders:
+			if shadow_positions.size() >= 16:
+				break
+			var world_pos: Vector2 = obs["world_pos"]
+			var obs_spos: Vector2 = screen_pos + (world_pos - player_world_pos)
+			shadow_positions.append(obs_spos)
+			shadow_radii.append(float(obs.get("radius", 16.0)))
+		
+		while shadow_positions.size() < 16:
+			shadow_positions.append(Vector2(-9999, -9999))
+			shadow_radii.append(0.0)
+		
+		darkness_mat.set_shader_parameter("u_shadow_count", mini(occluders.size(), 16))
+		darkness_mat.set_shader_parameter("u_shadow_obs_pos", shadow_positions)
+		darkness_mat.set_shader_parameter("u_shadow_obs_radius", shadow_radii)
+	
 	if night_factor > 0.01:
 		var pos_dist := flashlight_screen_pos.distance_squared_to(last_drawn_flashlight_pos)
 		var ang_diff := absf(wrapf(flashlight_angle - last_drawn_flashlight_angle, -PI, PI))
@@ -45,6 +176,46 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 			last_drawn_flashlight_pos = flashlight_screen_pos
 			last_drawn_flashlight_angle = flashlight_angle
 			queue_redraw()
+
+func update_ambient_lights(lights: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
+	ambient_lights = lights
+	if darkness_mat and night_factor > 0.005:
+		var light_positions: Array[Vector2] = []
+		var light_radii: Array[float] = []
+		var light_colors: Array[Vector4] = []
+		
+		for l in lights:
+			if light_positions.size() >= 16:
+				break
+			var wpos: Vector2 = l["world_pos"]
+			var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
+			light_positions.append(spos)
+			light_radii.append(float(l.get("radius", 140.0)))
+			var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
+			light_colors.append(Vector4(col.r, col.g, col.b, col.a))
+		
+		while light_positions.size() < 16:
+			light_positions.append(Vector2(-9999, -9999))
+			light_radii.append(0.0)
+			light_colors.append(Vector4(0, 0, 0, 0))
+		
+		darkness_mat.set_shader_parameter("u_light_count", mini(lights.size(), 16))
+		darkness_mat.set_shader_parameter("u_light_pos", light_positions)
+		darkness_mat.set_shader_parameter("u_light_radius", light_radii)
+		darkness_mat.set_shader_parameter("u_light_color", light_colors)
+
+func update_witch_eyes(witches: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
+	active_witches.clear()
+	for w in witches:
+		var wpos: Vector2 = w["pos"]
+		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
+		active_witches.append({
+			"screen_pos": spos,
+			"rot": float(w.get("rot", 0.0)),
+			"is_enraged": bool(w.get("is_enraged", false))
+		})
+	if active_witches.size() > 0 and night_factor > 0.02:
+		queue_redraw()
 
 func _process(delta: float) -> void:
 	pulse_time += delta
@@ -56,6 +227,9 @@ func _process(delta: float) -> void:
 	
 	if low_health_ratio < 0.35:
 		needs_redraw = true
+	
+	if active_witches.size() > 0 and night_factor > 0.02:
+		needs_redraw = true # Pulsing eye glint
 	
 	if pov_blood_drops.size() > 0:
 		needs_redraw = true
@@ -126,167 +300,56 @@ func trigger_bite_pov_splatter(hit_dir: Vector2 = Vector2.ZERO, damage: float = 
 	
 	queue_redraw()
 
-func _draw_gradual_night_darkness(vp: Vector2) -> void:
-	# 1. Atmospheric Sunset/Dusk (warm amber-crimson) or Dawn (cold slate-blue) glaze during twilight transition
-	var twilight_bell := sin(clampf(night_factor, 0.0, 1.0) * PI)
-	if twilight_bell > 0.02:
-		var tint_col := Color(0.26, 0.09, 0.03, twilight_bell * 0.22) if is_dusk_phase else Color(0.06, 0.12, 0.24, twilight_bell * 0.20)
-		draw_rect(Rect2(Vector2.ZERO, vp), tint_col, true)
-	
-	# 2. Gradual darkness mask outside the player's directional flashlight cone
-	var origin := flashlight_screen_pos
-	var cone_half := 0.44 # ~50-degree tactical flashlight cone
-	var inner_r := lerpf(90.0, 52.0, night_factor) # Ambient awareness ring shrinks smoothly as night deepens
-	var beam_len := 430.0
-	var outer_r := 1600.0
-	var dark_alpha := 0.96 * night_factor
-	var dark_col := Color(0.01, 0.01, 0.02, dark_alpha)
-	var penumbra_col := Color(0.01, 0.01, 0.02, 0.56 * night_factor)
-	
-	# 310-degree darkness shrouding everything outside the flashlight beam cone
-	var start_a := flashlight_angle + cone_half
-	var end_a := flashlight_angle + TAU - cone_half
-	var dark_steps := 36
-	for i in range(dark_steps):
-		var a0 := lerpf(start_a, end_a, float(i) / float(dark_steps))
-		var a1 := lerpf(start_a, end_a, float(i + 1) / float(dark_steps))
-		var d0 := Vector2.from_angle(a0)
-		var d1 := Vector2.from_angle(a1)
-		var quad := PackedVector2Array([
-			origin + d0 * inner_r,
-			origin + d0 * outer_r,
-			origin + d1 * outer_r,
-			origin + d1 * inner_r
-		])
-		draw_colored_polygon(quad, dark_col)
-	
-	# Darkness beyond the tip of the flashlight beam (distance > beam_len)
-	var cone_start := flashlight_angle - cone_half
-	var cone_end := flashlight_angle + cone_half
-	var cone_steps := 10
-	for i in range(cone_steps):
-		var a0 := lerpf(cone_start, cone_end, float(i) / float(cone_steps))
-		var a1 := lerpf(cone_start, cone_end, float(i + 1) / float(cone_steps))
-		var d0 := Vector2.from_angle(a0)
-		var d1 := Vector2.from_angle(a1)
-		var cap_quad := PackedVector2Array([
-			origin + d0 * beam_len,
-			origin + d0 * outer_r,
-			origin + d1 * outer_r,
-			origin + d1 * beam_len
-		])
-		draw_colored_polygon(cap_quad, dark_col)
-		
-		var tip_fade_quad := PackedVector2Array([
-			origin + d0 * (beam_len * 0.78),
-			origin + d0 * beam_len,
-			origin + d1 * beam_len,
-			origin + d1 * (beam_len * 0.78)
-		])
-		draw_colored_polygon(tip_fade_quad, penumbra_col)
-	
-	# Soft penumbra feather wedges along left and right beam edges
-	var feather := 0.11
-	var left_outer := Vector2.from_angle(cone_start)
-	var left_inner := Vector2.from_angle(cone_start + feather)
-	draw_colored_polygon(PackedVector2Array([
-		origin + left_outer * inner_r,
-		origin + left_outer * beam_len,
-		origin + left_inner * beam_len,
-		origin + left_inner * inner_r
-	]), penumbra_col)
-	
-	var right_inner := Vector2.from_angle(cone_end - feather)
-	var right_outer := Vector2.from_angle(cone_end)
-	draw_colored_polygon(PackedVector2Array([
-		origin + right_inner * inner_r,
-		origin + right_inner * beam_len,
-		origin + right_outer * beam_len,
-		origin + right_outer * inner_r
-	]), penumbra_col)
-	
-	# Warm halogen flashlight beam glow inside cone (brightens as night deepens)
-	var mid_dir := Vector2.from_angle(flashlight_angle)
-	draw_colored_polygon(PackedVector2Array([
-		origin + mid_dir * 16.0,
-		origin + left_inner * (beam_len * 0.85),
-		origin + mid_dir * (beam_len * 0.92),
-		origin + right_inner * (beam_len * 0.85)
-	]), Color(1.0, 0.95, 0.78, 0.085 * night_factor))
-	
-	# 3. Dynamic Obstacle Shadows: Solid obstacles inside the flashlight beam block light and cast realistic shadows
-	if night_factor > 0.05 and flashlight_occluders.size() > 0:
-		for obs in flashlight_occluders:
-			var world_pos: Vector2 = obs["world_pos"]
-			var radius: float = float(obs.get("radius", 16.0))
-			var obs_screen_pos: Vector2 = flashlight_screen_pos + (world_pos - flashlight_player_world_pos)
-			
-			var to_obs: Vector2 = obs_screen_pos - origin
-			var dist := to_obs.length()
-			if dist < radius or dist > (beam_len + 60.0):
-				continue
-			
-			var ang := to_obs.angle()
-			var diff := absf(wrapf(ang - flashlight_angle, -PI, PI))
-			var angular_radius := clampf(atan2(radius, dist), 0.05, 0.60)
-			
-			if diff < (cone_half + angular_radius):
-				var a_left := ang - angular_radius
-				var a_right := ang + angular_radius
-				var dir_left := Vector2.from_angle(a_left)
-				var dir_right := Vector2.from_angle(a_right)
-				
-				var perp := Vector2(-to_obs.y, to_obs.x).normalized()
-				var p_near_left := obs_screen_pos - perp * (radius * 0.85)
-				var p_near_right := obs_screen_pos + perp * (radius * 0.85)
-				
-				var shadow_reach := outer_r
-				var p_far_left := obs_screen_pos + dir_left * shadow_reach
-				var p_far_right := obs_screen_pos + dir_right * shadow_reach
-				
-				# Main dark shadow polygon (blocks light completely behind the obstacle)
-				var shadow_poly := PackedVector2Array([p_near_left, p_far_left, p_far_right, p_near_right])
-				draw_colored_polygon(shadow_poly, dark_col)
-				
-				# Soft penumbra edges for cinematic realism
-				var pen_feather := 0.05
-				var dir_pen_left := Vector2.from_angle(a_left - pen_feather)
-				var dir_pen_right := Vector2.from_angle(a_right + pen_feather)
-				
-				draw_colored_polygon(PackedVector2Array([
-					p_near_left,
-					obs_screen_pos + dir_pen_left * shadow_reach,
-					p_far_left
-				]), penumbra_col)
-				
-				draw_colored_polygon(PackedVector2Array([
-					p_near_right,
-					p_far_right,
-					obs_screen_pos + dir_pen_right * shadow_reach
-				]), penumbra_col)
-
 func _draw() -> void:
 	var vp := get_viewport_rect().size
 	if vp == Vector2.ZERO:
 		vp = Vector2(1280, 720)
 	
-	# 0. Gradual Time-Based Day/Dusk/Night Cycle & Flashlight Cone
+	# 1. Atmospheric Sunset/Dusk or Dawn glaze during twilight transition
 	if night_factor > 0.01:
-		_draw_gradual_night_darkness(vp)
+		var twilight_bell := sin(clampf(night_factor, 0.0, 1.0) * PI)
+		if twilight_bell > 0.02:
+			var tint_col := Color(0.26, 0.09, 0.03, twilight_bell * 0.22) if is_dusk_phase else Color(0.06, 0.12, 0.24, twilight_bell * 0.20)
+			draw_rect(Rect2(Vector2.ZERO, vp), tint_col, true)
 	
-	# 1. Dark atmospheric horror border framing & corner shadows
+	# 2. Witch Glowing Crimson Eyes piercing pitch darkness
+	if night_factor > 0.05 and active_witches.size() > 0:
+		for w in active_witches:
+			var spos: Vector2 = w["screen_pos"]
+			if spos.x < -80 or spos.x > vp.x + 80 or spos.y < -80 or spos.y > vp.y + 80:
+				continue
+			var w_rot: float = float(w.get("rot", 0.0))
+			var is_enr: bool = bool(w.get("is_enraged", false))
+			
+			var fwd := Vector2(7.0, 0.0).rotated(w_rot)
+			var perp := Vector2(-fwd.y, fwd.x).normalized()
+			var eye_l := spos + fwd + perp * 2.8
+			var eye_r := spos + fwd - perp * 2.8
+			
+			var p_glow := 0.65 + 0.35 * sin(pulse_time * 8.0)
+			var glow_col := Color(0.95, 0.05, 0.05, 0.35 * p_glow) if not is_enr else Color(1.0, 0.25, 0.05, 0.65 * p_glow)
+			var pupil_col := Color(1.0, 0.1, 0.1, 0.98) if not is_enr else Color(1.0, 0.85, 0.2, 1.0)
+			
+			# Outer crimson glare aura
+			draw_circle(spos + fwd, 10.0 if not is_enr else 14.0, glow_col)
+			# Left eye glint
+			draw_circle(eye_l, 2.2 if is_enr else 1.8, pupil_col)
+			# Right eye glint
+			draw_circle(eye_r, 2.2 if is_enr else 1.8, pupil_col)
+	
+	# 3. Dark atmospheric horror border framing & corner shadows
 	var border_col := Color(0.01, 0.01, 0.02, 0.58)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(vp.x, 34)), border_col, true)
 	draw_rect(Rect2(0, vp.y - 34, vp.x, 34), border_col, true)
 	draw_rect(Rect2(Vector2.ZERO, Vector2(38, vp.y)), border_col, true)
 	draw_rect(Rect2(vp.x - 38, 0, 38, vp.y), border_col, true)
 	
-	# 2. Immediate crimson bite shockwave border flash
+	# 4. Immediate crimson bite shockwave border flash
 	if bite_flash_alpha > 0.01:
 		draw_rect(Rect2(Vector2.ZERO, vp), Color(0.72, 0.03, 0.04, bite_flash_alpha * 0.42), false, 54.0)
 		draw_rect(Rect2(Vector2(18, 18), vp - Vector2(36, 36)), Color(0.52, 0.02, 0.02, bite_flash_alpha * 0.25), false, 28.0)
 	
-	# 3. POV Blood Splatters, Claw Gashes & Dripping Streaks on Camera Lens
+	# 5. POV Blood Splatters, Claw Gashes & Dripping Streaks on Camera Lens
 	for drop in pov_blood_drops:
 		var age: float = float(drop["age"])
 		var life: float = float(drop["lifetime"])
@@ -315,7 +378,7 @@ func _draw() -> void:
 				var offset := Vector2(c_idx * 16.0, c_idx * 6.0)
 				draw_line(p + offset + Vector2(-34, -28), p + offset + Vector2(34, 28), Color(0.78, 0.04, 0.04, 0.85 * fade), 4.5, true)
 	
-	# 4. Low-health blood heartbeat vignette when HP < 40%
+	# 6. Low-health blood heartbeat vignette when HP < 40%
 	if low_health_ratio < 0.40:
 		var intensity := (0.40 - low_health_ratio) / 0.40
 		var beat := 0.55 + 0.45 * sin(pulse_time * 7.5)

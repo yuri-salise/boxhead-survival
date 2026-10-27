@@ -19,7 +19,8 @@ const SUITES: Array[String] = [
 	"res://tests/test_multiplayer_gameplay.gd",
 	"res://tests/test_sector_biomes.gd",
 	"res://tests/test_graphics_settings.gd",
-	"res://tests/test_obstacle_physics_and_shadows.gd"
+	"res://tests/test_obstacle_physics_and_shadows.gd",
+	"res://tests/test_survival_and_generator.gd"
 ]
 
 func _init():
@@ -37,7 +38,7 @@ class MasterTestRunner extends Node:
 			assert(ResourceLoader.exists(path) or FileAccess.file_exists(path), "Missing test suite script: " + path)
 			print("  [OK] Verified suite file: ", path.get_file())
 		
-		print("\nAll 19 test suites verified and ready for execution!")
+		print("\nAll " + str(SUITES.size()) + " test suites verified and ready for execution!")
 		print("=================================================================")
 		print("               ALL SYSTEMS VERIFIED & READY                     ")
 		print("=================================================================")

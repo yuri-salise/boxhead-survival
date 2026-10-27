@@ -32,6 +32,14 @@ const ACHIEVEMENT_DEFS: Dictionary = {
 	"QUARANTINE_SAVIOR": {
 		"title": "DEAD BLOCK SAVIOR",
 		"desc": "Clear all 5 Quarantine Sectors of the campaign."
+	},
+	"SURVIVOR_TEN": {
+		"title": "SURVIVAL VETERAN",
+		"desc": "Survive 10 waves in Endless Survival Mode."
+	},
+	"GENERATOR_POWER": {
+		"title": "LET THERE BE LIGHT",
+		"desc": "Start the emergency generator and illuminate the darkness."
 	}
 }
 
@@ -39,6 +47,8 @@ var unlocked_level: int = 1
 var current_level: int = 1
 var selected_mode: String = "offline"
 var night_mode_enabled: bool = false
+var survival_best_wave: int = 0
+var survival_best_score: int = 0
 
 var best_score_by_level: Dictionary = {
 	1: 0, 2: 0, 3: 0, 4: 0, 5: 0
@@ -164,6 +174,9 @@ func save_progress() -> bool:
 	for ach_id in ACHIEVEMENT_DEFS.keys():
 		config.set_value("achievements", ach_id, has_achievement(ach_id))
 	
+	config.set_value("survival", "best_wave", survival_best_wave)
+	config.set_value("survival", "best_score", survival_best_score)
+	
 	config.set_value("settings", "sfx_enabled", sfx_enabled)
 	config.set_value("settings", "music_enabled", music_enabled)
 	config.set_value("settings", "night_mode_enabled", night_mode_enabled)
@@ -202,6 +215,9 @@ func load_progress() -> void:
 		for ach_id in ACHIEVEMENT_DEFS.keys():
 			unlocked_achievements[ach_id] = bool(config.get_value("achievements", ach_id, false))
 	
+	survival_best_wave = max(0, int(config.get_value("survival", "best_wave", 0)))
+	survival_best_score = max(0, int(config.get_value("survival", "best_score", 0)))
+	
 	sfx_enabled = bool(config.get_value("settings", "sfx_enabled", true))
 	music_enabled = bool(config.get_value("settings", "music_enabled", true))
 	night_mode_enabled = bool(config.get_value("settings", "night_mode_enabled", false))
@@ -227,12 +243,31 @@ func reset_progress() -> void:
 	total_limbs_severed = 0
 	killed_witch = false
 	killed_tank = false
+	survival_best_wave = 0
+	survival_best_score = 0
 	unlocked_achievements.clear()
 	for lvl in range(1, TOTAL_LEVELS + 1):
 		best_score_by_level[lvl] = 0
 		best_stars_by_level[lvl] = 0
 	last_saved_checkpoint.clear()
 	save_progress()
+
+func record_survival_run(wave: int, score: int) -> Dictionary:
+	var new_wave_rec := (wave > survival_best_wave)
+	var new_score_rec := (score > survival_best_score)
+	if new_wave_rec:
+		survival_best_wave = wave
+	if new_score_rec:
+		survival_best_score = score
+	if wave >= 10:
+		unlock_achievement("SURVIVOR_TEN")
+	save_progress()
+	return {
+		"new_wave_record": new_wave_rec,
+		"new_score_record": new_score_rec,
+		"best_wave": survival_best_wave,
+		"best_score": survival_best_score
+	}
 
 func set_graphics_quality(quality: int) -> void:
 	graphics_quality = clampi(quality, 0, 2)

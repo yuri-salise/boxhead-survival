@@ -82,6 +82,35 @@ func show_defeat(level_id: int, score: int, kills: int, reason: String = "OUTPOS
 	if next_level_button:
 		next_level_button.visible = false
 
+func show_survival_defeat(wave: int, score: int, kills: int, is_new_best: bool = false) -> void:
+	is_victory = false
+	visible = true
+	
+	if outcome_title:
+		outcome_title.text = "SURVIVAL TERMINATED // OVERRUN"
+		outcome_title.add_theme_color_override("font_color", Color(0.92, 0.22, 0.22, 1.0))
+	
+	if stars_label:
+		stars_label.text = "WAVES SURVIVED: " + str(wave)
+		stars_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25, 1.0) if is_new_best else Color(0.85, 0.55, 0.25, 1.0))
+		stars_label.visible = true
+	
+	if stats_label:
+		stats_label.text = "INFECTED KILLED: " + str(kills) + "   ·   TOTAL SCORE: " + str(score)
+	
+	if unlock_banner:
+		if is_new_best:
+			unlock_banner.text = "★ NEW PERSONAL RECORD SET! ★"
+			unlock_banner.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25, 1.0))
+		else:
+			unlock_banner.text = "[ POSITION OVERRUN BY ENDLESS HORDE — REARM & RETRY ]"
+			unlock_banner.add_theme_color_override("font_color", Color(0.85, 0.45, 0.35, 1.0))
+	
+	if next_level_button:
+		next_level_button.visible = false
+	if retry_button:
+		retry_button.text = "RETRY SURVIVAL"
+
 func _on_next_level_pressed() -> void:
 	visible = false
 	get_tree().paused = false

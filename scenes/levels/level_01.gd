@@ -82,6 +82,14 @@ func _ready() -> void:
 	spawn_pickup_at("ARMOR", Vector2(820, 470))
 	spawn_pickup_at("MEDKIT", Vector2(640, 210))
 	
+	# Spawn interactive emergency generator at quarantine substation
+	var gen_scene: PackedScene = load("res://scenes/actors/generator.tscn")
+	if gen_scene:
+		var generator := gen_scene.instantiate()
+		generator.position = Vector2(740, 240)
+		generator.generator_started.connect(_on_generator_started)
+		add_child(generator)
+	
 	if player:
 		player.add_to_group("players")
 		player.touch_controls = touch_controls
@@ -193,14 +201,20 @@ func _ready() -> void:
 	advance_day_night_cycle(0.0, true)
 	
 	if wave_director:
-		var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
-		if not waves_to_use.is_empty():
-			wave_director.setup_waves(waves_to_use)
+		var is_survival: bool = (gs != null and gs.selected_mode == "survival")
+		if is_survival:
+			wave_director.is_endless_survival = true
+		else:
+			var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
+			if not waves_to_use.is_empty():
+				wave_director.setup_waves(waves_to_use)
 		wave_director.wave_started.connect(_on_wave_started)
 		wave_director.enemy_spawn_requested.connect(_on_wave_enemy_spawn_requested)
 		wave_director.wave_enemies_updated.connect(_on_wave_enemies_updated)
 		wave_director.wave_completed.connect(_on_wave_completed)
 		wave_director.all_waves_completed.connect(_on_all_waves_completed)
+		if wave_director.has_signal("herd_swarm_triggered"):
+			wave_director.herd_swarm_triggered.connect(_on_herd_swarm_triggered)
 		wave_director.start_waves()
 	elif spawn_timer:
 		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
@@ -336,6 +350,30 @@ func _process(delta: float) -> void:
 					cached_occluders = arena_env.get_nearby_obstacles(player.global_position, 550.0)
 				occluders = cached_occluders
 			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, player.global_position)
+			
+			if horror_vignette.has_method("update_ambient_lights"):
+				var ambients: Array = []
+				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
+					ambients.append_array(arena_env.get_ambient_lights(player.global_position, 850.0))
+				var gens := get_tree().get_nodes_in_group("generators")
+				for g in gens:
+					if is_instance_valid(g) and g.has_method("get_light_data"):
+						var ldata: Dictionary = g.get_light_data()
+						if not ldata.is_empty():
+							ambients.append(ldata)
+				horror_vignette.update_ambient_lights(ambients, player.global_position)
+			
+			if horror_vignette.has_method("update_witch_eyes"):
+				var witches: Array = []
+				if is_instance_valid(zombie_container):
+					for z in zombie_container.get_children():
+						if is_instance_valid(z) and not z.get("is_dead") and z.get("zombie_type") == 5: # ZombieType.WITCH == 5
+							witches.append({
+								"pos": z.global_position,
+								"rot": z.rotation,
+								"is_enraged": z.get("is_enraged", false)
+							})
+				horror_vignette.update_witch_eyes(witches, player.global_position)
 			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
 			if is_instance_valid(zombie_container):
@@ -531,10 +569,57 @@ func _handle_all_players_dead() -> void:
 	if wave_director and wave_director.has_method("stop_waves"):
 		wave_director.stop_waves()
 	
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.selected_mode == "survival":
+		var rec: Dictionary = gs.record_survival_run(current_wave_num, score_count)
+		if result_screen and result_screen.has_method("show_survival_defeat"):
+			result_screen.show_survival_defeat(current_wave_num, score_count, kills_count, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
+			if death_panel:
+				death_panel.visible = false
+			return
+	
 	if level_controller and level_controller.has_method("on_all_players_dead"):
 		level_controller.on_all_players_dead("OUTPOST OVERRUN")
 	else:
 		_on_level_lost(level_id, score_count, kills_count, "OUTPOST OVERRUN")
+
+func _on_generator_started(pos: Vector2) -> void:
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("unlock_achievement"):
+		gs.unlock_achievement("GENERATOR_POWER")
+	if is_instance_valid(player):
+		spawn_floating_text(pos + Vector2(0, -48), "⚡ EMERGENCY GENERATOR RUNNING — FLOODLIGHT ACTIVE! ⚡", Color(1.0, 0.90, 0.30))
+		player.add_camera_shake(6.0)
+	
+	# Loud engine roars attract an immediate zombie swarm!
+	if wave_director and wave_director.has_method("trigger_herd_swarm"):
+		wave_director.trigger_herd_swarm(8, randf() * TAU)
+
+func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
+	if not is_instance_valid(player) or player.is_dead:
+		return
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_groan", 0.70, 4.0)
+	
+	spawn_floating_text(player.global_position + Vector2(0, -68), "⚠ WARNING: ZOMBIE HERD RUSH DETECTED! ⚠", Color(1.0, 0.20, 0.15))
+	if player.has_method("add_camera_shake"):
+		player.add_camera_shake(7.5)
+	
+	# Deploy cluster of zombies charging the player together
+	var center_spawn := player.global_position + Vector2.from_angle(direction_angle) * 560.0
+	for i in range(count):
+		var jitter := Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
+		var z_pos := center_spawn + jitter
+		var z_type := ZombieScript.ZombieType.RUNNER if (i % 2 == 0) else ZombieScript.ZombieType.WALKER
+		if i == 0 and count >= 12:
+			z_type = ZombieScript.ZombieType.BOOMER
+		var z := spawn_test_zombie_at(z_pos, z_type)
+		if is_instance_valid(z):
+			z.set_meta("is_wave_enemy", true)
+			if "speed" in z:
+				z.speed *= 1.15
 
 func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) -> void:
 	var audio_mgr := get_node_or_null("/root/AudioManager")
@@ -545,7 +630,8 @@ func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) 
 	wave_remaining_count = wave_total_enemies
 	_update_kills_display()
 	if is_instance_valid(player):
-		spawn_floating_text(player.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ===", Color(0.98, 0.78, 0.25))
+		var banner := "=== WAVE " + str(wave_num) + " INCOMING ===" if total_waves <= 0 else "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ==="
+		spawn_floating_text(player.global_position + Vector2(0, -56), banner, Color(0.98, 0.78, 0.25))
 
 func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> void:
 	wave_remaining_count = remaining_in_wave
@@ -566,7 +652,8 @@ func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
 
 func _on_wave_completed(wave_num: int, total_waves: int) -> void:
-	if wave_num < total_waves and is_instance_valid(player):
+	var is_endless: bool = (total_waves <= 0)
+	if (is_endless or wave_num < total_waves) and is_instance_valid(player):
 		spawn_floating_text(player.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " CLEARED — SUPPLY DROP! ===", Color(0.35, 0.95, 0.50))
 		var supply_pool: Array[String] = ["MEDKIT", "ARMOR", "AMMO", "ADRENALINE"]
 		var drop_offset := Vector2.from_angle(randf() * TAU) * 85.0
@@ -602,6 +689,15 @@ func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_defeat")
+	
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.selected_mode == "survival":
+		var rec: Dictionary = gs.record_survival_run(current_wave_num, score_count)
+		if result_screen and result_screen.has_method("show_survival_defeat"):
+			result_screen.show_survival_defeat(current_wave_num, score, kills, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
+			if death_panel:
+				death_panel.modulate.a = 0.0
+			return
 	
 	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_match_result.rpc(false, lvl, score, kills, 0, reason)
@@ -754,7 +850,10 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 
 func _update_kills_display() -> void:
 	if kills_label:
-		kills_label.text = "WAVE " + str(current_wave_num) + "/" + str(total_waves_count) + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
+		var wave_str := "WAVE " + str(current_wave_num) if total_waves_count <= 0 else "WAVE " + str(current_wave_num) + "/" + str(total_waves_count)
+		var gs := get_node_or_null("/root/GameState")
+		var mode_prefix := "SURVIVAL: " if (gs != null and gs.selected_mode == "survival") else ""
+		kills_label.text = mode_prefix + wave_str + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
 
 func _on_pause_button_pressed() -> void:
 	if pause_menu and pause_menu.has_method("open_pause_menu"):

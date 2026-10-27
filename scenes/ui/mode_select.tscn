@@ -70,6 +70,11 @@ custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 text = "SOLO CAMPAIGN (OFFLINE)"
 
+[node name="SurvivalModeButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=648291038]
+custom_minimum_size = Vector2(0, 56)
+layout_mode = 2
+text = "SURVIVAL MODE (ENDLESS WAVES)"
+
 [node name="CoopLobbyButton" type="Button" parent="CenterContainer/ModePanel/ModeMargin/ModeVBox" unique_id=736451289]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2

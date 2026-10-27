@@ -152,6 +152,38 @@ func get_nearby_obstacles(center_pos: Vector2, max_dist: float = 550.0) -> Array
 					})
 	return result
 
+func get_ambient_lights(center_pos: Vector2, max_dist: float = 750.0) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	var center_chunk := get_chunk_coords(center_pos)
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var chunk := _get_chunk_data(center_chunk.x + dx, center_chunk.y + dy)
+			var s: int = int(chunk.get("sector", 1))
+			for p in chunk.get("props", []):
+				var pos: Vector2 = p["pos"]
+				var d := pos.distance_to(center_pos)
+				if d <= max_dist:
+					var kind: int = p.get("kind", 0)
+					if s == SectorBiome.QUARANTINE and kind == 2:
+						result.append({
+							"world_pos": pos,
+							"radius": 135.0,
+							"color": Color(1.0, 0.42, 0.18, 0.85)
+						})
+					elif s == SectorBiome.URBAN and kind == 1:
+						result.append({
+							"world_pos": pos,
+							"radius": 175.0,
+							"color": Color(0.85, 0.92, 1.0, 0.90)
+						})
+					elif s == SectorBiome.SWAMP and kind == 2:
+						result.append({
+							"world_pos": pos,
+							"radius": 75.0,
+							"color": Color(0.25, 0.85, 0.30, 0.65)
+						})
+	return result
+
 func _update_active_colliders() -> void:
 	if not is_inside_tree() or not is_instance_valid(collider_container):
 		return
