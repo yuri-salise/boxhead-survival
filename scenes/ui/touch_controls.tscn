@@ -14,69 +14,69 @@ mouse_filter = 1
 script = ExtResource("1_8dnwg")
 
 [node name="MoveStickLabel" type="Label" parent="." unique_id=342529266]
-custom_minimum_size = Vector2(100, 22)
+custom_minimum_size = Vector2(120, 24)
 layout_mode = 0
-offset_left = 98.0
+offset_left = 115.0
 offset_top = 642.0
-offset_right = 98.0
-offset_bottom = 642.0
+offset_right = 235.0
+offset_bottom = 666.0
 theme_override_fonts/font = ExtResource("2_l8g55")
-theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(0.75, 0.8, 0.85, 0.78)
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(0.85, 0.90, 0.95, 0.85)
 text = "MOVE"
 horizontal_alignment = 1
 
 [node name="AimStickLabel" type="Label" parent="." unique_id=1798833182]
-custom_minimum_size = Vector2(120, 22)
+custom_minimum_size = Vector2(130, 24)
 layout_mode = 0
-offset_left = 1055.0
+offset_left = 1040.0
 offset_top = 642.0
-offset_right = 1055.0
-offset_bottom = 642.0
+offset_right = 1170.0
+offset_bottom = 666.0
 theme_override_fonts/font = ExtResource("2_l8g55")
-theme_override_font_sizes/font_size = 16
-theme_override_colors/font_color = Color(0.95, 0.55, 0.5, 0.82)
-text = "AIM & SHOOT"
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1.0, 0.60, 0.55, 0.88)
+text = "AIM & FIRE"
 horizontal_alignment = 1
 
 [node name="DashButton" type="Button" parent="." unique_id=573054148]
-custom_minimum_size = Vector2(92, 60)
+custom_minimum_size = Vector2(104, 66)
 layout_mode = 0
-offset_left = 915.0
-offset_top = 560.0
-offset_right = 915.0
-offset_bottom = 560.0
-theme_override_font_sizes/font_size = 20
+offset_left = 935.0
+offset_top = 566.0
+offset_right = 1039.0
+offset_bottom = 632.0
+theme_override_font_sizes/font_size = 22
 text = "DASH"
 
 [node name="InteractButton" type="Button" parent="." unique_id=948271038]
 visible = false
-custom_minimum_size = Vector2(130, 60)
+custom_minimum_size = Vector2(175, 66)
 layout_mode = 0
-offset_left = 770.0
-offset_top = 560.0
-offset_right = 900.0
-offset_bottom = 620.0
+offset_left = 945.0
+offset_top = 375.0
+offset_right = 1120.0
+offset_bottom = 441.0
 theme_override_colors/font_color = Color(1, 0.9, 0.25, 1)
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 text = "⚡ USE"
 
 [node name="GrenadeButton" type="Button" parent="." unique_id=1365109803]
-custom_minimum_size = Vector2(102, 54)
+custom_minimum_size = Vector2(110, 64)
 layout_mode = 0
-offset_left = 945.0
-offset_top = 482.0
-offset_right = 945.0
-offset_bottom = 482.0
-theme_override_font_sizes/font_size = 18
+offset_left = 935.0
+offset_top = 480.0
+offset_right = 1045.0
+offset_bottom = 544.0
+theme_override_font_sizes/font_size = 20
 text = "FRAG (2)"
 
 [node name="WeaponSwitchButton" type="Button" parent="." unique_id=1801127127]
-custom_minimum_size = Vector2(320, 52)
+custom_minimum_size = Vector2(360, 56)
 layout_mode = 0
-offset_left = 480.0
-offset_top = 636.0
-offset_right = 480.0
-offset_bottom = 636.0
-theme_override_font_sizes/font_size = 19
-text = "GUN: 9MM SERVICE PISTOL [ INF ]"
+offset_left = 460.0
+offset_top = 650.0
+offset_right = 820.0
+offset_bottom = 706.0
+theme_override_font_sizes/font_size = 20
+text = "WEAPON: 9MM PISTOL [ INF ]"

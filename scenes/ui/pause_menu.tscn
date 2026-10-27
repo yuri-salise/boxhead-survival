@@ -67,31 +67,37 @@ horizontal_alignment = 1
 layout_mode = 2
 
 [node name="ResumeButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012932]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
 text = "RESUME SURVIVAL"
 
 [node name="GraphicsButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012933]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+theme_override_font_sizes/font_size = 19
 text = "GRAPHICS: BALANCED"
 
 [node name="ResolutionButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012934]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+theme_override_font_sizes/font_size = 19
 text = "RESOLUTION: 100%"
 
 [node name="SaveButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1852370492]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
+theme_override_font_sizes/font_size = 19
 text = "SAVE PROGRESS"
 
 [node name="RetryButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1681719678]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
 text = "RETRY ZONE"
 
 [node name="MainMenuButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1292362883]
-custom_minimum_size = Vector2(0, 46)
+custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
+theme_override_font_sizes/font_size = 20
 text = "RETURN TO MAIN"

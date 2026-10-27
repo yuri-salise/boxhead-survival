@@ -96,10 +96,10 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 mouse_filter = 2
-theme_override_constants/margin_left = 36
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 36
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 20
 
 [node name="TopBar" type="HBoxContainer" parent="UI/MarginContainer" unique_id=1302126105]
 layout_mode = 2
@@ -107,20 +107,20 @@ mouse_filter = 2
 theme_override_constants/separation = 18
 
 [node name="VitalsColumn" type="VBoxContainer" parent="UI/MarginContainer/TopBar" unique_id=1046945012]
-custom_minimum_size = Vector2(210, 0)
+custom_minimum_size = Vector2(230, 0)
 layout_mode = 2
 mouse_filter = 2
-theme_override_constants/separation = 2
+theme_override_constants/separation = 3
 
 [node name="HealthLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=558427164]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_cywot")
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 18
 theme_override_colors/font_color = Color(0.95, 0.88, 0.88, 1)
 text = "HP: 100 / 100"
 
 [node name="HealthBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=1665032228]
-custom_minimum_size = Vector2(210, 12)
+custom_minimum_size = Vector2(230, 20)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_3t34l")
 theme_override_styles/fill = SubResource("StyleBoxFlat_qy4h0")
@@ -130,12 +130,12 @@ show_percentage = false
 [node name="ArmorLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=576232806]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_cywot")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 17
 theme_override_colors/font_color = Color(0.65, 0.86, 1, 1)
 text = "ARMOR: 0 / 100"
 
 [node name="ArmorBar" type="ProgressBar" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=268673939]
-custom_minimum_size = Vector2(210, 9)
+custom_minimum_size = Vector2(230, 14)
 layout_mode = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_e5bmj")
 theme_override_styles/fill = SubResource("StyleBoxFlat_iqf6e")
@@ -144,7 +144,7 @@ show_percentage = false
 [node name="DashStatusLabel" type="Label" parent="UI/MarginContainer/TopBar/VitalsColumn" unique_id=852557333]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_cywot")
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 15
 theme_override_colors/font_color = Color(0.35, 0.92, 0.5, 1)
 text = "DASH: READY"
 
@@ -161,12 +161,13 @@ theme_override_constants/separation = 2
 [node name="KillsLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=647847228]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_cywot")
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
 text = "INFECTED KILLED: 0   ·   SCORE: 0"
 horizontal_alignment = 1
 
 [node name="WeaponLabel" type="Label" parent="UI/MarginContainer/TopBar/CenterColumn" unique_id=1175827819]
+visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("9_cywot")
 theme_override_font_sizes/font_size = 17
@@ -180,11 +181,11 @@ size_flags_horizontal = 3
 mouse_filter = 2
 
 [node name="PauseButton" type="Button" parent="UI/MarginContainer/TopBar" unique_id=392993132]
-custom_minimum_size = Vector2(114, 46)
+custom_minimum_size = Vector2(120, 52)
 layout_mode = 2
 size_flags_vertical = 0
 theme_override_font_sizes/font_size = 20
-text = "|| PAUSE"
+text = "❚❚ PAUSE"
 
 [node name="PauseMenu" parent="UI" unique_id=857925483 instance=ExtResource("10_vrcmr")]
 

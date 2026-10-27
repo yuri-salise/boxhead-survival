@@ -5,12 +5,12 @@ signal grenade_pressed()
 signal switch_weapon_pressed()
 signal interact_pressed()
 
-@export var joystick_radius: float = 68.0
-@export var knob_radius: float = 28.0
+@export var joystick_radius: float = 75.0
+@export var knob_radius: float = 32.0
 @export var deadzone: float = 0.14
 
-# Centers in 1280x720 landscape viewport with safe-area margins for phone notches/bezels
-var left_center: Vector2 = Vector2(148.0, 565.0)
+# Dynamically updated in _recalculate_layout() for any mobile aspect ratio (16:9, 19.5:9, 20:9, etc.)
+var left_center: Vector2 = Vector2(170.0, 565.0)
 var right_center: Vector2 = Vector2(1115.0, 565.0)
 
 var move_touch_idx: int = -1
@@ -49,13 +49,69 @@ func _ready() -> void:
 	if weapon_btn:
 		weapon_btn.pressed.connect(func(): switch_weapon_pressed.emit())
 	
+	_recalculate_layout()
 	_update_button_labels()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		_recalculate_layout()
+
+func _recalculate_layout() -> void:
+	var s := size
+	if s.x < 100.0 or s.y < 100.0:
+		s = get_viewport_rect().size
+	if s.x < 100.0 or s.y < 100.0:
+		s = Vector2(1280.0, 720.0)
+	
+	# Ergonomic bottom placement with notch/chin safe padding
+	left_center = Vector2(170.0, s.y - 145.0)
+	right_center = Vector2(s.x - 170.0, s.y - 145.0)
+	
+	var move_lbl = get_node_or_null("MoveStickLabel")
+	if move_lbl:
+		move_lbl.size = Vector2(120.0, 24.0)
+		move_lbl.position = Vector2(left_center.x - 60.0, left_center.y + joystick_radius + 10.0)
+	
+	var aim_lbl = get_node_or_null("AimStickLabel")
+	if aim_lbl:
+		aim_lbl.size = Vector2(130.0, 24.0)
+		aim_lbl.position = Vector2(right_center.x - 65.0, right_center.y + joystick_radius + 10.0)
+	
+	# Action buttons curved along the right thumb reach arc
+	if dash_btn:
+		dash_btn.custom_minimum_size = Vector2(104.0, 66.0)
+		dash_btn.size = Vector2(104.0, 66.0)
+		dash_btn.position = Vector2(right_center.x - 172.0, right_center.y + 6.0)
+	
+	if grenade_btn:
+		grenade_btn.custom_minimum_size = Vector2(110.0, 64.0)
+		grenade_btn.size = Vector2(110.0, 64.0)
+		grenade_btn.position = Vector2(right_center.x - 160.0, right_center.y - 88.0)
+	
+	if interact_btn:
+		interact_btn.custom_minimum_size = Vector2(175.0, 66.0)
+		interact_btn.size = Vector2(175.0, 66.0)
+		interact_btn.position = Vector2(right_center.x - 88.0, right_center.y - 180.0)
+	
+	if weapon_btn:
+		var w_width := minf(400.0, s.x * 0.35)
+		weapon_btn.custom_minimum_size = Vector2(w_width, 56.0)
+		weapon_btn.size = Vector2(w_width, 56.0)
+		weapon_btn.position = Vector2((s.x - w_width) * 0.5, s.y - 68.0)
+	
+	queue_redraw()
 
 func set_interact_prompt(visible_flag: bool, prompt_text: String = "USE", target: Node = null) -> void:
 	current_interactable = target if visible_flag else null
 	if interact_btn:
 		interact_btn.visible = visible_flag
-		interact_btn.text = "⚡ " + prompt_text
+		var is_revive: bool = ("REVIVE" in prompt_text.to_upper())
+		var icon: String = "✚ " if is_revive else "⚡ "
+		interact_btn.text = icon + prompt_text
+		if is_revive:
+			interact_btn.add_theme_color_override("font_color", Color(0.25, 1.0, 0.45, 1.0))
+		else:
+			interact_btn.add_theme_color_override("font_color", Color(1.0, 0.90, 0.25, 1.0))
 
 func set_dash_cooldown(cd_left: float, cd_max: float) -> void:
 	dash_cooldown_ratio = clampf(cd_left / maxf(0.01, cd_max), 0.0, 1.0)
@@ -81,7 +137,7 @@ func _update_button_labels() -> void:
 		grenade_btn.text = "FRAG (" + str(grenade_count) + ")"
 		grenade_btn.disabled = (grenade_count <= 0)
 	if weapon_btn:
-		weapon_btn.text = "GUN: " + current_weapon_label
+		weapon_btn.text = "WEAPON: " + current_weapon_label
 
 func is_using_touch_input() -> bool:
 	return move_touch_idx != -1 or aim_touch_idx != -1
@@ -98,10 +154,10 @@ func _input(event: InputEvent) -> void:
 			if _is_point_on_action_buttons(touch.position):
 				return
 			
-			if touch.position.distance_to(left_center) <= joystick_radius * 1.55 and move_touch_idx == -1:
+			if touch.position.distance_to(left_center) <= joystick_radius * 1.75 and move_touch_idx == -1:
 				move_touch_idx = touch.index
 				_update_move_stick(touch.position)
-			elif touch.position.distance_to(right_center) <= joystick_radius * 1.55 and aim_touch_idx == -1:
+			elif touch.position.distance_to(right_center) <= joystick_radius * 1.75 and aim_touch_idx == -1:
 				aim_touch_idx = touch.index
 				_update_aim_stick(touch.position)
 		else:

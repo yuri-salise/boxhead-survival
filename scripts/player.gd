@@ -9,6 +9,8 @@ signal grenade_detonated(world_pos: Vector2, radius: float, damage: float)
 signal player_damaged_at(world_pos: Vector2, hit_dir: Vector2)
 signal player_bitten(hit_dir: Vector2, damage: float)
 signal player_died()
+signal player_downed(player_node: CharacterBody2D)
+signal player_revived(player_node: CharacterBody2D)
 
 @export var speed: float = 280.0
 @export var max_health: float = 100.0
@@ -23,6 +25,11 @@ signal player_died()
 var current_health: float = 100.0
 var current_armor: float = 0.0
 var is_dead: bool = false
+
+# Multiplayer Squad Revive & Bleedout
+var is_downed: bool = false
+var bleedout_time_left: float = 0.0
+const MAX_BLEEDOUT_TIME: float = 35.0
 
 # Dash state
 var is_dashing: bool = false
@@ -140,6 +147,13 @@ func _physics_process(delta: float) -> void:
 		queue_redraw()
 		return
 	
+	if is_downed:
+		bleedout_time_left = maxf(0.0, bleedout_time_left - delta)
+		if bleedout_time_left <= 0.0:
+			die()
+			return
+		queue_redraw()
+	
 	var move_vec: Vector2
 	var aim_pos: Vector2
 	var shooting: bool
@@ -147,11 +161,11 @@ func _physics_process(delta: float) -> void:
 	if is_coop_mode and not is_local_player():
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
-		shooting = override_is_shooting
+		shooting = override_is_shooting and not is_downed
 	elif input_override_enabled:
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
-		shooting = override_is_shooting
+		shooting = override_is_shooting and not is_downed
 	else:
 		move_vec = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 		if move_vec == Vector2.ZERO:
@@ -164,7 +178,7 @@ func _physics_process(delta: float) -> void:
 			move_vec = touch_controls.get("move_vector")
 		
 		# Check if mobile right twin-stick is actively aiming/shooting
-		if is_instance_valid(touch_controls) and touch_controls.get("is_firing") == true:
+		if is_instance_valid(touch_controls) and touch_controls.get("is_firing") == true and not is_downed:
 			var stick_aim: Vector2 = touch_controls.get("aim_vector")
 			aim_pos = global_position + stick_aim * 150.0
 			shooting = true
@@ -173,17 +187,20 @@ func _physics_process(delta: float) -> void:
 			var pointer_on_touch_ui := false
 			if is_instance_valid(touch_controls) and touch_controls.has_method("is_using_touch_input"):
 				pointer_on_touch_ui = touch_controls.is_using_touch_input() or touch_controls._is_point_on_action_buttons(get_viewport().get_mouse_position())
-			shooting = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not pointer_on_touch_ui
+			shooting = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not pointer_on_touch_ui and not is_downed
 		
 		# Dash trigger on Space or Shift
-		if Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT):
+		if (Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT)) and not is_downed:
 			try_dash(move_vec, aim_pos)
 		
 		if is_coop_mode and is_local_player() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() != 1:
 			sync_input_to_host.rpc_id(1, move_vec, aim_pos, shooting)
 	
-	# Handle active dash or standard movement
-	if is_dashing:
+	# Handle active dash, downed crawl, or standard movement
+	if is_downed:
+		is_dashing = false
+		velocity = move_vec.normalized() * 58.0 # Slow wounded crawl
+	elif is_dashing:
 		dash_time_left -= delta
 		velocity = dash_direction * dash_speed
 		ghost_trail_points.append({
@@ -322,11 +339,20 @@ func try_throw_grenade(target_pos: Vector2) -> bool:
 	return true
 
 func try_interact() -> bool:
-	if is_dead:
+	if is_dead or is_downed:
 		return false
 	var tree := get_tree()
 	if not tree:
 		return false
+	
+	# Priority 1: Revive nearby downed squadmates!
+	var players := tree.get_nodes_in_group("players")
+	for p in players:
+		if is_instance_valid(p) and p != self and p.get("is_downed") == true:
+			if global_position.distance_to(p.global_position) <= 100.0:
+				p.revive(40.0)
+				return true
+	
 	var interactables := tree.get_nodes_in_group("interactables")
 	var closest: Node = null
 	var min_d := 130.0
@@ -415,7 +441,84 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 	player_bitten.emit(hit_dir, amount)
 	
 	if current_health <= 0.0:
-		die()
+		if is_coop_mode and not is_downed:
+			down()
+		else:
+			die()
+
+func can_interact() -> bool:
+	return is_downed and not is_dead
+
+func interact() -> bool:
+	if is_downed and not is_dead:
+		revive(40.0)
+		return true
+	return false
+
+func down() -> void:
+	if is_dead or is_downed:
+		return
+	is_downed = true
+	bleedout_time_left = MAX_BLEEDOUT_TIME
+	current_health = 0.0
+	velocity = Vector2.ZERO
+	is_dashing = false
+	health_changed.emit(current_health, max_health)
+	player_downed.emit(self)
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("play_sfx"):
+		audio_mgr.play_sfx("sfx_player_hurt", 0.85, 3.0)
+	
+	if is_local_player():
+		var tree := get_tree()
+		if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
+			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -60), "! DOWNED — CALLING FOR SQUAD REVIVE !", Color(1.0, 0.25, 0.20))
+	
+	if multiplayer and multiplayer.has_multiplayer_peer() and is_local_player():
+		rpc_sync_downed.rpc(true)
+	
+	queue_redraw()
+
+func revive(restore_hp: float = 40.0) -> void:
+	if not is_downed:
+		return
+	is_downed = false
+	bleedout_time_left = 0.0
+	current_health = clampf(restore_hp, 20.0, max_health)
+	health_changed.emit(current_health, max_health)
+	player_revived.emit(self)
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("play_sfx"):
+		audio_mgr.play_sfx("sfx_pickup", 1.2, 0.0)
+	
+	var tree := get_tree()
+	if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
+		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -60), "★ SQUADMATE REVIVED! ★", Color(0.35, 1.0, 0.50))
+	
+	if multiplayer and multiplayer.has_multiplayer_peer() and is_local_player():
+		rpc_sync_downed.rpc(false)
+	
+	queue_redraw()
+
+@rpc("any_peer", "call_local", "reliable")
+func rpc_sync_downed(downed: bool) -> void:
+	if downed:
+		if not is_downed:
+			is_downed = true
+			bleedout_time_left = MAX_BLEEDOUT_TIME
+			current_health = 0.0
+			health_changed.emit(current_health, max_health)
+			player_downed.emit(self)
+	else:
+		if is_downed:
+			is_downed = false
+			bleedout_time_left = 0.0
+			current_health = 40.0
+			health_changed.emit(current_health, max_health)
+			player_revived.emit(self)
+	queue_redraw()
 
 func heal(amount: float) -> void:
 	if is_dead or amount <= 0.0:
@@ -433,6 +536,7 @@ func die() -> void:
 	if is_dead:
 		return
 	is_dead = true
+	is_downed = false
 	velocity = Vector2.ZERO
 	player_died.emit()
 
@@ -485,9 +589,19 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(-5 + leg_stride, -12), Vector2(10, 6)), Color(0.14, 0.13, 0.12, 1.0), true)
 	draw_rect(Rect2(Vector2(-5 - leg_stride, 6), Vector2(10, 6)), Color(0.14, 0.13, 0.12, 1.0), true)
 	
-	# 3. Survivor Shoulders & Weathered Field Jacket (Olive Slate for P1, Navy Charcoal for P2)
-	var base_jacket := Color(0.28, 0.34, 0.24, 1.0) if player_index == 1 else Color(0.22, 0.27, 0.38, 1.0)
+	# 3. Survivor Shoulders & Weathered Field Jacket (Distinct 4-Player Squad Outfits)
+	var base_jacket := Color(0.28, 0.34, 0.24, 1.0) # P1: Olive Green / Slate
+	if player_index == 2:
+		base_jacket = Color(0.22, 0.32, 0.50, 1.0) # P2: Navy Blue
+	elif player_index == 3:
+		base_jacket = Color(0.48, 0.20, 0.20, 1.0) # P3: Crimson Ops
+	elif player_index >= 4:
+		base_jacket = Color(0.48, 0.40, 0.16, 1.0) # P4: Desert Tan / Gold
+	
 	var jacket_col := base_jacket if hurt_flash_timer <= 0.0 else Color(0.92, 0.25, 0.25, 1.0)
+	if is_downed:
+		jacket_col = jacket_col.darkened(0.35)
+	
 	var shoulder_pts := PackedVector2Array([
 		Vector2(-10, -15),
 		Vector2(7, -14),
@@ -515,41 +629,43 @@ func _draw() -> void:
 	draw_circle(Vector2(14, -2), 3.2, Color(0.78, 0.64, 0.52, 1.0))
 	draw_circle(Vector2(17, 4), 3.2, Color(0.78, 0.64, 0.52, 1.0))
 	
-	# 5. Distinct Equipped Weapon Model
-	var wid: String = weapon_controller.current_weapon_id if weapon_controller else "PISTOL"
-	match wid:
-		"PISTOL":
-			draw_rect(Rect2(Vector2(12, 0), Vector2(13, 4.5)), Color(0.16, 0.18, 0.20, 1.0), true)
-			draw_rect(Rect2(Vector2(14, 1), Vector2(9, 2)), Color(0.42, 0.45, 0.48, 1.0), true)
-		"SMG":
-			draw_rect(Rect2(Vector2(10, 0), Vector2(18, 5)), Color(0.14, 0.15, 0.18, 1.0), true)
-			draw_rect(Rect2(Vector2(17, -4), Vector2(3, 5)), Color(0.25, 0.26, 0.28, 1.0), true)
-		"SHOTGUN":
-			draw_rect(Rect2(Vector2(7, 0.5), Vector2(24, 5)), Color(0.18, 0.18, 0.20, 1.0), true)
-			draw_rect(Rect2(Vector2(14, 0), Vector2(10, 6)), Color(0.48, 0.30, 0.16, 1.0), true) # Wood pump
-		"ASSAULT_RIFLE":
-			draw_rect(Rect2(Vector2(6, 0), Vector2(26, 5.5)), Color(0.13, 0.15, 0.17, 1.0), true)
-			draw_rect(Rect2(Vector2(12, 1), Vector2(11, 3.5)), Color(0.28, 0.32, 0.26, 1.0), true)
-			draw_rect(Rect2(Vector2(26, 1.8), Vector2(6, 2)), Color(0.35, 0.38, 0.40, 1.0), true)
-		"MAGNUM":
-			draw_rect(Rect2(Vector2(11, 0), Vector2(19, 5)), Color(0.75, 0.78, 0.82, 1.0), true)
-			draw_rect(Rect2(Vector2(12, 1), Vector2(6, 3)), Color(0.35, 0.20, 0.12, 1.0), true)
-	
-	# Muzzle Flash Burst
-	if muzzle_flash_timer > 0.0:
-		var flash_pts := PackedVector2Array([
-			Vector2(28, 3),
-			Vector2(42, -5),
-			Vector2(37, 1),
-			Vector2(48, 3),
-			Vector2(37, 5),
-			Vector2(42, 11)
-		])
-		draw_colored_polygon(flash_pts, Color(1.0, 0.88, 0.35, 0.92))
-		draw_circle(Vector2(31, 3), 5.0, Color(1.0, 0.98, 0.85, 0.95))
+	# 5. Distinct Equipped Weapon Model (hidden while crawling downed)
+	if not is_downed:
+		var wid: String = weapon_controller.current_weapon_id if weapon_controller else "PISTOL"
+		match wid:
+			"PISTOL":
+				draw_rect(Rect2(Vector2(12, 0), Vector2(13, 4.5)), Color(0.16, 0.18, 0.20, 1.0), true)
+				draw_rect(Rect2(Vector2(14, 1), Vector2(9, 2)), Color(0.42, 0.45, 0.48, 1.0), true)
+			"SMG":
+				draw_rect(Rect2(Vector2(10, 0), Vector2(18, 5)), Color(0.14, 0.15, 0.18, 1.0), true)
+				draw_rect(Rect2(Vector2(17, -4), Vector2(3, 5)), Color(0.25, 0.26, 0.28, 1.0), true)
+			"SHOTGUN":
+				draw_rect(Rect2(Vector2(7, 0.5), Vector2(24, 5)), Color(0.18, 0.18, 0.20, 1.0), true)
+				draw_rect(Rect2(Vector2(14, 0), Vector2(10, 6)), Color(0.48, 0.30, 0.16, 1.0), true) # Wood pump
+			"ASSAULT_RIFLE":
+				draw_rect(Rect2(Vector2(6, 0), Vector2(26, 5.5)), Color(0.13, 0.15, 0.17, 1.0), true)
+				draw_rect(Rect2(Vector2(12, 1), Vector2(11, 3.5)), Color(0.28, 0.32, 0.26, 1.0), true)
+				draw_rect(Rect2(Vector2(26, 1.8), Vector2(6, 2)), Color(0.35, 0.38, 0.40, 1.0), true)
+			"MAGNUM":
+				draw_rect(Rect2(Vector2(11, 0), Vector2(19, 5)), Color(0.75, 0.78, 0.82, 1.0), true)
+				draw_rect(Rect2(Vector2(12, 1), Vector2(6, 3)), Color(0.35, 0.20, 0.12, 1.0), true)
+		
+		# Muzzle Flash Burst
+		if muzzle_flash_timer > 0.0:
+			var flash_pts := PackedVector2Array([
+				Vector2(28, 3),
+				Vector2(42, -5),
+				Vector2(37, 1),
+				Vector2(48, 3),
+				Vector2(37, 5),
+				Vector2(42, 11)
+			])
+			draw_colored_polygon(flash_pts, Color(1.0, 0.88, 0.35, 0.92))
+			draw_circle(Vector2(31, 3), 5.0, Color(1.0, 0.98, 0.85, 0.95))
 	
 	# 6. Survivor Head, Bandana & Cap
-	var bandana_col := Color(0.75, 0.16, 0.16, 1.0) if player_index == 1 else Color(0.20, 0.55, 0.88, 1.0)
+	var bandana_cols := [Color(0.75, 0.16, 0.16, 1.0), Color(0.20, 0.55, 0.88, 1.0), Color(0.85, 0.25, 0.25, 1.0), Color(0.92, 0.75, 0.22, 1.0)]
+	var bandana_col: Color = bandana_cols[clampi(player_index - 1, 0, 3)]
 	# Trailing bandana knot
 	draw_line(Vector2(-8, -2), Vector2(-15, -6 - sin(walk_cycle) * 2.0), bandana_col.darkened(0.12), 3.0)
 	draw_line(Vector2(-8, 2), Vector2(-15, 5 + cos(walk_cycle) * 2.0), bandana_col.darkened(0.12), 2.5)
@@ -561,8 +677,30 @@ func _draw() -> void:
 	
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	
-	# Overhead squad tag in co-op mode
-	if is_coop_mode:
-		var tag_txt := "SURVIVOR 1 (HOST)" if player_index == 1 else "SURVIVOR 2 (PARTNER)"
-		var tag_col := Color(0.95, 0.45, 0.40) if player_index == 1 else Color(0.40, 0.75, 0.95)
-		draw_string(ThemeDB.fallback_font, Vector2(-60, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 120, 11, tag_col)
+	# 7. Downed Bleedout & Revive Beacon
+	if is_downed:
+		var pulse := 0.6 + 0.4 * sin(walk_cycle * 8.0)
+		var beacon_col := Color(1.0, 0.20, 0.20, 0.95 * pulse)
+		
+		# Ground revive ring
+		draw_circle(Vector2.ZERO, 30.0, Color(0.85, 0.15, 0.15, 0.25 * pulse))
+		var time_ratio := clampf(bleedout_time_left / MAX_BLEEDOUT_TIME, 0.0, 1.0)
+		draw_arc(Vector2.ZERO, 34.0, -PI * 0.5, -PI * 0.5 + TAU * time_ratio, 32, beacon_col, 3.2)
+		
+		# Pulsing medical cross badge above head
+		var cross_pos := Vector2(0, -42)
+		draw_circle(cross_pos, 15.0, Color(0.10, 0.11, 0.13, 0.90))
+		draw_arc(cross_pos, 15.0, 0.0, TAU, 24, Color(1.0, 0.30, 0.30, 0.90), 2.0)
+		draw_line(cross_pos + Vector2(-8, 0), cross_pos + Vector2(8, 0), Color(1.0, 0.95, 0.95), 4.2)
+		draw_line(cross_pos + Vector2(0, -8), cross_pos + Vector2(0, 8), Color(1.0, 0.95, 0.95), 4.2)
+		
+		var b_sec := str(int(ceil(bleedout_time_left))) + "s"
+		draw_string(ThemeDB.fallback_font, cross_pos + Vector2(-20, -18), b_sec, HORIZONTAL_ALIGNMENT_CENTER, 40, 12, Color(1.0, 0.85, 0.25))
+	elif is_coop_mode:
+		# Overhead squad tag in co-op mode
+		var squad_names: Array[String] = ["ALPHA (HOST)", "BRAVO", "CHARLIE", "DELTA"]
+		var s_idx := clampi(player_index - 1, 0, 3)
+		var tag_txt: String = "SURVIVOR " + str(player_index) + " [" + squad_names[s_idx] + "]"
+		var squad_colors: Array[Color] = [Color(0.95, 0.55, 0.40), Color(0.40, 0.75, 0.95), Color(0.95, 0.40, 0.40), Color(0.95, 0.85, 0.35)]
+		var tag_col: Color = squad_colors[s_idx]
+		draw_string(ThemeDB.fallback_font, Vector2(-70, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, tag_col)

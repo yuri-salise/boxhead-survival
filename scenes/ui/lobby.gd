@@ -158,12 +158,15 @@ func _on_peer_updated(_id: int) -> void:
 func _update_players_display(peers: Array) -> void:
 	var count := peers.size()
 	if players_label:
-		players_label.text = "SURVIVORS READY: " + str(count) + " / 2"
-		if count >= 2:
-			players_label.text += "  ·  [ SQUAD FULL - DEPLOYMENT AUTHORIZED ]"
+		players_label.text = "SURVIVORS READY: " + str(count) + " / 4"
+		if count >= 4:
+			players_label.text += "  ·  [ FULL SQUAD — READY TO DEPLOY ]"
 			players_label.add_theme_color_override("font_color", Color(0.35, 0.92, 0.50))
+		elif count >= 2:
+			players_label.text += "  ·  [ SQUAD FORMED (" + str(count) + "/4) — DEPLOYMENT READY ]"
+			players_label.add_theme_color_override("font_color", Color(0.40, 0.88, 0.55))
 		elif count == 1:
-			players_label.text += "  ·  [ WAITING FOR SECOND SURVIVOR ]"
+			players_label.text += "  ·  [ WAITING FOR SQUAD MATES (1-3 MORE) ]"
 			players_label.add_theme_color_override("font_color", Color(0.85, 0.70, 0.25))
 		else:
 			players_label.add_theme_color_override("font_color", Color(0.70, 0.72, 0.75))
@@ -174,7 +177,7 @@ func _update_players_display(peers: Array) -> void:
 	if start_button:
 		if am_host:
 			start_button.disabled = (count < 2)
-			start_button.text = "LAUNCH CO-OP MISSION" if count >= 2 else "WAITING FOR 2ND SURVIVOR..."
+			start_button.text = "LAUNCH SQUAD MISSION (" + str(count) + "/4)" if count >= 2 else "WAITING FOR SQUAD TO JOIN..."
 		else:
 			start_button.disabled = true
 			start_button.text = "WAITING FOR HOST TO LAUNCH..."

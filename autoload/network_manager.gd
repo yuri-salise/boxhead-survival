@@ -9,7 +9,7 @@ signal status_changed(message: String)
 signal game_started(level_id: int)
 
 const DEFAULT_PORT: int = 7777
-const MAX_CLIENTS: int = 1 # 2-player co-op: Host (1) + Guest (1)
+const MAX_CLIENTS: int = 3 # 4-player Squad Co-op: Host (1) + up to 3 Guests (4 survivors total)
 
 var CONNECT_TIMEOUT_SEC: float = 8.0
 
@@ -61,7 +61,7 @@ func host_game(port: int = DEFAULT_PORT) -> Error:
 	
 	_connect_multiplayer_signals()
 	
-	var status_msg := "Host active on port " + str(port) + ". Waiting for co-op peer..."
+	var status_msg := "Host active on port " + str(port) + ". Waiting for squad peers..."
 	status_changed.emit(status_msg)
 	peer_connected.emit(1)
 	return OK

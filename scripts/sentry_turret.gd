@@ -36,7 +36,7 @@ func _ready() -> void:
 	
 	if prompt_label:
 		prompt_label.visible = false
-		prompt_label.text = "[E] / [TAP] ACTIVATE TURRET"
+		prompt_label.text = "TAP TO ACTIVATE TURRET"
 
 func can_interact() -> bool:
 	return not is_active
@@ -112,7 +112,7 @@ func _process(delta: float) -> void:
 			is_active = false
 			if prompt_label:
 				prompt_label.visible = is_player_nearby
-				prompt_label.text = "[E] / [TAP] ACTIVATE TURRET"
+				prompt_label.text = "TAP TO ACTIVATE TURRET"
 			queue_redraw()
 			return
 		
@@ -183,7 +183,7 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 		player_proximity_changed.emit(true)
 		if not is_active and prompt_label:
 			prompt_label.visible = true
-			prompt_label.text = "[E] / [TAP] ACTIVATE TURRET"
+			prompt_label.text = "TAP TO ACTIVATE TURRET"
 		if not is_active and "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(true, "START TURRET", self)
 		queue_redraw()

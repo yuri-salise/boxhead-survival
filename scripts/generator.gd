@@ -28,7 +28,7 @@ func _ready() -> void:
 	
 	if prompt_label:
 		prompt_label.visible = false
-		prompt_label.text = "[E] / [TAP] START GENERATOR"
+		prompt_label.text = "TAP TO START GENERATOR"
 
 func _process(delta: float) -> void:
 	anim_time += delta

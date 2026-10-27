@@ -52,6 +52,7 @@ var day_night_time: float = 0.0
 var current_night_factor: float = 0.0
 var current_time_phase_name: String = "DAYLIGHT"
 var player2: CharacterBody2D = null
+var squad_peers: Dictionary = {}
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 # Mobile performance caching for flashlight occluders & lights
@@ -150,35 +151,50 @@ func _ready() -> void:
 		_on_player_armor_changed(player.current_armor, player.max_armor)
 		_refresh_weapon_hud()
 	
-	# Initialize 2-player co-op if connected via NetworkManager
+	# Initialize Squad Co-op (up to 4 survivors) if connected via NetworkManager
 	var net_mgr := get_node_or_null("/root/NetworkManager")
 	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
 	if is_coop and player:
 		player.is_coop_mode = true
 		player.peer_id = 1
 		player.player_index = 1
-		
-		var client_id := 2
-		for p in net_mgr.connected_peers:
-			if p != 1:
-				client_id = p
-				break
+		squad_peers[1] = player
+		if player.has_signal("player_downed"):
+			player.player_downed.connect(_on_squad_member_downed)
+		if player.has_signal("player_revived"):
+			player.player_revived.connect(_on_squad_member_revived)
 		
 		var player_scene: PackedScene = load("res://scenes/actors/player.tscn")
-		player2 = player_scene.instantiate()
-		player2.name = "Player2"
-		player2.position = player.position + Vector2(70, 0)
-		player2.is_coop_mode = true
-		player2.peer_id = client_id
-		player2.player_index = 2
-		add_child(player2)
-		player2.add_to_group("players")
+		var spawn_offsets: Array[Vector2] = [Vector2(70, 0), Vector2(-70, 0), Vector2(0, 70), Vector2(0, -70)]
+		var other_idx: int = 2
 		
-		player2.player_died.connect(_on_player2_died)
-		if player2.has_signal("player_bitten"):
-			player2.player_bitten.connect(_on_player_bitten)
-		player2.pickup_collected.connect(func(msg, col): _on_player_pickup_collected(msg, col))
-		player2.grenade_detonated.connect(_on_grenade_detonated)
+		for p_id in net_mgr.connected_peers:
+			if p_id == 1:
+				continue
+			var sp_avatar: CharacterBody2D = player_scene.instantiate()
+			sp_avatar.name = "Player" + str(other_idx)
+			sp_avatar.position = player.position + spawn_offsets[(other_idx - 2) % spawn_offsets.size()]
+			sp_avatar.is_coop_mode = true
+			sp_avatar.peer_id = p_id
+			sp_avatar.player_index = other_idx
+			add_child(sp_avatar)
+			sp_avatar.add_to_group("players")
+			squad_peers[p_id] = sp_avatar
+			
+			if other_idx == 2:
+				player2 = sp_avatar
+			
+			sp_avatar.player_died.connect(_on_squad_member_died)
+			if sp_avatar.has_signal("player_downed"):
+				sp_avatar.player_downed.connect(_on_squad_member_downed)
+			if sp_avatar.has_signal("player_revived"):
+				sp_avatar.player_revived.connect(_on_squad_member_revived)
+			if sp_avatar.has_signal("player_bitten"):
+				sp_avatar.player_bitten.connect(_on_player_bitten)
+			sp_avatar.pickup_collected.connect(func(msg, col): _on_player_pickup_collected(msg, col))
+			sp_avatar.grenade_detonated.connect(_on_grenade_detonated)
+			
+			other_idx += 1
 		
 		if not net_mgr.peer_disconnected.is_connected(_on_coop_peer_disconnected):
 			net_mgr.peer_disconnected.connect(_on_coop_peer_disconnected)
@@ -422,6 +438,18 @@ func _process(delta: float) -> void:
 				if horror_vignette.has_method("update_witch_eyes"):
 					horror_vignette.update_witch_eyes(cached_witch_eyes, player.global_position)
 			
+			# Check proximity to downed squad members for Mobile Revive prompt
+			if is_instance_valid(player) and not player.get("is_downed"):
+				var nearby_downed: Node = null
+				for p in get_tree().get_nodes_in_group("players"):
+					if is_instance_valid(p) and p != player and p.get("is_downed") == true:
+						if player.global_position.distance_to(p.global_position) <= 100.0:
+							nearby_downed = p
+							break
+				if is_instance_valid(nearby_downed):
+					if touch_controls and touch_controls.has_method("set_interact_prompt"):
+						touch_controls.set_interact_prompt(true, "REVIVE SQUADMATE", nearby_downed)
+			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
 			if is_instance_valid(zombie_container):
 				for z in zombie_container.get_children():
@@ -607,19 +635,50 @@ func _on_player_died() -> void:
 		_handle_all_players_dead()
 	else:
 		if is_instance_valid(player):
-			spawn_floating_text(player.global_position, "! SURVIVOR 1 INCAPACITATED !", Color(1.0, 0.25, 0.20))
+			spawn_floating_text(player.global_position, "! SURVIVOR 1 ELIMINATED !", Color(1.0, 0.25, 0.20))
 
 func _on_player2_died() -> void:
 	if _check_all_players_dead():
 		_handle_all_players_dead()
 	else:
 		if is_instance_valid(player2):
-			spawn_floating_text(player2.global_position, "! SURVIVOR 2 INCAPACITATED !", Color(1.0, 0.25, 0.20))
+			spawn_floating_text(player2.global_position, "! SURVIVOR 2 ELIMINATED !", Color(1.0, 0.25, 0.20))
+
+func _on_squad_member_downed(p_node: CharacterBody2D) -> void:
+	if _check_all_players_dead():
+		_handle_all_players_dead()
+	else:
+		if is_instance_valid(p_node):
+			var idx: int = int(p_node.get("player_index")) if p_node.get("player_index") != null else 1
+			spawn_floating_text(p_node.global_position, "! SURVIVOR " + str(idx) + " DOWNED — REVIVE AVAILABLE !", Color(1.0, 0.35, 0.25))
+
+func _on_squad_member_revived(p_node: CharacterBody2D) -> void:
+	if is_instance_valid(p_node):
+		var idx: int = int(p_node.get("player_index")) if p_node.get("player_index") != null else 1
+		spawn_floating_text(p_node.global_position, "★ SURVIVOR " + str(idx) + " REVIVED! ★", Color(0.35, 1.0, 0.50))
+
+func _on_squad_member_died() -> void:
+	if _check_all_players_dead():
+		_handle_all_players_dead()
 
 func _check_all_players_dead() -> bool:
-	var p1_dead: bool = (not is_instance_valid(player) or player.is_dead)
-	var p2_dead: bool = (not is_instance_valid(player2) or player2.is_dead)
-	return p1_dead and p2_dead
+	if is_instance_valid(player) and not player.is_dead and not bool(player.get("is_downed")):
+		return false
+	if is_instance_valid(player2) and not player2.is_dead and not bool(player2.get("is_downed")):
+		return false
+	for p_id in squad_peers:
+		var sp: Node = squad_peers[p_id]
+		if is_instance_valid(sp) and not sp.get("is_dead") and not bool(sp.get("is_downed")):
+			return false
+	
+	var players := get_tree().get_nodes_in_group("players")
+	for p in players:
+		if is_instance_valid(p):
+			var dead: bool = bool(p.get("is_dead"))
+			var downed: bool = bool(p.get("is_downed"))
+			if not dead and not downed:
+				return false
+	return true
 
 func _handle_all_players_dead() -> void:
 	if spawn_timer:
@@ -741,6 +800,10 @@ func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
 		if horror_vignette and horror_vignette.get("night_mode_enabled") == true:
 			achs.append("NIGHT STALKER (BLACKOUT)")
 	if result_screen and result_screen.has_method("show_victory"):
+		if death_panel:
+			death_panel.visible = false
+		if touch_controls:
+			touch_controls.visible = false
 		result_screen.show_victory(lvl, score, kills, stars, achs)
 
 func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
@@ -748,28 +811,30 @@ func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_defeat")
 	
+	if touch_controls:
+		touch_controls.visible = false
+	
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.selected_mode == "survival":
 		var rec: Dictionary = gs.record_survival_run(current_wave_num, score_count)
 		if result_screen and result_screen.has_method("show_survival_defeat"):
-			result_screen.show_survival_defeat(current_wave_num, score, kills, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
 			if death_panel:
-				death_panel.modulate.a = 0.0
+				death_panel.visible = false
+			result_screen.show_survival_defeat(current_wave_num, score, kills, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
 			return
 	
 	if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_match_result.rpc(false, lvl, score, kills, 0, reason)
 	
-	if death_panel:
+	if result_screen and result_screen.has_method("show_defeat"):
+		if death_panel:
+			death_panel.visible = false
+		result_screen.show_defeat(lvl, score, kills, reason)
+	elif death_panel:
 		death_panel.visible = true
+		death_panel.modulate.a = 1.0
 		if death_kills_label:
 			death_kills_label.text = reason + " — ELIMINATED " + str(kills) + " INFECTED (SCORE: " + str(score) + ")"
-	if result_screen and result_screen.has_method("show_defeat"):
-		result_screen.show_defeat(lvl, score, kills, reason)
-		# Hide legacy DeathPanel visuals when ResultScreen is present so they don't overlap visually,
-		# while keeping death_panel.visible = true if ResultScreen is absent
-		if death_panel:
-			death_panel.modulate.a = 0.0
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_sync_match_result(is_victory: bool, lvl: int, score: int, kills: int, stars: int, reason: String) -> void:
@@ -779,6 +844,13 @@ func rpc_sync_match_result(is_victory: bool, lvl: int, score: int, kills: int, s
 		_on_level_lost(lvl, score, kills, reason)
 
 func _on_coop_peer_disconnected(id: int) -> void:
+	if squad_peers.has(id):
+		var p_node: Node = squad_peers[id]
+		if is_instance_valid(p_node):
+			if is_instance_valid(player):
+				spawn_floating_text(player.global_position, "SQUADMATE (PEER " + str(id) + ") DISCONNECTED", Color(1.0, 0.65, 0.25))
+			p_node.queue_free()
+		squad_peers.erase(id)
 	if is_instance_valid(player2) and player2.peer_id == id:
 		if is_instance_valid(player):
 			spawn_floating_text(player.global_position, "CO-OP SURVIVOR DISCONNECTED", Color(1.0, 0.65, 0.25))

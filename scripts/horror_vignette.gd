@@ -29,6 +29,7 @@ const DARKNESS_SHADER_CODE: String = """
 shader_type canvas_item;
 
 uniform float u_night_factor : hint_range(0.0, 1.0) = 0.0;
+uniform vec2 u_canvas_size = vec2(1280.0, 720.0);
 uniform vec2 u_player_screen_pos = vec2(640.0, 360.0);
 uniform float u_flashlight_angle = 0.0;
 uniform float u_cone_half = 0.44;
@@ -50,7 +51,7 @@ void fragment() {
 	if (u_night_factor <= 0.005) {
 		COLOR = vec4(0.0);
 	} else {
-		vec2 p = FRAGCOORD.xy;
+		vec2 p = UV * u_canvas_size;
 		vec2 to_pixel = p - u_player_screen_pos;
 		float dist = length(to_pixel);
 		float angle = atan(to_pixel.y, to_pixel.x);
@@ -146,6 +147,8 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 	flashlight_player_world_pos = player_world_pos
 	
 	if darkness_mat and night_factor > 0.005:
+		var c_size: Vector2 = size if size != Vector2.ZERO else get_viewport_rect().size
+		darkness_mat.set_shader_parameter("u_canvas_size", c_size)
 		darkness_mat.set_shader_parameter("u_player_screen_pos", screen_pos)
 		darkness_mat.set_shader_parameter("u_flashlight_angle", angle_rad)
 		darkness_mat.set_shader_parameter("u_inner_radius", lerpf(90.0, 52.0, night_factor))

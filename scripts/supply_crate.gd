@@ -23,7 +23,7 @@ func _ready() -> void:
 	
 	if prompt_label:
 		prompt_label.visible = false
-		prompt_label.text = "[E] / [TAP] OPEN SUPPLY CRATE"
+		prompt_label.text = "TAP TO OPEN CRATE"
 
 func _process(delta: float) -> void:
 	anim_time += delta
