@@ -20,7 +20,8 @@ const SUITES: Array[String] = [
 	"res://tests/test_sector_biomes.gd",
 	"res://tests/test_graphics_settings.gd",
 	"res://tests/test_obstacle_physics_and_shadows.gd",
-	"res://tests/test_survival_and_generator.gd"
+	"res://tests/test_survival_and_generator.gd",
+	"res://tests/test_all_scenes_load.gd"
 ]
 
 func _init():
