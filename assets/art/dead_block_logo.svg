@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" width="800" height="260">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="bgPlateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14171a"/>
+      <stop offset="50%" stop-color="#0c0e10"/>
+      <stop offset="100%" stop-color="#171b1f"/>
+    </linearGradient>
+
+    <linearGradient id="metalBevel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#454c54"/>
+      <stop offset="50%" stop-color="#282d33"/>
+      <stop offset="100%" stop-color="#191c20"/>
+    </linearGradient>
+
+    <linearGradient id="bloodGrad" x1="0%" y1="0%" x2="100%" y2="80%">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="50%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#450a0a"/>
+    </linearGradient>
+
+    <linearGradient id="hazardYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97706"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+
+    <linearGradient id="textMetalGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#e2e8f0"/>
+      <stop offset="70%" stop-color="#94a3b8"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+
+    <linearGradient id="glowRed" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#7f1d1d"/>
+    </linearGradient>
+
+    <!-- Hazard Stripes Pattern -->
+    <pattern id="hazardStripe" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="14" height="28" fill="#d97706" fill-opacity="0.85"/>
+      <rect x="14" width="14" height="28" fill="#181a1b"/>
+    </pattern>
+
+    <!-- Filter for subtle drop shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- Main Background Backplate with Cut Corners -->
+  <polygon points="20,12 780,12 792,24 792,236 780,248 20,248 8,236 8,24" 
+           fill="url(#bgPlateGrad)" stroke="url(#metalBevel)" stroke-width="3" filter="url(#shadow)"/>
+
+  <!-- Top & Bottom Hazard Stripe Accents -->
+  <polygon points="24,16 776,16 776,26 24,26" fill="url(#hazardStripe)" opacity="0.7"/>
+  <polygon points="24,234 776,234 776,244 24,244" fill="url(#hazardStripe)" opacity="0.7"/>
+
+  <!-- Inner Frame Accent Border -->
+  <rect x="18" y="32" width="764" height="196" fill="none" stroke="#2a3038" stroke-width="1.5" stroke-dasharray="8 4"/>
+
+  <!-- Left/Right Corner Rivets -->
+  <circle cx="28" cy="40" r="4" fill="#3b424a" stroke="#111417" stroke-width="1"/>
+  <circle cx="772" cy="40" r="4" fill="#3b424a" stroke="#111417" stroke-width="1"/>
+  <circle cx="28" cy="220" r="4" fill="#3b424a" stroke="#111417" stroke-width="1"/>
+  <circle cx="772" cy="220" r="4" fill="#3b424a" stroke="#111417" stroke-width="1"/>
+
+  <!-- Tactical Quarantine Sector Stamp Top Left -->
+  <text x="36" y="52" font-family="'Courier New', monospace" font-size="11" font-weight="bold" fill="#f59e0b" letter-spacing="2">
+    [ PROTOCOL: APOCALYPSE // SEC-04 ]
+  </text>
+  <text x="764" y="52" text-anchor="end" font-family="'Courier New', monospace" font-size="11" font-weight="bold" fill="#ef4444" letter-spacing="2">
+    BIOLOGICAL HAZARD LEVEL 5
+  </text>
+
+  <!-- Left Shield / Cracked Concrete Block Icon -->
+  <g transform="translate(68, 62)">
+    <!-- Hexagonal Block Base -->
+    <polygon points="56,0 112,32 112,96 56,128 0,96 0,32" fill="#1e2329" stroke="#374151" stroke-width="4"/>
+    
+    <!-- Hazard Stripes across block -->
+    <polygon points="0,52 112,52 112,76 0,76" fill="url(#hazardStripe)" opacity="0.5"/>
+
+    <!-- Concrete Crack Lines -->
+    <path d="M56,0 L50,45 L32,60 L24,90 M50,45 L70,70 L65,115 M32,60 L10,65" fill="none" stroke="#0f1115" stroke-width="2.5"/>
+
+    <!-- Biohazard / Skull Crosshair Graphic -->
+    <circle cx="56" cy="64" r="32" fill="#0b0e11" stroke="#dc2626" stroke-width="3" stroke-dasharray="16 6"/>
+    <circle cx="56" cy="64" r="16" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <line x1="56" y1="26" x2="56" y2="102" stroke="#dc2626" stroke-width="2"/>
+    <line x1="18" y1="64" x2="94" y2="64" stroke="#dc2626" stroke-width="2"/>
+
+    <!-- Central Skull Silhouette -->
+    <path d="M48,54 C48,46 64,46 64,54 C64,62 60,65 60,70 L52,70 C52,65 48,62 48,54 Z" fill="#e2e8f0"/>
+    <rect x="51" y="70" width="10" height="4" fill="#cbd5e1"/>
+    <!-- Eye sockets -->
+    <circle cx="52" cy="54" r="2.5" fill="#181a1b"/>
+    <circle cx="60" cy="54" r="2.5" fill="#181a1b"/>
+
+    <!-- Blood Splatter on Shield -->
+    <path d="M75,20 Q85,15 95,30 Q90,45 80,40 Q85,55 92,60 Q75,70 70,50 Z" fill="url(#bloodGrad)" opacity="0.85"/>
+  </g>
+
+  <!-- Splatter Details on Text Area -->
+  <path d="M280,65 Q310,50 340,68 Q315,90 290,80 Z" fill="#991b1b" opacity="0.6"/>
+  <path d="M520,135 Q545,120 560,140 Q535,155 510,145 Z" fill="#7f1d1d" opacity="0.5"/>
+  <circle cx="345" cy="85" r="3" fill="#991b1b" opacity="0.7"/>
+  <circle cx="355" cy="95" r="2" fill="#7f1d1d" opacity="0.6"/>
+  <circle cx="570" cy="150" r="3.5" fill="#991b1b" opacity="0.7"/>
+
+  <!-- "DEAD BLOCK" Heavy Stencil Typography -->
+  <!-- Shadow / 3D Extrusion -->
+  <text x="214" y="148" font-family="'Arial Black', Impact, 'Bebas Neue', sans-serif" font-size="76" font-weight="900" fill="#450a0a" letter-spacing="4">
+    DEAD BLOCK
+  </text>
+  <text x="212" y="146" font-family="'Arial Black', Impact, 'Bebas Neue', sans-serif" font-size="76" font-weight="900" fill="#111317" letter-spacing="4">
+    DEAD BLOCK
+  </text>
+
+  <!-- Front Metallic / Blood-Tinged Face -->
+  <text x="210" y="144" font-family="'Arial Black', Impact, 'Bebas Neue', sans-serif" font-size="76" font-weight="900" fill="url(#textMetalGrad)" stroke="#1a1e24" stroke-width="2" letter-spacing="4">
+    DEAD BLOCK
+  </text>
+
+  <!-- Stencil Cut Lines over "DEAD BLOCK" -->
+  <line x1="205" y1="116" x2="710" y2="116" stroke="#121518" stroke-width="3"/>
+  <line x1="270" y1="78" x2="282" y2="148" stroke="#121518" stroke-width="2"/>
+  <line x1="435" y1="78" x2="445" y2="148" stroke="#121518" stroke-width="2"/>
+  <line x1="600" y1="78" x2="610" y2="148" stroke="#121518" stroke-width="2"/>
+
+  <!-- Subtitle Bar Background -->
+  <polygon points="210,170 710,170 700,208 220,208" fill="#1c0a0a" stroke="#dc2626" stroke-width="2"/>
+
+  <!-- Subtitle Text: "SURVIVAL" -->
+  <text x="460" y="198" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="28" font-weight="900" fill="#f87171" letter-spacing="14">
+    S U R V I V A L
+  </text>
+
+  <!-- Under-bar Technical Code -->
+  <text x="460" y="222" text-anchor="middle" font-family="'Courier New', monospace" font-size="11" font-weight="bold" fill="#9ca3af" letter-spacing="3">
+    ARENA OUTPOST // LOCAL &amp; CO-OP CAMPAIGN
+  </text>
+
+  <!-- Barbed Wire Graphic Accent on Right -->
+  <path d="M720,80 L730,95 L720,110 L735,125 L720,140 L730,155 L720,170" fill="none" stroke="#4b5563" stroke-width="2"/>
+  <line x1="720" y1="95" x2="735" y2="92" stroke="#dc2626" stroke-width="2"/>
+  <line x1="720" y1="125" x2="735" y2="122" stroke="#dc2626" stroke-width="2"/>
+  <line x1="720" y1="155" x2="735" y2="152" stroke="#dc2626" stroke-width="2"/>
+</svg>

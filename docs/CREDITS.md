@@ -30,5 +30,8 @@ This document tracks all external, licensed, and original assets and technologie
 |---|---|---|---|
 | **Project UI Theme & Layout** | Dead Block: Survival Team | MIT License | Custom procedural UI themes, styleboxes, layouts, and menus. |
 | **Scene Templates** | Dead Block: Survival Team | MIT License | Initial project architecture, Main Menu, Settings, Credits, and Arena scenes. |
-| **Project Icon** (`icon.svg`) | Godot Engine / Project Team | MIT License | Default engine icon used for early development testing. |
+| **Branding Logo Suite** (`assets/art/dead_block_logo.svg`, `dead_block_logo.png`) | Dead Block: Survival Team | MIT License | Original tactical quarantine branding logo, distressed concrete block insignia, and hazard typography. |
+| **Studio Splash Badge** (`assets/art/outpost_logo.svg`) | Dead Block: Survival Team | MIT License | Original tactical radio transmission studio badge for Outpost Games / ITSD 85 presentation. |
+| **Engine Boot Splash** (`assets/art/boot_splash.png`) | Dead Block: Survival Team | MIT License | Original 1280x720 dark post-apocalyptic splash screen for engine-level mobile/desktop boot. |
+| **Application Icon** (`icon.svg`, `assets/art/icon.png`) | Dead Block: Survival Team | MIT License | Original 512x512 high-contrast post-apocalyptic survivor emblem, hazard warning strip, and shield squircle. |
 | **Procedural SFX Suite** (`assets/audio/*.wav`) | Dead Block: Survival Team | MIT License | Original 16-bit 22kHz PCM sound effects for firearms (Pistol, Shotgun, SMG, Rifle, Magnum, Dry Fire), special infected (Groan, Hit, Death, Bite, Boomer, Witch), survivor actions (Hurt, Dash, Frag Explosion, Supply Pickup), and mission events (Wave Horn, Victory, Defeat). |

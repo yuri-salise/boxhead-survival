@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 120" width="480" height="120">
+  <defs>
+    <linearGradient id="studioPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181c20"/>
+      <stop offset="100%" stop-color="#0e1013"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Plate background -->
+  <polygon points="10,6 470,6 476,12 476,108 470,114 10,114 4,108 4,12" 
+           fill="url(#studioPlate)" stroke="#374151" stroke-width="2"/>
+
+  <!-- Left Radar / Radio Tower Emblem -->
+  <g transform="translate(32, 24)">
+    <polygon points="28,4 52,68 4,68" fill="none" stroke="#d97706" stroke-width="2.5"/>
+    <line x1="28" y1="4" x2="28" y2="68" stroke="#f59e0b" stroke-width="2"/>
+    <line x1="16" y1="42" x2="40" y2="42" stroke="#d97706" stroke-width="2"/>
+    <line x1="10" y1="56" x2="46" y2="56" stroke="#d97706" stroke-width="2"/>
+    <circle cx="28" cy="4" r="5" fill="#ef4444" stroke="#991b1b" stroke-width="1.5"/>
+    
+    <!-- Broadcast Waves -->
+    <path d="M12,14 C18,8 38,8 44,14" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 2"/>
+    <path d="M6,6 C16,-4 40,-4 50,6" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 2"/>
+  </g>
+
+  <!-- Studio Typography -->
+  <text x="110" y="42" font-family="'Courier New', monospace" font-size="12" font-weight="bold" fill="#f59e0b" letter-spacing="3">
+    [ TRANSMISSION INCOMING ]
+  </text>
+  <text x="110" y="74" font-family="'Arial Black', Impact, sans-serif" font-size="30" font-weight="900" fill="#f3f4f6" letter-spacing="4">
+    OUTPOST GAMES
+  </text>
+  <text x="110" y="98" font-family="'Courier New', monospace" font-size="11" font-weight="bold" fill="#9ca3af" letter-spacing="2">
+    ITSD 85 MOBILE LABS · GD 4.7
+  </text>
+
+  <!-- Right Accent Hazard Bar -->
+  <rect x="454" y="16" width="6" height="88" fill="#d97706"/>
+</svg>

@@ -1,1 +1,96 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"><rect width="124" height="124" x="2" y="2" fill="#363d52" stroke="#212532" stroke-width="4" rx="14"/><g fill="#fff" transform="translate(12.322 12.322)scale(.101)"><path d="M105 673v33q407 354 814 0v-33z"/><path fill="#478cbf" d="m105 673 152 14q12 1 15 14l4 67 132 10 8-61q2-11 15-15h162q13 4 15 15l8 61 132-10 4-67q3-13 15-14l152-14V427q30-39 56-81-35-59-83-108-43 20-82 47-40-37-88-64 7-51 8-102-59-28-123-42-26 43-46 89-49-7-98 0-20-46-46-89-64 14-123 42 1 51 8 102-48 27-88 64-39-27-82-47-48 49-83 108 26 42 56 81zm0 33v39c0 276 813 276 814 0v-39l-134 12-5 69q-2 10-14 13l-162 11q-12 0-16-11l-10-65H446l-10 65q-4 11-16 11l-162-11q-12-3-14-13l-5-69z"/><path d="M483 600c0 34 58 34 58 0v-86c0-34-58-34-58 0z"/><circle cx="725" cy="526" r="90"/><circle cx="299" cy="526" r="90"/></g><g fill="#414042" transform="translate(12.322 12.322)scale(.101)"><circle cx="307" cy="532" r="60"/><circle cx="717" cy="532" r="60"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c2127"/>
+      <stop offset="45%" stop-color="#0f1216"/>
+      <stop offset="100%" stop-color="#08090b"/>
+    </linearGradient>
+
+    <!-- Metal Border Gradient -->
+    <linearGradient id="iconBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b"/>
+      <stop offset="30%" stop-color="#334155"/>
+      <stop offset="70%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+
+    <!-- Hazard Stripes Pattern -->
+    <pattern id="iconHazard" width="32" height="32" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="16" height="32" fill="#d97706"/>
+      <rect x="16" width="16" height="32" fill="#181a1b"/>
+    </pattern>
+
+    <!-- Blood Gradient -->
+    <linearGradient id="bloodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ef4444"/>
+      <stop offset="40%" stop-color="#dc2626"/>
+      <stop offset="80%" stop-color="#991b1b"/>
+      <stop offset="100%" stop-color="#450a0a"/>
+    </linearGradient>
+
+    <!-- Text Glow -->
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.9"/>
+    </filter>
+  </defs>
+
+  <!-- App Icon Base Squircle with Beveled Border -->
+  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#iconBg)" stroke="url(#iconBorder)" stroke-width="14" filter="url(#iconShadow)"/>
+
+  <!-- Inner Inset Frame -->
+  <rect x="36" y="36" width="440" height="440" rx="76" ry="76" fill="none" stroke="#252c36" stroke-width="3" stroke-dasharray="12 6"/>
+
+  <!-- Corner Rivets -->
+  <circle cx="68" cy="68" r="8" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+  <circle cx="444" cy="68" r="8" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+  <circle cx="68" cy="444" r="8" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+  <circle cx="444" cy="444" r="8" fill="#475569" stroke="#0f172a" stroke-width="2"/>
+
+  <!-- Diagonal Hazard Warning Strip Across Base -->
+  <polygon points="40,290 472,290 472,350 40,350" fill="url(#iconHazard)" opacity="0.45"/>
+
+  <!-- Concrete Barricade Block Silhouette -->
+  <polygon points="256,70 410,150 410,340 256,430 102,340 102,150" fill="#13171d" stroke="#334155" stroke-width="6"/>
+
+  <!-- Block Fracture Cracks -->
+  <path d="M256,70 L240,180 L180,220 L150,290 M240,180 L310,230 L280,350 M180,220 L110,235" fill="none" stroke="#090b0d" stroke-width="4"/>
+
+  <!-- Biohazard Outer Reticle Rings -->
+  <circle cx="256" cy="235" r="110" fill="none" stroke="#dc2626" stroke-width="6" stroke-dasharray="40 16"/>
+  <circle cx="256" cy="235" r="64" fill="none" stroke="#ef4444" stroke-width="4"/>
+
+  <!-- Reticle Crosshair Lines -->
+  <line x1="256" y1="105" x2="256" y2="365" stroke="#dc2626" stroke-width="4"/>
+  <line x1="126" y1="235" x2="386" y2="235" stroke="#dc2626" stroke-width="4"/>
+
+  <!-- Biohazard Curved Arcs -->
+  <path d="M210,185 C230,165 282,165 302,185" fill="none" stroke="#f59e0b" stroke-width="5"/>
+  <path d="M315,245 C325,275 295,310 265,305" fill="none" stroke="#f59e0b" stroke-width="5"/>
+  <path d="M197,245 C187,275 217,310 247,305" fill="none" stroke="#f59e0b" stroke-width="5"/>
+
+  <!-- Survivor Skull Emblem in Center -->
+  <path d="M230,205 C230,175 282,175 282,205 C282,230 274,242 272,258 L240,258 C238,242 230,230 230,205 Z" fill="#f1f5f9"/>
+  <!-- Skull Teeth Bar -->
+  <rect x="238" y="258" width="36" height="12" fill="#e2e8f0"/>
+  <line x1="247" y1="258" x2="247" y2="270" stroke="#0f172a" stroke-width="2"/>
+  <line x1="256" y1="258" x2="256" y2="270" stroke="#0f172a" stroke-width="2"/>
+  <line x1="265" y1="258" x2="265" y2="270" stroke="#0f172a" stroke-width="2"/>
+  <!-- Eye Sockets -->
+  <ellipse cx="244" cy="206" rx="7" ry="9" fill="#0f172a"/>
+  <ellipse cx="268" cy="206" rx="7" ry="9" fill="#0f172a"/>
+  <!-- Nose Cavity -->
+  <polygon points="256,220 252,230 260,230" fill="#0f172a"/>
+
+  <!-- Blood Slash Splatter Across Skull -->
+  <path d="M290,120 Q340,90 380,140 Q350,180 300,160 Q340,210 330,260 Q270,240 280,180 Z" fill="url(#bloodGrad)" opacity="0.88"/>
+  <circle cx="370" cy="190" r="8" fill="#dc2626" opacity="0.8"/>
+  <circle cx="390" cy="220" r="5" fill="#991b1b" opacity="0.8"/>
+  <circle cx="360" cy="250" r="4" fill="#7f1d1d" opacity="0.7"/>
+
+  <!-- Bottom Brand Ribbon Banner -->
+  <polygon points="60,400 452,400 422,460 90,460" fill="#0a0c0e" stroke="#dc2626" stroke-width="4"/>
+  <text x="256" y="442" text-anchor="middle" font-family="'Arial Black', Impact, sans-serif" font-size="34" font-weight="900" fill="#f8fafc" letter-spacing="4">
+    DEAD BLOCK
+  </text>
+</svg>
