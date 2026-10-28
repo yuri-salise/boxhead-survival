@@ -4,6 +4,22 @@
 [ext_resource type="FontFile" path="res://assets/fonts/BebasNeue-Regular.ttf" id="2_bebas"]
 [ext_resource type="FontFile" path="res://assets/fonts/SpecialElite-Regular.ttf" id="3_elite"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_host_banner"]
+content_margin_left = 16.0
+content_margin_top = 10.0
+content_margin_right = 16.0
+content_margin_bottom = 10.0
+bg_color = Color(0.12, 0.14, 0.08, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.9, 0.75, 0.22, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [node name="Lobby" type="Control" unique_id=987123456]
 layout_mode = 3
 anchors_preset = 15
@@ -32,19 +48,19 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="LobbyPanel" type="PanelContainer" parent="CenterContainer" unique_id=687123453]
-custom_minimum_size = Vector2(880, 620)
+custom_minimum_size = Vector2(880, 600)
 layout_mode = 2
 
 [node name="LobbyMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel" unique_id=587123452]
 layout_mode = 2
 theme_override_constants/margin_left = 34
-theme_override_constants/margin_top = 22
+theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 34
-theme_override_constants/margin_bottom = 22
+theme_override_constants/margin_bottom = 18
 
 [node name="LobbyVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin" unique_id=487123451]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 8
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=387123450]
 layout_mode = 2
@@ -59,17 +75,85 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.85, 0.55, 0.22, 1)
-text = "[ 2-PLAYER LAN / MOBILE HOTSPOT PROTOCOL ]"
+text = "[ 2 TO 4 SURVIVOR LAN / MOBILE HOTSPOT CO-OP ]"
 horizontal_alignment = 1
+
+[node name="GuideLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123447]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.82, 0.74, 0.45, 1)
+text = "💡 Each device on your Wi-Fi has a DIFFERENT IP. One player clicks HOST; other players type the HOST's IP into JOIN."
+horizontal_alignment = 1
+autowrap_mode = 2
 
 [node name="LocalIpLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123448]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.40, 0.75, 0.95, 1)
-text = "YOUR LOCAL IP(S):  DETECTING..."
+text = "THIS DEVICE'S IP:  DETECTING..."
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="HostBannerPanel" type="PanelContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123446]
+visible = false
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_host_banner")
+
+[node name="HostBannerMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel" unique_id=187123445]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 6
+
+[node name="HostBannerVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin" unique_id=187123444]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HostBannerTitle" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123443]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(1, 0.85, 0.25, 1)
+text = "★ YOU ARE HOSTING — SHARE THIS IP WITH JOINERS: ★"
+horizontal_alignment = 1
+
+[node name="HostBannerInstruction" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123442]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.9, 0.92, 0.95, 1)
+text = "TELL OTHER SURVIVORS TO ENTER THIS IP IN THEIR \"JOIN\" BOX:"
+horizontal_alignment = 1
+
+[node name="HostIpBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123441]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 12
+
+[node name="HostIpDisplay" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123440]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_bebas")
+theme_override_font_sizes/font_size = 30
+theme_override_colors/font_color = Color(0.35, 1, 0.55, 1)
+text = "👉  127.0.0.1  (PORT: 7777)  👈"
+horizontal_alignment = 1
+
+[node name="CopyIpButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123439]
+custom_minimum_size = Vector2(90, 36)
+layout_mode = 2
+text = "📋 COPY"
+
+[node name="HostAltIpsLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123438]
+visible = false
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 11
+theme_override_colors/font_color = Color(0.65, 0.68, 0.72, 1)
+text = "Alternative network adapters: ..."
+horizontal_alignment = 1
 
 [node name="HSeparator1" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=977123447]
 layout_mode = 2

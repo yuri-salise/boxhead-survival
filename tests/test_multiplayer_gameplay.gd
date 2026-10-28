@@ -47,6 +47,16 @@ class MultiplayerGameplayTestRunner extends Node:
 		assert(p2.weapon_controller.current_weapon_id == "SHOTGUN", "P2 weapon must sync from host")
 		print("Host Authoritative State Replication: PASS")
 		
+		# 3b. Test Client Touch Controls Movement (Local Player on Mobile)
+		var dummy_touch = Control.new()
+		dummy_touch.set_script(load("res://scripts/touch_controls.gd"))
+		p1.touch_controls = dummy_touch
+		dummy_touch.move_vector = Vector2(1.0, 0.0)
+		p1._physics_process(0.016)
+		assert(p1.velocity.x > 0.0, "Local player must move right with touch stick input")
+		dummy_touch.queue_free()
+		print("Local Player Touch Controls Movement: PASS")
+		
 		# 4. Test Two-Player Survival Loop: P1 death does NOT trigger defeat if P2 is alive
 		var lvl_scene = load("res://scenes/levels/level_01.tscn")
 		var level = lvl_scene.instantiate()

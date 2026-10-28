@@ -30,17 +30,81 @@ func _process(delta: float) -> void:
 		if connection_timer <= 0.0:
 			_handle_connection_timeout()
 
+func get_smart_ip_list() -> Array[Dictionary]:
+	var results: Array[Dictionary] = []
+	var interfaces := IP.get_local_interfaces()
+	
+	var virtual_keywords := ["wsl", "hyper-v", "vmnet", "vmware", "virtualbox", "vbox", "docker", "vethernet", "bluetooth", "loopback", "pseudo"]
+	var wifi_lan_keywords := ["wi-fi", "wifi", "wlan", "wireless", "hotspot", "ap0", "eth", "ethernet", "en0", "wlan0"]
+	
+	for iface in interfaces:
+		var name_str: String = str(iface.get("name", "")).to_lower()
+		var friendly: String = str(iface.get("friendly", "")).to_lower()
+		var full_id := name_str + " " + friendly
+		
+		var is_virtual: bool = false
+		for vk in virtual_keywords:
+			if vk in full_id:
+				is_virtual = true
+				break
+		
+		var is_wifi_lan: bool = false
+		for wk in wifi_lan_keywords:
+			if wk in full_id:
+				is_wifi_lan = true
+				break
+		
+		var addresses: Array = iface.get("addresses", [])
+		for addr in addresses:
+			var s_addr: String = str(addr)
+			if not s_addr.contains(".") or s_addr.begins_with("127.") or s_addr.begins_with("169.254."):
+				continue
+			
+			var score := 0
+			if is_wifi_lan and not is_virtual:
+				score += 100
+			elif not is_virtual:
+				score += 50
+			else:
+				score -= 50
+			
+			if s_addr.begins_with("192.168."):
+				score += 20
+			elif s_addr.begins_with("10."):
+				score += 10
+			
+			results.append({
+				"ip": s_addr,
+				"name": iface.get("friendly", iface.get("name", "LAN")),
+				"score": score,
+				"is_virtual": is_virtual
+			})
+	
+	results.sort_custom(func(a, b): return a["score"] > b["score"])
+	return results
+
 func get_local_ip_addresses() -> Array[String]:
+	var smart := get_smart_ip_list()
 	var results: Array[String] = []
-	var all_ips: PackedStringArray = IP.get_local_addresses()
-	for ip in all_ips:
-		# Filter for valid IPv4 addresses excluding link-local or loopback
-		if ip.contains(".") and not ip.begins_with("127.") and not ip.begins_with("169.254."):
-			results.append(ip)
+	for item in smart:
+		if not results.has(item["ip"]):
+			results.append(item["ip"])
+	
+	# Fallback if interface scanning returned empty
+	if results.is_empty():
+		var all_ips: PackedStringArray = IP.get_local_addresses()
+		for ip in all_ips:
+			if ip.contains(".") and not ip.begins_with("127.") and not ip.begins_with("169.254."):
+				if not results.has(ip):
+					results.append(ip)
 	
 	if results.is_empty():
 		results.append("127.0.0.1")
 	return results
+
+func get_primary_host_ip() -> String:
+	var ips := get_local_ip_addresses()
+	return ips[0] if not ips.is_empty() else "127.0.0.1"
 
 func host_game(port: int = DEFAULT_PORT) -> Error:
 	leave_game()
@@ -175,7 +239,9 @@ func _handle_connection_timeout() -> void:
 
 @rpc("authority", "call_local", "reliable")
 func rpc_start_coop_mission(level_id: int) -> void:
-	var sender_id: int = multiplayer.get_remote_sender_id()
+	var sender_id: int = 0
+	if is_inside_tree() and multiplayer != null and multiplayer.has_multiplayer_peer():
+		sender_id = multiplayer.get_remote_sender_id()
 	# In local call, sender_id can be 0 (called locally by host) or 1
 	if sender_id != 0 and sender_id != 1:
 		push_warning("Unauthorized client attempted to call rpc_start_coop_mission")

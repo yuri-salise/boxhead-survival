@@ -110,46 +110,7 @@ func _ready() -> void:
 	
 	if player:
 		player.add_to_group("players")
-		player.touch_controls = touch_controls
-		player.health_changed.connect(_on_player_health_changed)
-		player.armor_changed.connect(_on_player_armor_changed)
-		player.dash_changed.connect(_on_player_dash_changed)
-		player.grenades_changed.connect(_on_player_grenades_changed)
-		player.pickup_collected.connect(_on_player_pickup_collected)
-		player.grenade_detonated.connect(_on_grenade_detonated)
-		player.player_damaged_at.connect(_on_player_damaged_at)
-		if player.has_signal("player_bitten"):
-			player.player_bitten.connect(_on_player_bitten)
-		player.player_died.connect(_on_player_died)
-		
-		if player.weapon_controller:
-			player.weapon_controller.weapon_changed.connect(_on_weapon_updated)
-			player.weapon_controller.ammo_changed.connect(_on_ammo_updated)
-		
-		if touch_controls:
-			touch_controls.dash_pressed.connect(func():
-				if is_instance_valid(player):
-					var aim_dir := Vector2.from_angle(player.visuals.rotation if player.visuals else 0.0)
-					player.try_dash(player.velocity, player.global_position + aim_dir * 120.0)
-			)
-			touch_controls.grenade_pressed.connect(func():
-				if is_instance_valid(player):
-					var aim_dir := Vector2.from_angle(player.visuals.rotation if player.visuals else 0.0)
-					player.try_throw_grenade(player.global_position + aim_dir * 190.0)
-			)
-			touch_controls.switch_weapon_pressed.connect(func():
-				if is_instance_valid(player) and player.weapon_controller:
-					player.weapon_controller.cycle_weapon(1)
-			)
-			if touch_controls.has_signal("interact_pressed"):
-				touch_controls.interact_pressed.connect(func():
-					if is_instance_valid(player):
-						player.try_interact()
-				)
-		
-		_on_player_health_changed(player.current_health, player.max_health)
-		_on_player_armor_changed(player.current_armor, player.max_armor)
-		_refresh_weapon_hud()
+		squad_peers[1] = player
 	
 	# Initialize Squad Co-op (up to 4 survivors) if connected via NetworkManager
 	var net_mgr := get_node_or_null("/root/NetworkManager")
@@ -168,7 +129,9 @@ func _ready() -> void:
 		var spawn_offsets: Array[Vector2] = [Vector2(70, 0), Vector2(-70, 0), Vector2(0, 70), Vector2(0, -70)]
 		var other_idx: int = 2
 		
-		for p_id in net_mgr.connected_peers:
+		var sorted_peers: Array = net_mgr.connected_peers.duplicate()
+		sorted_peers.sort()
+		for p_id in sorted_peers:
 			if p_id == 1:
 				continue
 			var sp_avatar: CharacterBody2D = player_scene.instantiate()
@@ -200,6 +163,8 @@ func _ready() -> void:
 			net_mgr.peer_disconnected.connect(_on_coop_peer_disconnected)
 		if not net_mgr.server_disconnected.is_connected(_on_coop_server_disconnected):
 			net_mgr.server_disconnected.connect(_on_coop_server_disconnected)
+	
+	_setup_local_player_ui_and_controls()
 	
 	if pause_button:
 		pause_button.pressed.connect(_on_pause_button_pressed)
@@ -259,6 +224,95 @@ func _ready() -> void:
 		spawn_timer.start()
 	
 	_update_kills_display()
+
+func get_local_player() -> CharacterBody2D:
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and multiplayer and multiplayer.has_multiplayer_peer():
+		var my_id := multiplayer.get_unique_id()
+		if squad_peers.has(my_id) and is_instance_valid(squad_peers[my_id]):
+			return squad_peers[my_id]
+	return player
+
+func _setup_local_player_ui_and_controls() -> void:
+	var lp := get_local_player()
+	if not is_instance_valid(lp):
+		return
+	
+	# Clear touch_controls from all other player nodes so remote puppets don't process touch input
+	for p_node in get_tree().get_nodes_in_group("players"):
+		if p_node != lp and "touch_controls" in p_node:
+			p_node.touch_controls = null
+	
+	lp.touch_controls = touch_controls
+	
+	if not lp.health_changed.is_connected(_on_player_health_changed):
+		lp.health_changed.connect(_on_player_health_changed)
+	if not lp.armor_changed.is_connected(_on_player_armor_changed):
+		lp.armor_changed.connect(_on_player_armor_changed)
+	if lp.has_signal("dash_changed") and not lp.dash_changed.is_connected(_on_player_dash_changed):
+		lp.dash_changed.connect(_on_player_dash_changed)
+	if lp.has_signal("grenades_changed") and not lp.grenades_changed.is_connected(_on_player_grenades_changed):
+		lp.grenades_changed.connect(_on_player_grenades_changed)
+	if not lp.pickup_collected.is_connected(_on_player_pickup_collected_proxy):
+		lp.pickup_collected.connect(_on_player_pickup_collected_proxy)
+	if not lp.grenade_detonated.is_connected(_on_grenade_detonated):
+		lp.grenade_detonated.connect(_on_grenade_detonated)
+	if not lp.player_damaged_at.is_connected(_on_player_damaged_at):
+		lp.player_damaged_at.connect(_on_player_damaged_at)
+	if lp.has_signal("player_bitten") and not lp.player_bitten.is_connected(_on_player_bitten):
+		lp.player_bitten.connect(_on_player_bitten)
+	if not lp.player_died.is_connected(_on_player_died):
+		lp.player_died.connect(_on_player_died)
+	
+	if lp.weapon_controller:
+		if not lp.weapon_controller.weapon_changed.is_connected(_on_weapon_updated):
+			lp.weapon_controller.weapon_changed.connect(_on_weapon_updated)
+		if not lp.weapon_controller.ammo_changed.is_connected(_on_ammo_updated):
+			lp.weapon_controller.ammo_changed.connect(_on_ammo_updated)
+	
+	if touch_controls:
+		if not touch_controls.dash_pressed.is_connected(_on_touch_dash):
+			touch_controls.dash_pressed.connect(_on_touch_dash)
+		if not touch_controls.grenade_pressed.is_connected(_on_touch_grenade):
+			touch_controls.grenade_pressed.connect(_on_touch_grenade)
+		if not touch_controls.switch_weapon_pressed.is_connected(_on_touch_switch_weapon):
+			touch_controls.switch_weapon_pressed.connect(_on_touch_switch_weapon)
+		if touch_controls.has_signal("interact_pressed") and not touch_controls.interact_pressed.is_connected(_on_touch_interact):
+			touch_controls.interact_pressed.connect(_on_touch_interact)
+	
+	if lp.player_camera:
+		lp.player_camera.enabled = true
+		lp.player_camera.make_current()
+	
+	_on_player_health_changed(lp.current_health, lp.max_health)
+	_on_player_armor_changed(lp.current_armor, lp.max_armor)
+	_refresh_weapon_hud()
+
+func _on_player_pickup_collected_proxy(msg: String, col: Color) -> void:
+	_on_player_pickup_collected(msg, col)
+
+func _on_touch_dash() -> void:
+	var lp := get_local_player()
+	if is_instance_valid(lp):
+		var aim_dir := Vector2.from_angle(lp.visuals.rotation if lp.visuals else 0.0)
+		lp.try_dash(lp.velocity, lp.global_position + aim_dir * 120.0)
+
+func _on_touch_grenade() -> void:
+	var lp := get_local_player()
+	if is_instance_valid(lp):
+		var aim_dir := Vector2.from_angle(lp.visuals.rotation if lp.visuals else 0.0)
+		lp.try_throw_grenade(lp.global_position + aim_dir * 190.0)
+
+func _on_touch_switch_weapon() -> void:
+	var lp := get_local_player()
+	if is_instance_valid(lp) and lp.weapon_controller:
+		lp.weapon_controller.cycle_weapon(1)
+
+func _on_touch_interact() -> void:
+	var lp := get_local_player()
+	if is_instance_valid(lp):
+		lp.try_interact()
 
 func _get_preset_waves_for_level(lvl_id: int) -> Array[Dictionary]:
 	match lvl_id:
@@ -373,28 +427,31 @@ func _on_achievement_unlocked(_ach_id: String, title: String, _desc: String) -> 
 
 func _process(delta: float) -> void:
 	advance_day_night_cycle(delta)
-	if is_instance_valid(player):
+	var lp := get_local_player()
+	if not is_instance_valid(lp):
+		lp = player
+	if is_instance_valid(lp):
 		if is_instance_valid(arena_env):
 			if arena_env.has_method("set_focus_position"):
-				arena_env.set_focus_position(player.global_position)
+				arena_env.set_focus_position(lp.global_position)
 		
 		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
-			var screen_pos: Vector2 = player.get_global_transform_with_canvas().origin
-			var aim_rot: float = float(player.visuals.rotation) if player.visuals else 0.0
+			var screen_pos: Vector2 = lp.get_global_transform_with_canvas().origin
+			var aim_rot: float = float(lp.visuals.rotation) if lp.visuals else 0.0
 			var occluders: Array = []
 			if current_night_factor > 0.02 and is_instance_valid(arena_env) and arena_env.has_method("get_nearby_obstacles"):
-				if player.global_position.distance_squared_to(last_occluder_query_pos) >= 256.0 or cached_occluders.is_empty():
-					last_occluder_query_pos = player.global_position
-					cached_occluders = arena_env.get_nearby_obstacles(player.global_position, 550.0)
+				if lp.global_position.distance_squared_to(last_occluder_query_pos) >= 256.0 or cached_occluders.is_empty():
+					last_occluder_query_pos = lp.global_position
+					cached_occluders = arena_env.get_nearby_obstacles(lp.global_position, 550.0)
 				occluders = cached_occluders
-			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, player.global_position)
+			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, lp.global_position)
 			
 			ambient_query_timer += delta
 			if ambient_query_timer >= 0.20 or cached_ambient_lights.is_empty():
 				ambient_query_timer = 0.0
 				var ambients: Array = []
 				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
-					ambients.append_array(arena_env.get_ambient_lights(player.global_position, 850.0))
+					ambients.append_array(arena_env.get_ambient_lights(lp.global_position, 850.0))
 				var gens := get_tree().get_nodes_in_group("generators")
 				for g in gens:
 					if is_instance_valid(g) and g.has_method("get_light_data"):
@@ -403,7 +460,7 @@ func _process(delta: float) -> void:
 							ambients.append(ldata)
 				cached_ambient_lights = ambients
 				if not has_turret_flash_active and horror_vignette.has_method("update_ambient_lights"):
-					horror_vignette.update_ambient_lights(cached_ambient_lights, player.global_position)
+					horror_vignette.update_ambient_lights(cached_ambient_lights, lp.global_position)
 			
 			# Dynamic turret gunfire muzzle flash lights
 			var turret_flash_lights: Array = []
@@ -420,7 +477,7 @@ func _process(delta: float) -> void:
 				var combined_lights := cached_ambient_lights.duplicate()
 				combined_lights.append_array(turret_flash_lights)
 				if horror_vignette.has_method("update_ambient_lights"):
-					horror_vignette.update_ambient_lights(combined_lights, player.global_position)
+					horror_vignette.update_ambient_lights(combined_lights, lp.global_position)
 			
 			witch_query_timer += delta
 			if witch_query_timer >= 0.12 or cached_witch_eyes.is_empty():
@@ -436,14 +493,14 @@ func _process(delta: float) -> void:
 							})
 				cached_witch_eyes = witches
 				if horror_vignette.has_method("update_witch_eyes"):
-					horror_vignette.update_witch_eyes(cached_witch_eyes, player.global_position)
+					horror_vignette.update_witch_eyes(cached_witch_eyes, lp.global_position)
 			
 			# Check proximity to downed squad members for Mobile Revive prompt
-			if is_instance_valid(player) and not player.get("is_downed"):
+			if is_instance_valid(lp) and not lp.get("is_downed"):
 				var nearby_downed: Node = null
 				for p in get_tree().get_nodes_in_group("players"):
-					if is_instance_valid(p) and p != player and p.get("is_downed") == true:
-						if player.global_position.distance_to(p.global_position) <= 100.0:
+					if is_instance_valid(p) and p != lp and p.get("is_downed") == true:
+						if lp.global_position.distance_to(p.global_position) <= 100.0:
 							nearby_downed = p
 							break
 				if is_instance_valid(nearby_downed):
@@ -454,9 +511,9 @@ func _process(delta: float) -> void:
 			if is_instance_valid(zombie_container):
 				for z in zombie_container.get_children():
 					if is_instance_valid(z) and not z.get("is_dead"):
-						if z.global_position.distance_to(player.global_position) > 1450.0:
+						if z.global_position.distance_to(lp.global_position) > 1450.0:
 							var ahead_ang := randf() * TAU
-							z.global_position = player.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+							z.global_position = lp.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
 
 func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int = -1, scale_mult: float = 1.0, active_splash: bool = true) -> Node2D:
 	if not blood_container:
@@ -507,8 +564,9 @@ func spawn_pickup_at(p_type: String, world_pos: Vector2) -> Node2D:
 	if not pickup_scene or not pickup_container:
 		return null
 	var item: Node2D = pickup_scene.instantiate()
-	pickup_container.add_child(item)
+	item.position = world_pos
 	item.setup(p_type, world_pos)
+	pickup_container.add_child.call_deferred(item)
 	return item
 
 func spawn_floating_text(world_pos: Vector2, message: String, color: Color = Color.WHITE) -> void:
@@ -568,10 +626,11 @@ func _on_ammo_updated(_wid: String, _ammo: int, _max_ammo: int) -> void:
 	_refresh_weapon_hud()
 
 func _refresh_weapon_hud() -> void:
-	if not player or not player.weapon_controller:
+	var lp := get_local_player()
+	if not lp or not lp.weapon_controller:
 		return
-	var w_text: String = player.weapon_controller.get_current_weapon_display()
-	var g_count: int = int(player.grenade_count)
+	var w_text: String = lp.weapon_controller.get_current_weapon_display()
+	var g_count: int = int(lp.grenade_count)
 	if weapon_label:
 		weapon_label.text = w_text + "  ·  FRAGS: " + str(g_count)
 	if touch_controls:
@@ -581,9 +640,10 @@ func _refresh_weapon_hud() -> void:
 			touch_controls.set_grenade_count(g_count)
 
 func _on_player_pickup_collected(msg: String, col: Color) -> void:
-	if is_instance_valid(player):
-		spawn_floating_text(player.global_position, msg, col)
-		if player.weapon_controller and player.weapon_controller.unlocked_weapons.size() >= 5:
+	var lp := get_local_player()
+	if is_instance_valid(lp):
+		spawn_floating_text(lp.global_position, msg, col)
+		if lp.weapon_controller and lp.weapon_controller.unlocked_weapons.size() >= 5:
 			var gs := get_node_or_null("/root/GameState")
 			if gs and gs.has_method("unlock_achievement"):
 				gs.unlock_achievement("ARSENAL_MASTER")
