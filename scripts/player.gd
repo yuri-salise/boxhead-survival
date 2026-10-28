@@ -56,6 +56,7 @@ var override_move_vec: Vector2 = Vector2.ZERO
 var override_aim_pos: Vector2 = Vector2.ZERO
 var override_is_shooting: bool = false
 var touch_controls: Control = null
+var network_sync_enabled: bool = false
 var terrain_speed_mult: float = 1.0
 var terrain_check_timer: float = 999.0
 
@@ -73,6 +74,15 @@ func is_local_player() -> bool:
 func _ready() -> void:
 	current_health = max_health
 	is_dead = false
+	
+	if is_coop_mode:
+		var tree := get_tree()
+		if tree:
+			var timer := tree.create_timer(0.6)
+			if timer:
+				timer.timeout.connect(func(): network_sync_enabled = true)
+	else:
+		network_sync_enabled = true
 	
 	# Attach smooth Camera2D for infinite world movement
 	player_camera = get_node_or_null("PlayerCamera") as Camera2D
@@ -162,7 +172,7 @@ func _physics_process(delta: float) -> void:
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting and not is_downed
-	elif input_override_enabled:
+	elif not is_coop_mode and input_override_enabled:
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting and not is_downed
@@ -193,7 +203,7 @@ func _physics_process(delta: float) -> void:
 		if (Input.is_key_pressed(KEY_SPACE) or Input.is_key_pressed(KEY_SHIFT)) and not is_downed:
 			try_dash(move_vec, aim_pos)
 		
-		if is_coop_mode and is_local_player() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() != 1:
+		if is_coop_mode and is_local_player() and network_sync_enabled and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.get_unique_id() != 1:
 			sync_input_to_host.rpc_id(1, move_vec, aim_pos, shooting)
 	
 	# Handle active dash, downed crawl, or standard movement
@@ -237,16 +247,19 @@ func _physics_process(delta: float) -> void:
 			var muzzle_global := get_muzzle_position()
 			weapon_controller.try_fire(muzzle_global, aim_dir, self)
 	
-	if is_coop_mode and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+	if is_coop_mode and network_sync_enabled and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		sync_state_to_peers.rpc(global_position, visuals.rotation if visuals else 0.0, velocity, current_health, current_armor, weapon_controller.current_weapon_id if weapon_controller else "PISTOL")
 	
 	queue_redraw()
 
-@rpc("any_peer", "call_local", "unreliable")
+@rpc("any_peer", "call_remote", "unreliable")
 func sync_input_to_host(p_move: Vector2, p_aim: Vector2, p_shooting: bool) -> void:
-	var sender_id: int = multiplayer.get_remote_sender_id()
-	if sender_id != 0 and sender_id != peer_id:
+	if not is_inside_tree() or multiplayer == null:
 		return
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		var sender_id: int = multiplayer.get_remote_sender_id()
+		if sender_id != 0 and sender_id != peer_id:
+			return
 	input_override_enabled = true
 	override_move_vec = p_move
 	override_aim_pos = p_aim
@@ -254,9 +267,13 @@ func sync_input_to_host(p_move: Vector2, p_aim: Vector2, p_shooting: bool) -> vo
 
 @rpc("authority", "call_remote", "unreliable")
 func sync_state_to_peers(p_pos: Vector2, p_rot: float, p_vel: Vector2, p_hp: float, p_ap: float, p_wep: String) -> void:
+	if not is_inside_tree() or multiplayer == null:
+		return
 	if is_local_player():
 		current_health = p_hp
 		current_armor = p_ap
+		if global_position.distance_squared_to(p_pos) > 10000.0:
+			global_position = p_pos
 		return
 	global_position = p_pos
 	if visuals:
@@ -504,6 +521,8 @@ func revive(restore_hp: float = 40.0) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_downed(downed: bool) -> void:
+	if not is_inside_tree() or multiplayer == null:
+		return
 	if downed:
 		if not is_downed:
 			is_downed = true
