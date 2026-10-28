@@ -34,6 +34,9 @@ crash.*.log
 *.jks
 local.properties
 .export_credentials.cfg
+.env
+.env.*
+!.env.example
 
 # ------------------------------------------------------------------------------
 # Android Build & Export Artifacts
