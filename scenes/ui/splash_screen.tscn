@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://splash_screen_alias"]
+
+[ext_resource type="PackedScene" path="res://scenes/ui/title_screen.tscn" id="1_title"]
+
+[node name="SplashScreen" instance=ExtResource("1_title")]
