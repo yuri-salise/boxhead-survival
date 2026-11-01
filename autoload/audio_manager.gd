@@ -238,6 +238,6 @@ func _load_wav_stream(path: String) -> AudioStream:
 	if path.contains("ambient_"):
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		stream.loop_begin = 0
-		stream.loop_end = int(data_size / (2 if bits_per_sample == 16 else 1))
+		stream.loop_end = int(float(data_size) / (2.0 if bits_per_sample == 16 else 1.0))
 	return stream
 

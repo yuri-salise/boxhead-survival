@@ -340,12 +340,13 @@ func take_damage(amount: float) -> void:
 	if is_dead or amount <= 0.0:
 		return
 	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
+	
 	if is_network_puppet:
 		hurt_flash_timer = 0.10
-		var audio_mgr := get_node_or_null("/root/AudioManager")
 		if audio_mgr:
 			audio_mgr.play_sfx("sfx_zombie_hit")
-		var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
 		blood_splashed.emit(global_position, last_hit_dir, s_type, 0.85)
 		if blood_splatter_scene and get_parent():
 			var b_fx = blood_splatter_scene.instantiate()
@@ -361,7 +362,6 @@ func take_damage(amount: float) -> void:
 	
 	var prev_ratio := current_health / maxf(1.0, max_health)
 	hurt_flash_timer = 0.10
-	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_zombie_hit")
 	
@@ -382,7 +382,6 @@ func take_damage(amount: float) -> void:
 			sever_next_limb(last_hit_dir)
 	
 	# Emit active blood splash on hit
-	var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
 	blood_splashed.emit(global_position, last_hit_dir, s_type, 0.85)
 	if blood_splatter_scene and get_parent():
 		var b_fx = blood_splatter_scene.instantiate()

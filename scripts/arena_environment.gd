@@ -199,7 +199,6 @@ func get_ambient_lights(center_pos: Vector2, max_dist: float = 750.0) -> Array[D
 							"color": Color(0.75, 0.90, 1.0, 0.95)
 						})
 	return result
-	return result
 
 func _update_active_colliders() -> void:
 	if not is_inside_tree() or not is_instance_valid(collider_container):
@@ -474,7 +473,7 @@ func _generate_quarantine_chunk(data: Dictionary, origin: Vector2, cx: int, cy: 
 	data["has_ns_road"] = (absi(cx) % 2 == 1)
 
 # --- Level 2: The Street (Abandoned vehicle barricades creating vertical sightlines) ---
-func _generate_street_chunk(data: Dictionary, origin: Vector2, cx: int, cy: int, rng: RandomNumberGenerator) -> void:
+func _generate_street_chunk(data: Dictionary, origin: Vector2, _cx: int, cy: int, rng: RandomNumberGenerator) -> void:
 	var foliage_patches: Array[Dictionary] = []
 	var fol_count := 2 if graphics_quality == 0 else 5
 	for i in range(fol_count):
@@ -792,6 +791,7 @@ func _draw_street_chunk(chunk: Dictionary, flicker: float) -> void:
 	# North-South Highway Lanes
 	var road_col := Color(0.045, 0.045, 0.05, 1.0)
 	var curb_col := Color(0.22, 0.22, 0.24, 0.8)
+	draw_rect(Rect2(origin + Vector2(60, 0), Vector2(CHUNK_SIZE - 120, CHUNK_SIZE)), road_col, true)
 	draw_line(origin + Vector2(60, 0), origin + Vector2(60, CHUNK_SIZE), curb_col, 3.0)
 	draw_line(origin + Vector2(CHUNK_SIZE - 60, 0), origin + Vector2(CHUNK_SIZE - 60, CHUNK_SIZE), curb_col, 3.0)
 	

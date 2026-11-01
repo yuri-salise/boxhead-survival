@@ -75,10 +75,10 @@ func _ready() -> void:
 	if audio_mgr and audio_mgr.has_method("play_music"):
 		audio_mgr.play_music("ambient_combat")
 	
+	var gs := get_node_or_null("/root/GameState")
 	if is_instance_valid(arena_env):
 		if "sector_type" in arena_env:
 			arena_env.sector_type = level_id
-		var gs = get_node_or_null("/root/GameState")
 		if gs and "graphics_quality" in gs and "graphics_quality" in arena_env:
 			arena_env.graphics_quality = gs.graphics_quality
 	
@@ -170,16 +170,15 @@ func _ready() -> void:
 		if not net_mgr.server_disconnected.is_connected(_on_coop_server_disconnected):
 			net_mgr.server_disconnected.connect(_on_coop_server_disconnected)
 	elif player:
-		var gs_init := get_node_or_null("/root/GameState")
-		if gs_init:
-			if "player_callsign" in gs_init:
-				player.custom_callsign = str(gs_init.player_callsign)
-			if gs_init.has_method("is_veteran_loadout_unlocked") and gs_init.is_veteran_loadout_unlocked():
+		if gs:
+			if "player_callsign" in gs:
+				player.custom_callsign = str(gs.player_callsign)
+			if gs.has_method("is_veteran_loadout_unlocked") and gs.is_veteran_loadout_unlocked():
 				player.add_armor(50.0)
 				if player.weapon_controller and player.weapon_controller.has_method("unlock_or_add_weapon"):
 					player.weapon_controller.unlock_or_add_weapon("SMG")
 				spawn_floating_text(player.global_position + Vector2(0, -82), "★ VETERAN STAR PERK: +50 ARMOR & MP5 SMG ★", Color(1.0, 0.85, 0.25))
-			if bool(gs_init.get("ai_companion_enabled")):
+			if bool(gs.get("ai_companion_enabled")):
 				var bot_scene: PackedScene = load("res://scenes/actors/player.tscn")
 				if bot_scene:
 					var bot: CharacterBody2D = bot_scene.instantiate()
@@ -223,7 +222,6 @@ func _ready() -> void:
 		level_controller.level_won.connect(_on_level_won)
 		level_controller.level_lost.connect(_on_level_lost)
 	
-	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_signal("achievement_unlocked") and not gs.achievement_unlocked.is_connected(_on_achievement_unlocked):
 		gs.achievement_unlocked.connect(_on_achievement_unlocked)
 	
