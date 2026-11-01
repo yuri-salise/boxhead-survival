@@ -19,6 +19,7 @@ class PriorityFeaturesRunner extends Node:
 		_test_ambient_music()
 		_test_coop_survival_mode()
 		_test_rubric_excellent_and_bonus_features()
+		_test_necro_and_7_witches_coven()
 		
 		print("==================================================")
 		print("ALL PRIORITY 1, RUBRIC EXCELLENT & BONUS TESTS PASSED! 100%")
@@ -182,3 +183,31 @@ class PriorityFeaturesRunner extends Node:
 		gs.queue_free()
 		nm.queue_free()
 		print("  Rubric Excellent Tier & Bonus Features: PASS")
+
+	func _test_necro_and_7_witches_coven() -> void:
+		print("\n--- Testing NECRO Boss Spawning with 7 Witches Coven & Weapon Shake Reset ---")
+		var lvl_scene: PackedScene = load("res://scenes/levels/level_01.tscn")
+		var lvl: Node2D = lvl_scene.instantiate()
+		add_child(lvl)
+		
+		var necro: Node2D = lvl.spawn_test_zombie_at(Vector2(600, 300), 13)
+		assert(necro != null, "NECRO boss must spawn")
+		assert(necro.get_type_name() == "NECRO", "Spawned zombie must be NECRO")
+		assert(necro.has_meta("witch_coven"), "NECRO must spawn with witch_coven meta")
+		var coven: Array = necro.get_meta("witch_coven")
+		assert(coven.size() == 7, "NECRO must spawn with exactly 7 Witches around her (got " + str(coven.size()) + ")")
+		for w in coven:
+			assert(is_instance_valid(w), "Each Witch in the 7-witch coven must be valid")
+			assert(w.get_type_name() == "WITCH", "Coven escort must be WITCH variant")
+			assert(w.necro_leader == necro, "Each Witch must track NECRO as her coven leader")
+		
+		# Verify Shotgun shake reset on weapon switch
+		if is_instance_valid(lvl.player) and lvl.player.weapon_controller:
+			lvl.player.weapon_controller.unlock_or_add_weapon("SHOTGUN")
+			lvl.player.add_camera_shake(9.5)
+			assert(lvl.player.camera_shake_strength > 0.0, "Shotgun should apply camera shake")
+			lvl.player.weapon_controller.equip_weapon("PISTOL")
+			assert(is_equal_approx(lvl.player.camera_shake_strength, 0.0), "Switching weapon from Shotgun must immediately reset camera shake to 0")
+		
+		lvl.queue_free()
+		print("  NECRO + 7 Witches Coven Escort & Shotgun Shake Reset: PASS")

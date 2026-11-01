@@ -70,7 +70,8 @@ class ZombieTestRunner extends Node2D:
 			{"type": 9, "name": "BRUTE", "sfx": "res://assets/audio/sfx_brute.wav"},
 			{"type": 10, "name": "PARASITE", "sfx": "res://assets/audio/sfx_parasite.wav"},
 			{"type": 11, "name": "BUTCHER", "sfx": "res://assets/audio/sfx_butcher.wav"},
-			{"type": 12, "name": "PHANTOM", "sfx": "res://assets/audio/sfx_phantom.wav"}
+			{"type": 12, "name": "PHANTOM", "sfx": "res://assets/audio/sfx_phantom.wav"},
+			{"type": 13, "name": "NECRO", "sfx": "res://assets/audio/sfx_necro.wav"}
 		]
 		for v in expected_scary_variants:
 			assert(FileAccess.file_exists(v["sfx"]), "Missing scary zombie audio file: " + str(v["sfx"]))
@@ -80,7 +81,28 @@ class ZombieTestRunner extends Node2D:
 			assert(sz.get_type_name() == v["name"], "Scary zombie type name mismatch for " + str(v["name"]))
 			assert(sz.max_health > 0.0, "Scary zombie max_health must be positive")
 			sz.queue_free()
-		print("7 Scary Zombie Variants & Audio Files: PASS")
+		print("7 Scary Zombie Variants + NECRO Boss & Audio Files: PASS")
+		
+		# Test NECRO Boss Variant: Red with glowing green, higher HP than Tanker (>320), passive healing
+		var tank_z = zombie_scene.instantiate()
+		add_child(tank_z)
+		tank_z.configure_type(3) # TANK
+		var necro_z = zombie_scene.instantiate()
+		add_child(necro_z)
+		necro_z.configure_type(13) # NECRO
+		assert(necro_z.max_health > tank_z.max_health, "NECRO HP (" + str(necro_z.max_health) + ") must be higher than TANKER (" + str(tank_z.max_health) + ")")
+		assert(necro_z.get_skin_color().r > 0.80, "NECRO must have crimson-red body color")
+		var necro_cfg: Dictionary = necro_z.ZOMBIE_CONFIGS[13]
+		var necro_eye: Color = necro_cfg.get("eye_color", Color.BLACK)
+		assert(necro_eye.g > 0.90, "NECRO must have glowing green eye/aura color")
+		assert(necro_z.passive_heal_rate > 0.0, "NECRO must have passive_heal_rate > 0")
+		necro_z.take_damage(100.0)
+		var hp_after_hit: float = necro_z.current_health
+		necro_z._physics_process(1.0)
+		assert(necro_z.current_health > hp_after_hit, "NECRO must passively heal over time")
+		tank_z.queue_free()
+		necro_z.queue_free()
+		print("NECRO Boss Stats, Red/Glowing-Green Palette & Passive Healing: PASS")
 		
 		print("ALL ZOMBIE TESTS PASSED!")
 		get_tree().quit(0)
