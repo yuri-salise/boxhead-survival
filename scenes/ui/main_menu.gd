@@ -35,8 +35,8 @@ func _ready() -> void:
 	
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
-		sfx_enabled = bool(audio_mgr.sfx_enabled)
-		music_enabled = bool(audio_mgr.music_enabled)
+		sfx_enabled = (audio_mgr.sfx_enabled == true)
+		music_enabled = (audio_mgr.music_enabled == true)
 		if audio_mgr.has_method("play_music"):
 			audio_mgr.play_music("ambient_menu")
 	
@@ -205,7 +205,7 @@ func _update_settings_ui() -> void:
 		if resolution_toggle_button:
 			resolution_toggle_button.text = "RESOLUTION: " + str(scale_pct) + "%"
 		
-		is_fullscreen = bool(gs.fullscreen)
+		is_fullscreen = (gs.fullscreen == true)
 	
 	sfx_toggle_button.text = "SOUND FX: " + ("ENABLED" if sfx_enabled else "MUTED")
 	music_toggle_button.text = "MUSIC: " + ("ENABLED" if music_enabled else "MUTED")

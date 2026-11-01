@@ -316,7 +316,7 @@ func _update_players_display(peers: Array) -> void:
 			players_label.add_theme_color_override("font_color", Color(0.70, 0.72, 0.75))
 	
 	var net_mgr := _get_network_manager()
-	var am_host: bool = bool(net_mgr.is_host) if net_mgr else false
+	var am_host: bool = (net_mgr.is_host == true) if net_mgr else false
 	
 	if start_button:
 		if am_host:

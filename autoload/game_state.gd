@@ -213,8 +213,8 @@ func load_progress() -> void:
 	unlocked_level = clampi(int(config.get_value("progression", "unlocked_level", 1)), 1, TOTAL_LEVELS)
 	current_level = clampi(int(config.get_value("progression", "current_level", 1)), 1, TOTAL_LEVELS)
 	total_limbs_severed = int(config.get_value("progression", "total_limbs_severed", 0))
-	killed_witch = bool(config.get_value("progression", "killed_witch", false))
-	killed_tank = bool(config.get_value("progression", "killed_tank", false))
+	killed_witch = config.get_value("progression", "killed_witch", false) == true
+	killed_tank = config.get_value("progression", "killed_tank", false) == true
 	
 	for lvl in range(1, TOTAL_LEVELS + 1):
 		best_score_by_level[lvl] = max(0, int(config.get_value("scores", "level_" + str(lvl), 0)))
@@ -223,22 +223,22 @@ func load_progress() -> void:
 	unlocked_achievements.clear()
 	if config.has_section("achievements"):
 		for ach_id in ACHIEVEMENT_DEFS.keys():
-			unlocked_achievements[ach_id] = bool(config.get_value("achievements", ach_id, false))
+			unlocked_achievements[ach_id] = config.get_value("achievements", ach_id, false) == true
 	
 	survival_best_wave = max(0, int(config.get_value("survival", "best_wave", 0)))
 	survival_best_score = max(0, int(config.get_value("survival", "best_score", 0)))
 	
-	sfx_enabled = bool(config.get_value("settings", "sfx_enabled", true))
-	music_enabled = bool(config.get_value("settings", "music_enabled", true))
-	ai_companion_enabled = bool(config.get_value("settings", "ai_companion_enabled", true))
-	vibration_enabled = bool(config.get_value("settings", "vibration_enabled", true))
-	colorblind_mode = bool(config.get_value("settings", "colorblind_mode", false))
+	sfx_enabled = config.get_value("settings", "sfx_enabled", true) == true
+	music_enabled = config.get_value("settings", "music_enabled", true) == true
+	ai_companion_enabled = config.get_value("settings", "ai_companion_enabled", true) == true
+	vibration_enabled = config.get_value("settings", "vibration_enabled", true) == true
+	colorblind_mode = config.get_value("settings", "colorblind_mode", false) == true
 	player_callsign = str(config.get_value("settings", "player_callsign", "SURVIVOR"))
-	tutorial_seen = bool(config.get_value("settings", "tutorial_seen", false))
-	night_mode_enabled = bool(config.get_value("settings", "night_mode_enabled", false))
+	tutorial_seen = config.get_value("settings", "tutorial_seen", false) == true
+	night_mode_enabled = config.get_value("settings", "night_mode_enabled", false) == true
 	graphics_quality = clampi(int(config.get_value("settings", "graphics_quality", 1)), 0, 2)
 	resolution_scale = clampf(float(config.get_value("settings", "resolution_scale", 1.0)), 0.5, 1.5)
-	fullscreen = bool(config.get_value("settings", "fullscreen", false))
+	fullscreen = config.get_value("settings", "fullscreen", false) == true
 	apply_display_settings()
 	
 	if config.has_section("checkpoint"):
