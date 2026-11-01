@@ -53,6 +53,8 @@ var current_night_factor: float = 0.0
 var current_time_phase_name: String = "DAYLIGHT"
 var player2: CharacterBody2D = null
 var squad_peers: Dictionary = {}
+var next_zombie_net_id: int = 1
+var net_zombie_sync_timer: float = 0.0
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 # Mobile performance caching for flashlight occluders & lights
@@ -68,6 +70,10 @@ func _ready() -> void:
 	get_tree().paused = false
 	if death_panel:
 		death_panel.visible = false
+	
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("play_music"):
+		audio_mgr.play_music("ambient_combat")
 	
 	if is_instance_valid(arena_env):
 		if "sector_type" in arena_env:
@@ -203,25 +209,28 @@ func _ready() -> void:
 	day_night_time = start_phase * maxf(10.0, day_night_cycle_duration)
 	advance_day_night_cycle(0.0, true)
 	
-	if wave_director:
-		var is_survival: bool = (gs != null and gs.selected_mode == "survival")
-		if is_survival:
-			wave_director.is_endless_survival = true
-		else:
-			var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
-			if not waves_to_use.is_empty():
-				wave_director.setup_waves(waves_to_use)
-		wave_director.wave_started.connect(_on_wave_started)
-		wave_director.enemy_spawn_requested.connect(_on_wave_enemy_spawn_requested)
-		wave_director.wave_enemies_updated.connect(_on_wave_enemies_updated)
-		wave_director.wave_completed.connect(_on_wave_completed)
-		wave_director.all_waves_completed.connect(_on_all_waves_completed)
-		if wave_director.has_signal("herd_swarm_triggered"):
-			wave_director.herd_swarm_triggered.connect(_on_herd_swarm_triggered)
-		wave_director.start_waves()
-	elif spawn_timer:
-		spawn_timer.timeout.connect(_on_spawn_timer_timeout)
-		spawn_timer.start()
+	var is_coop_guest: bool = (is_coop and not net_mgr.is_host)
+	
+	if not is_coop_guest:
+		if wave_director:
+			var is_survival: bool = (gs != null and gs.selected_mode == "survival")
+			if is_survival:
+				wave_director.is_endless_survival = true
+			else:
+				var waves_to_use: Array[Dictionary] = custom_waves if not custom_waves.is_empty() else _get_preset_waves_for_level(level_id)
+				if not waves_to_use.is_empty():
+					wave_director.setup_waves(waves_to_use)
+			wave_director.wave_started.connect(_on_wave_started)
+			wave_director.enemy_spawn_requested.connect(_on_wave_enemy_spawn_requested)
+			wave_director.wave_enemies_updated.connect(_on_wave_enemies_updated)
+			wave_director.wave_completed.connect(_on_wave_completed)
+			wave_director.all_waves_completed.connect(_on_all_waves_completed)
+			if wave_director.has_signal("herd_swarm_triggered"):
+				wave_director.herd_swarm_triggered.connect(_on_herd_swarm_triggered)
+			wave_director.start_waves()
+		elif spawn_timer:
+			spawn_timer.timeout.connect(_on_spawn_timer_timeout)
+			spawn_timer.start()
 	
 	_update_kills_display()
 
@@ -508,12 +517,21 @@ func _process(delta: float) -> void:
 						touch_controls.set_interact_prompt(true, "REVIVE SQUADMATE", nearby_downed)
 			
 			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
-			if is_instance_valid(zombie_container):
+			var net_mgr := get_node_or_null("/root/NetworkManager")
+			var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+			if is_instance_valid(zombie_container) and (not is_coop or (is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server())):
 				for z in zombie_container.get_children():
 					if is_instance_valid(z) and not z.get("is_dead"):
 						if z.global_position.distance_to(lp.global_position) > 1450.0:
 							var ahead_ang := randf() * TAU
 							z.global_position = lp.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+			
+			# Realtime Host-Authoritative Zombie Network Batch Replication (12.5 Hz)
+			if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+				net_zombie_sync_timer += delta
+				if net_zombie_sync_timer >= 0.08:
+					net_zombie_sync_timer = 0.0
+					_broadcast_zombie_sync_state()
 
 func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int = -1, scale_mult: float = 1.0, active_splash: bool = true) -> Node2D:
 	if not blood_container:
@@ -749,6 +767,8 @@ func _handle_all_players_dead() -> void:
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.selected_mode == "survival":
 		var rec: Dictionary = gs.record_survival_run(current_wave_num, score_count)
+		if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			rpc_sync_survival_result.rpc(current_wave_num, score_count, kills_count, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
 		if result_screen and result_screen.has_method("show_survival_defeat"):
 			result_screen.show_survival_defeat(current_wave_num, score_count, kills_count, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
 			if death_panel:
@@ -809,10 +829,19 @@ func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) 
 	if is_instance_valid(player):
 		var banner := "=== WAVE " + str(wave_num) + " INCOMING ===" if total_waves <= 0 else "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ==="
 		spawn_floating_text(player.global_position + Vector2(0, -56), banner, Color(0.98, 0.78, 0.25))
+	
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_wave_info.rpc(wave_num, total_waves, wave_total_enemies)
 
 func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> void:
 	wave_remaining_count = remaining_in_wave
 	_update_kills_display()
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_wave_enemies.rpc(remaining_in_wave)
 
 func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 	if not is_instance_valid(player) or player.is_dead:
@@ -877,6 +906,8 @@ func _on_level_lost(lvl: int, score: int, kills: int, reason: String) -> void:
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.selected_mode == "survival":
 		var rec: Dictionary = gs.record_survival_run(current_wave_num, score_count)
+		if multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			rpc_sync_survival_result.rpc(current_wave_num, score, kills, rec.get("new_wave_record", false) or rec.get("new_score_record", false))
 		if result_screen and result_screen.has_method("show_survival_defeat"):
 			if death_panel:
 				death_panel.visible = false
@@ -903,22 +934,52 @@ func rpc_sync_match_result(is_victory: bool, lvl: int, score: int, kills: int, s
 	else:
 		_on_level_lost(lvl, score, kills, reason)
 
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_survival_result(p_wave: int, p_score: int, p_kills: int, p_is_new_record: bool) -> void:
+	if touch_controls:
+		touch_controls.visible = false
+	if death_panel:
+		death_panel.visible = false
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_defeat")
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("record_survival_run"):
+		gs.record_survival_run(p_wave, p_score)
+	if result_screen and result_screen.has_method("show_survival_defeat"):
+		result_screen.show_survival_defeat(p_wave, p_score, p_kills, p_is_new_record)
+
 func _on_coop_peer_disconnected(id: int) -> void:
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	if net_mgr and net_mgr.is_host and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_remove_squad_peer.rpc(id)
+	_remove_squad_peer(id)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_remove_squad_peer(id: int) -> void:
+	_remove_squad_peer(id)
+
+func _remove_squad_peer(id: int) -> void:
 	if squad_peers.has(id):
 		var p_node: Node = squad_peers[id]
 		if is_instance_valid(p_node):
-			if is_instance_valid(player):
-				spawn_floating_text(player.global_position, "SQUADMATE (PEER " + str(id) + ") DISCONNECTED", Color(1.0, 0.65, 0.25))
+			var lp := get_local_player()
+			if is_instance_valid(lp):
+				spawn_floating_text(lp.global_position, "SQUADMATE (PEER " + str(id) + ") DISCONNECTED", Color(1.0, 0.65, 0.25))
 			p_node.queue_free()
 		squad_peers.erase(id)
 	if is_instance_valid(player2) and player2.peer_id == id:
-		if is_instance_valid(player):
-			spawn_floating_text(player.global_position, "CO-OP SURVIVOR DISCONNECTED", Color(1.0, 0.65, 0.25))
+		var lp := get_local_player()
+		if is_instance_valid(lp):
+			spawn_floating_text(lp.global_position, "CO-OP SURVIVOR DISCONNECTED", Color(1.0, 0.65, 0.25))
 		player2.queue_free()
 		player2 = null
 
 func _on_coop_server_disconnected() -> void:
 	get_tree().paused = false
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	if net_mgr and net_mgr.has_method("leave_game"):
+		net_mgr.leave_game()
 	if ResourceLoader.exists("res://scenes/ui/lobby.tscn"):
 		get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn")
 	else:
@@ -934,12 +995,23 @@ func _on_next_level_requested(next_lvl: int) -> void:
 	else:
 		get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
-func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1) -> Node2D:
+func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_net_id: int = -1) -> Node2D:
 	if not zombie_scene or not zombie_container:
 		return null
 	
+	var z_id := override_net_id
+	if z_id <= 0:
+		z_id = next_zombie_net_id
+		next_zombie_net_id += 1
+	
+	var z_name := "Z_" + str(z_id)
+	if zombie_container.has_node(z_name):
+		return zombie_container.get_node(z_name) as Node2D
+	
 	var zombie: Node2D = zombie_scene.instantiate()
+	zombie.name = z_name
 	zombie.position = spawn_pos
+	zombie.set_meta("net_id", z_id)
 	zombie_container.add_child(zombie)
 	
 	if forced_type >= 0 and zombie.has_method("configure_type"):
@@ -960,9 +1032,108 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1) -> Node2D:
 	if zombie.has_signal("drop_requested"):
 		zombie.drop_requested.connect(_on_zombie_drop_requested)
 	
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		var actual_type: int = forced_type if forced_type >= 0 else int(zombie.get("zombie_type"))
+		rpc_spawn_zombie.rpc(z_id, actual_type, spawn_pos)
+	
 	if is_instance_valid(player):
 		zombie.set_target(player)
 	return zombie
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_spawn_zombie(z_id: int, z_type: int, spawn_pos: Vector2) -> void:
+	var z := spawn_test_zombie_at(spawn_pos, z_type, z_id)
+	if is_instance_valid(z):
+		z.set("is_network_puppet", true)
+		z.set("target_sync_pos", spawn_pos)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_sync_wave_info(wave_num: int, total_waves: int, wave_total_enemies: int) -> void:
+	current_wave_num = wave_num
+	total_waves_count = total_waves
+	wave_remaining_count = wave_total_enemies
+	_update_kills_display()
+	var lp := get_local_player()
+	if is_instance_valid(lp):
+		var banner := "=== WAVE " + str(wave_num) + " INCOMING ===" if total_waves <= 0 else "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ==="
+		spawn_floating_text(lp.global_position + Vector2(0, -56), banner, Color(0.98, 0.78, 0.25))
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr:
+		audio_mgr.play_sfx("sfx_wave_start")
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_sync_wave_enemies(remaining: int) -> void:
+	wave_remaining_count = remaining
+	_update_kills_display()
+
+func _broadcast_zombie_sync_state() -> void:
+	if not is_instance_valid(zombie_container):
+		return
+	var batch: Array = []
+	for z in zombie_container.get_children():
+		if is_instance_valid(z) and not z.get("is_dead"):
+			var z_id: int = int(z.get_meta("net_id")) if z.has_meta("net_id") else 0
+			if z_id > 0:
+				var z_rot: float = z.visuals.rotation if z.get("visuals") else z.rotation
+				var z_type: int = int(z.get("zombie_type"))
+				batch.append([
+					z_id,
+					roundf(z.global_position.x),
+					roundf(z.global_position.y),
+					snappedf(z_rot, 0.05),
+					roundf(float(z.get("current_health"))),
+					z_type
+				])
+	if not batch.is_empty():
+		rpc_sync_zombies.rpc(batch)
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_sync_zombies(batch: Array) -> void:
+	if not is_instance_valid(zombie_container):
+		return
+	for item in batch:
+		var z_id: int = int(item[0])
+		var z_name := "Z_" + str(z_id)
+		var z: Node2D = zombie_container.get_node_or_null(z_name)
+		if not is_instance_valid(z):
+			z = spawn_test_zombie_at(Vector2(float(item[1]), float(item[2])), int(item[5]), z_id)
+			if is_instance_valid(z):
+				z.set("is_network_puppet", true)
+		if is_instance_valid(z) and not z.get("is_dead"):
+			z.set("target_sync_pos", Vector2(float(item[1]), float(item[2])))
+			z.set("target_sync_rot", float(item[3]))
+			z.set("current_health", float(item[4]))
+
+func report_client_zombie_hit(z_id: int, amount: float, hit_dir: Vector2) -> void:
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_client_hit_zombie.rpc_id(1, z_id, amount, hit_dir)
+
+@rpc("any_peer", "call_remote", "unreliable")
+func rpc_client_hit_zombie(z_id: int, amount: float, hit_dir: Vector2) -> void:
+	if not is_inside_tree() or multiplayer == null or not multiplayer.has_multiplayer_peer() or not multiplayer.is_server():
+		return
+	if not is_instance_valid(zombie_container):
+		return
+	var z_name := "Z_" + str(z_id)
+	var z := zombie_container.get_node_or_null(z_name)
+	if is_instance_valid(z) and not z.get("is_dead"):
+		z.apply_hit_impulse(hit_dir * 80.0)
+		z.take_damage(amount)
+
+@rpc("authority", "call_remote", "reliable")
+func rpc_zombie_died(z_id: int, p_kills: int, p_score: int) -> void:
+	if is_instance_valid(zombie_container):
+		var z_name := "Z_" + str(z_id)
+		var z := zombie_container.get_node_or_null(z_name)
+		if is_instance_valid(z) and not z.get("is_dead"):
+			z.die()
+	kills_count = p_kills
+	score_count = p_score
+	_update_kills_display()
 
 func _pick_zombie_type_for_spawn() -> int:
 	total_spawned += 1
@@ -1024,19 +1195,29 @@ func _on_zombie_drop_requested(world_pos: Vector2, z_type_name: String) -> void:
 	spawn_pickup_at(chosen, world_pos)
 
 func _on_zombie_killed(zombie: Node2D) -> void:
-	kills_count += 1
-	var pts: int = int(zombie.get("score_value")) if is_instance_valid(zombie) and zombie.get("score_value") != null else 10
-	score_count += pts
-	if is_instance_valid(zombie) and zombie.has_method("get_type_name"):
-		var z_name: String = zombie.get_type_name()
-		var gs := get_node_or_null("/root/GameState")
-		if gs and gs.has_method("record_special_kill"):
-			gs.record_special_kill(z_name)
-	if level_controller and level_controller.has_method("record_kill"):
-		level_controller.record_kill(pts)
-	if wave_director and is_instance_valid(zombie) and zombie.has_meta("is_wave_enemy"):
-		wave_director.notify_enemy_killed()
-	_update_kills_display()
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	var is_coop_guest: bool = (is_coop and not net_mgr.is_host)
+	
+	if not is_coop_guest:
+		kills_count += 1
+		var pts: int = int(zombie.get("score_value")) if is_instance_valid(zombie) and zombie.get("score_value") != null else 10
+		score_count += pts
+		if is_instance_valid(zombie) and zombie.has_method("get_type_name"):
+			var z_name: String = zombie.get_type_name()
+			var gs := get_node_or_null("/root/GameState")
+			if gs and gs.has_method("record_special_kill"):
+				gs.record_special_kill(z_name)
+		if level_controller and level_controller.has_method("record_kill"):
+			level_controller.record_kill(pts)
+		if wave_director and is_instance_valid(zombie) and zombie.has_meta("is_wave_enemy"):
+			wave_director.notify_enemy_killed()
+		_update_kills_display()
+		
+		if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			var z_id: int = int(zombie.get_meta("net_id")) if zombie.has_meta("net_id") else 0
+			if z_id > 0:
+				rpc_zombie_died.rpc(z_id, kills_count, score_count)
 
 func _update_kills_display() -> void:
 	if kills_label:
@@ -1068,10 +1249,21 @@ func _on_save_progress_requested() -> void:
 
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop:
+		if net_mgr.has_method("leave_game"):
+			net_mgr.leave_game()
+		if ResourceLoader.exists("res://scenes/ui/lobby.tscn"):
+			get_tree().change_scene_to_file("res://scenes/ui/lobby.tscn")
+			return
 	get_tree().reload_current_scene()
 
 func _on_return_pressed() -> void:
 	get_tree().paused = false
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	if net_mgr and net_mgr.has_method("leave_game"):
+		net_mgr.leave_game()
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
 
 func _unhandled_input(event: InputEvent) -> void:

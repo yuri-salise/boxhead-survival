@@ -76,7 +76,54 @@ class MultiplayerGameplayTestRunner extends Node:
 		assert(level._check_all_players_dead() == true, "Match must be lost when BOTH players are dead")
 		print("All Players Dead Resolution: PASS")
 		
-		# 5. Clean up nodes
+		# 4b. Test Downed & Revive Movement / Shooting Unlock
+		p1.is_dead = false
+		p1.down()
+		assert(p1.is_downed == true, "p1 must be downed after down()")
+		p1.revive(40.0)
+		assert(p1.is_downed == false, "p1 must be revived after revive()")
+		assert(p1.current_health == 40.0, "p1 health must be restored after revive")
+		p1.override_move_vec = Vector2(1.0, 0.0)
+		p1.input_override_enabled = true
+		p1._physics_process(0.016)
+		assert(p1.velocity.x > 0.0, "Revived player must be able to move immediately")
+		p1.input_override_enabled = false
+		print("Squadmate Revive & Control Unlock: PASS")
+		
+		# 5. Test Host-Authoritative Zombie Spawning & Client Replication
+		var hz = level.spawn_test_zombie_at(Vector2(500, 300), 0)
+		assert(hz != null, "Host must be able to spawn zombie")
+		assert(hz.has_meta("net_id"), "Spawned zombie must have net_id metadata")
+		var host_z_id: int = int(hz.get_meta("net_id"))
+		assert(level.zombie_container.has_node("Z_" + str(host_z_id)), "Zombie node name must be Z_<id>")
+		
+		# Test Client Receiving Spawn RPC
+		level.rpc_spawn_zombie(999, 1, Vector2(600, 400))
+		assert(level.zombie_container.has_node("Z_999"), "Client must spawn Z_999 from rpc_spawn_zombie")
+		var rz = level.zombie_container.get_node("Z_999")
+		assert(rz.get("is_network_puppet") == true, "Client zombie must be flagged as network puppet")
+		
+		# Test Realtime State Sync RPC
+		level.rpc_sync_zombies([[999, 615, 420, 1.25, 30.0, 1]])
+		assert(rz.get("target_sync_pos") == Vector2(615, 420), "Zombie sync pos must update")
+		assert(rz.get("current_health") == 30.0, "Zombie sync health must update")
+		
+		# Test Zombie Death RPC
+		level.rpc_zombie_died(999, 12, 180)
+		assert(rz.get("is_dead") == true, "Zombie must trigger die() on rpc_zombie_died")
+		assert(level.kills_count == 12, "Client kills count must sync from host")
+		assert(level.score_count == 180, "Client score count must sync from host")
+		print("Host-Authoritative Zombie Realtime Replication: PASS")
+		
+		# 6. Test Peer Disconnection Cleanup Broadcast
+		var dummy_p3 = player_scene.instantiate()
+		dummy_p3.peer_id = 3
+		level.squad_peers[3] = dummy_p3
+		level.rpc_remove_squad_peer(3)
+		assert(not level.squad_peers.has(3), "Disconnected peer 3 must be cleaned up from squad_peers")
+		print("Squad Peer Disconnect Broadcast Cleanup: PASS")
+		
+		# 7. Clean up nodes
 		level.queue_free()
 		p1.queue_free()
 		p2.queue_free()

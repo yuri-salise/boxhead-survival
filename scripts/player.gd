@@ -514,7 +514,7 @@ func revive(restore_hp: float = 40.0) -> void:
 	if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
 		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -60), "★ SQUADMATE REVIVED! ★", Color(0.35, 1.0, 0.50))
 	
-	if multiplayer and multiplayer.has_multiplayer_peer() and is_local_player():
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		rpc_sync_downed.rpc(false)
 	
 	queue_redraw()
@@ -528,13 +528,16 @@ func rpc_sync_downed(downed: bool) -> void:
 			is_downed = true
 			bleedout_time_left = MAX_BLEEDOUT_TIME
 			current_health = 0.0
+			velocity = Vector2.ZERO
+			is_dashing = false
 			health_changed.emit(current_health, max_health)
 			player_downed.emit(self)
 	else:
 		if is_downed:
 			is_downed = false
 			bleedout_time_left = 0.0
-			current_health = 40.0
+			current_health = clampf(current_health, 40.0, max_health)
+			velocity = Vector2.ZERO
 			health_changed.emit(current_health, max_health)
 			player_revived.emit(self)
 	queue_redraw()

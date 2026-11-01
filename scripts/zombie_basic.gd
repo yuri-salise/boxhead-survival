@@ -92,6 +92,10 @@ var current_health: float = 50.0
 var is_dead: bool = false
 var target_player: Node2D = null
 
+var is_network_puppet: bool = false
+var target_sync_pos: Vector2 = Vector2.ZERO
+var target_sync_rot: float = 0.0
+
 var can_attack: bool = true
 var attack_timer: float = 0.0
 var spit_cooldown: float = 2.2
@@ -175,6 +179,18 @@ func _physics_process(delta: float) -> void:
 	
 	if is_dead:
 		queue_redraw()
+		return
+	
+	if is_network_puppet:
+		if target_sync_pos != Vector2.ZERO:
+			if global_position.distance_squared_to(target_sync_pos) > 10000.0:
+				global_position = target_sync_pos
+			else:
+				global_position = global_position.lerp(target_sync_pos, minf(1.0, delta * 15.0))
+		if visuals:
+			visuals.rotation = lerp_angle(visuals.rotation, target_sync_rot, minf(1.0, delta * 15.0))
+		if velocity.length_squared() > 4.0 or hurt_flash_timer > 0.0 or is_enraged or not has_legs:
+			queue_redraw()
 		return
 	
 	if not is_instance_valid(target_player) or (target_player.get("is_dead") == true):
@@ -322,6 +338,25 @@ func sever_next_limb(impulse_dir: Vector2 = Vector2.RIGHT) -> String:
 
 func take_damage(amount: float) -> void:
 	if is_dead or amount <= 0.0:
+		return
+	
+	if is_network_puppet:
+		hurt_flash_timer = 0.10
+		var audio_mgr := get_node_or_null("/root/AudioManager")
+		if audio_mgr:
+			audio_mgr.play_sfx("sfx_zombie_hit")
+		var s_type := 6 if zombie_type == ZombieType.BOOMER else -1
+		blood_splashed.emit(global_position, last_hit_dir, s_type, 0.85)
+		if blood_splatter_scene and get_parent():
+			var b_fx = blood_splatter_scene.instantiate()
+			b_fx.global_position = global_position
+			var b_col := Color(0.45, 0.82, 0.20) if zombie_type == ZombieType.BOOMER else Color(0.68, 0.08, 0.08)
+			b_fx.setup(last_hit_dir, b_col, 8)
+			get_parent().add_child(b_fx)
+		var tree := get_tree()
+		if tree and tree.current_scene and tree.current_scene.has_method("report_client_zombie_hit"):
+			var z_id: int = int(get_meta("net_id")) if has_meta("net_id") else -1
+			tree.current_scene.report_client_zombie_hit(z_id, amount, last_hit_dir)
 		return
 	
 	var prev_ratio := current_health / maxf(1.0, max_health)
