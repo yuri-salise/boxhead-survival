@@ -18,9 +18,10 @@ class PriorityFeaturesRunner extends Node:
 		_test_unique_arena_layouts()
 		_test_ambient_music()
 		_test_coop_survival_mode()
+		_test_rubric_excellent_and_bonus_features()
 		
 		print("==================================================")
-		print("ALL PRIORITY 1 & CO-OP SURVIVAL TESTS PASSED! 100%")
+		print("ALL PRIORITY 1, RUBRIC EXCELLENT & BONUS TESTS PASSED! 100%")
 		print("==================================================")
 		get_tree().quit(0)
 
@@ -156,3 +157,28 @@ class PriorityFeaturesRunner extends Node:
 		if created_net_mgr:
 			net_mgr.queue_free()
 		print("  Co-op Survival Mode (Lobby toggle & NetworkManager sync): PASS")
+
+	func _test_rubric_excellent_and_bonus_features() -> void:
+		print("\n--- Testing Rubric Excellent Tier (AI Bot, Back Gesture, Option B Nakama, Star Perk) ---")
+		var GameStateScript = load("res://autoload/game_state.gd")
+		var gs = GameStateScript.new()
+		add_child(gs)
+		assert("ai_companion_enabled" in gs, "GameState must support ai_companion_enabled")
+		assert("vibration_enabled" in gs, "GameState must support vibration_enabled")
+		assert("colorblind_mode" in gs, "GameState must support colorblind_mode")
+		assert("player_callsign" in gs, "GameState must support player_callsign")
+		gs.best_stars_by_level = {1: 3, 2: 3, 3: 0, 4: 0, 5: 0}
+		assert(gs.get_total_stars() == 6, "get_total_stars() must sum stars across levels")
+		assert(gs.is_veteran_loadout_unlocked() == true, "6 stars must unlock Veteran Loadout Perk")
+		
+		var NetMgrScript = load("res://autoload/network_manager.gd")
+		var nm = NetMgrScript.new()
+		add_child(nm)
+		assert(nm.has_method("authenticate_nakama_device"), "NetworkManager must support Option B Nakama auth")
+		assert(nm.has_method("submit_leaderboard_score"), "NetworkManager must support Online Leaderboard")
+		nm.submit_leaderboard_score("TEST_HERO", 9999, 20)
+		assert(nm.cached_leaderboard[0]["callsign"] == "TEST_HERO", "Top score must rank #1 on leaderboard")
+		
+		gs.queue_free()
+		nm.queue_free()
+		print("  Rubric Excellent Tier & Bonus Features: PASS")

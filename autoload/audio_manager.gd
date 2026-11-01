@@ -184,6 +184,11 @@ func save_audio_settings() -> void:
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.save("user://audio.cfg")
+	var gs := get_node_or_null("/root/GameState")
+	if gs:
+		gs.sfx_enabled = sfx_enabled
+		gs.music_enabled = music_enabled
+		gs.save_progress()
 
 func load_audio_settings() -> void:
 	var cfg := ConfigFile.new()
@@ -193,6 +198,11 @@ func load_audio_settings() -> void:
 		music_enabled = bool(cfg.get_value("audio", "music_enabled", true))
 		sfx_volume = float(cfg.get_value("audio", "sfx_volume", 1.0))
 		music_volume = float(cfg.get_value("audio", "music_volume", 0.8))
+	else:
+		var gs := get_node_or_null("/root/GameState")
+		if gs:
+			sfx_enabled = bool(gs.sfx_enabled)
+			music_enabled = bool(gs.music_enabled)
 
 func _load_wav_stream(path: String) -> AudioStream:
 	if ResourceLoader.exists(path):

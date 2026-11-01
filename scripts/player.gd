@@ -21,6 +21,9 @@ signal player_revived(player_node: CharacterBody2D)
 @export var peer_id: int = 1
 @export var player_index: int = 1
 @export var is_coop_mode: bool = false
+@export var is_ai_bot: bool = false
+var ai_heal_cooldown: float = 0.0
+var custom_callsign: String = ""
 
 var current_health: float = 100.0
 var current_armor: float = 0.0
@@ -65,6 +68,8 @@ var terrain_check_timer: float = 999.0
 @onready var weapon_controller: Node = $WeaponController
 
 func is_local_player() -> bool:
+	if is_ai_bot:
+		return false
 	if not is_coop_mode:
 		return true
 	if multiplayer and multiplayer.has_multiplayer_peer():
@@ -169,6 +174,11 @@ func _physics_process(delta: float) -> void:
 	var shooting: bool
 	
 	if is_coop_mode and not is_local_player():
+		move_vec = override_move_vec
+		aim_pos = override_aim_pos
+		shooting = override_is_shooting and not is_downed
+	elif is_ai_bot:
+		_update_ai_bot_behavior(delta)
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting and not is_downed
@@ -457,8 +467,13 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 	player_damaged_at.emit(global_position, hit_dir)
 	player_bitten.emit(hit_dir, amount)
 	
+	if is_local_player():
+		var gs := get_node_or_null("/root/GameState")
+		if gs and gs.has_method("trigger_haptic"):
+			gs.trigger_haptic(55)
+	
 	if current_health <= 0.0:
-		if is_coop_mode and not is_downed:
+		if (is_coop_mode or is_ai_bot) and not is_downed:
 			down()
 		else:
 			die()
@@ -567,6 +582,64 @@ func set_input_override(move_vec: Vector2, aim_pos: Vector2, is_shooting: bool) 
 	override_move_vec = move_vec
 	override_aim_pos = aim_pos
 	override_is_shooting = is_shooting
+
+func _update_ai_bot_behavior(delta: float) -> void:
+	if ai_heal_cooldown > 0.0:
+		ai_heal_cooldown = maxf(0.0, ai_heal_cooldown - delta)
+	if is_dead:
+		override_move_vec = Vector2.ZERO
+		override_is_shooting = false
+		return
+	var tree := get_tree()
+	if not tree:
+		return
+	var leader: CharacterBody2D = null
+	for p in tree.get_nodes_in_group("players"):
+		if is_instance_valid(p) and p != self and not bool(p.get("is_ai_bot")):
+			leader = p as CharacterBody2D
+			break
+	if is_downed:
+		override_move_vec = (leader.global_position - global_position).normalized() if is_instance_valid(leader) else Vector2.ZERO
+		override_is_shooting = false
+		return
+	if is_instance_valid(leader) and not leader.is_dead and leader.current_health < 38.0 and ai_heal_cooldown <= 0.0:
+		if global_position.distance_to(leader.global_position) <= 115.0:
+			ai_heal_cooldown = 25.0
+			leader.heal(30.0)
+			if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
+				tree.current_scene.spawn_floating_text(leader.global_position + Vector2(0, -52), "★ ALLY BOT MEDIC: +30 HP ★", Color(0.30, 0.95, 0.55))
+	if weapon_controller and weapon_controller.has_method("refill_all_unlocked_ammo"):
+		var cur_ammo: int = int(weapon_controller.ammo_by_weapon.get(weapon_controller.current_weapon_id, 10))
+		if cur_ammo <= 2:
+			weapon_controller.refill_all_unlocked_ammo()
+	var closest_z: Node2D = null
+	var closest_z_dist := 460.0
+	var p_parent := get_parent()
+	if p_parent:
+		var z_cont := p_parent.get_node_or_null("ZombieContainer")
+		if z_cont:
+			for z in z_cont.get_children():
+				if is_instance_valid(z) and not bool(z.get("is_dead")):
+					var d := global_position.distance_to(z.global_position)
+					if d < closest_z_dist:
+						closest_z_dist = d
+						closest_z = z as Node2D
+	var move_dir := Vector2.ZERO
+	if is_instance_valid(leader) and not leader.is_dead:
+		var dist_leader := global_position.distance_to(leader.global_position)
+		if dist_leader > 155.0:
+			move_dir = (leader.global_position - global_position).normalized()
+		elif dist_leader < 70.0:
+			move_dir = (global_position - leader.global_position).normalized()
+	if is_instance_valid(closest_z) and closest_z_dist < 95.0:
+		move_dir = (global_position - closest_z.global_position).normalized()
+	override_move_vec = move_dir
+	if is_instance_valid(closest_z):
+		override_aim_pos = closest_z.global_position
+		override_is_shooting = true
+	else:
+		override_aim_pos = global_position + (move_dir * 120.0 if move_dir != Vector2.ZERO else Vector2.RIGHT * 120.0)
+		override_is_shooting = false
 
 func _draw() -> void:
 	var rot := visuals.rotation if visuals else 0.0
@@ -718,11 +791,15 @@ func _draw() -> void:
 		
 		var b_sec := str(int(ceil(bleedout_time_left))) + "s"
 		draw_string(ThemeDB.fallback_font, cross_pos + Vector2(-20, -18), b_sec, HORIZONTAL_ALIGNMENT_CENTER, 40, 12, Color(1.0, 0.85, 0.25))
-	elif is_coop_mode:
-		# Overhead squad tag in co-op mode
+	elif is_coop_mode or is_ai_bot or not custom_callsign.is_empty():
 		var squad_names: Array[String] = ["ALPHA (HOST)", "BRAVO", "CHARLIE", "DELTA"]
 		var s_idx := clampi(player_index - 1, 0, 3)
-		var tag_txt: String = "SURVIVOR " + str(player_index) + " [" + squad_names[s_idx] + "]"
+		var tag_txt: String = "ALLY BOT [BRAVO]" if is_ai_bot else ("SURVIVOR " + str(player_index) + " [" + squad_names[s_idx] + "]")
+		if not is_ai_bot and not custom_callsign.is_empty():
+			tag_txt = custom_callsign.to_upper()
 		var squad_colors: Array[Color] = [Color(0.95, 0.55, 0.40), Color(0.40, 0.75, 0.95), Color(0.95, 0.40, 0.40), Color(0.95, 0.85, 0.35)]
 		var tag_col: Color = squad_colors[s_idx]
+		var gs := get_node_or_null("/root/GameState")
+		if gs and bool(gs.get("colorblind_mode")):
+			draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, Color(0.20, 0.95, 1.0, 0.85) if not is_ai_bot else Color(1.0, 0.90, 0.20, 0.85), 2.4)
 		draw_string(ThemeDB.fallback_font, Vector2(-70, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, tag_col)

@@ -64,6 +64,11 @@ var killed_tank: bool = false
 
 var sfx_enabled: bool = true
 var music_enabled: bool = true
+var ai_companion_enabled: bool = true
+var vibration_enabled: bool = true
+var colorblind_mode: bool = false
+var player_callsign: String = "SURVIVOR"
+var tutorial_seen: bool = false
 var graphics_quality: int = 1 # 0 = LOW (Battery Saver), 1 = MEDIUM (Balanced), 2 = HIGH (Ultra)
 var resolution_scale: float = 1.0 # 0.75, 1.0, 1.25
 var fullscreen: bool = false
@@ -179,6 +184,11 @@ func save_progress() -> bool:
 	
 	config.set_value("settings", "sfx_enabled", sfx_enabled)
 	config.set_value("settings", "music_enabled", music_enabled)
+	config.set_value("settings", "ai_companion_enabled", ai_companion_enabled)
+	config.set_value("settings", "vibration_enabled", vibration_enabled)
+	config.set_value("settings", "colorblind_mode", colorblind_mode)
+	config.set_value("settings", "player_callsign", player_callsign)
+	config.set_value("settings", "tutorial_seen", tutorial_seen)
 	config.set_value("settings", "night_mode_enabled", night_mode_enabled)
 	config.set_value("settings", "graphics_quality", graphics_quality)
 	config.set_value("settings", "resolution_scale", resolution_scale)
@@ -220,6 +230,11 @@ func load_progress() -> void:
 	
 	sfx_enabled = bool(config.get_value("settings", "sfx_enabled", true))
 	music_enabled = bool(config.get_value("settings", "music_enabled", true))
+	ai_companion_enabled = bool(config.get_value("settings", "ai_companion_enabled", true))
+	vibration_enabled = bool(config.get_value("settings", "vibration_enabled", true))
+	colorblind_mode = bool(config.get_value("settings", "colorblind_mode", false))
+	player_callsign = str(config.get_value("settings", "player_callsign", "SURVIVOR"))
+	tutorial_seen = bool(config.get_value("settings", "tutorial_seen", false))
 	night_mode_enabled = bool(config.get_value("settings", "night_mode_enabled", false))
 	graphics_quality = clampi(int(config.get_value("settings", "graphics_quality", 1)), 0, 2)
 	resolution_scale = clampf(float(config.get_value("settings", "resolution_scale", 1.0)), 0.5, 1.5)
@@ -323,3 +338,37 @@ func apply_display_settings() -> void:
 	var root_viewport := get_tree().root if get_tree() else null
 	if root_viewport:
 		root_viewport.content_scale_factor = 1.0
+
+func get_total_stars() -> int:
+	var total := 0
+	for lvl in range(1, TOTAL_LEVELS + 1):
+		total += int(best_stars_by_level.get(lvl, 0))
+	return total
+
+func is_veteran_loadout_unlocked() -> bool:
+	return get_total_stars() >= 6
+
+func trigger_haptic(duration_ms: int = 40) -> void:
+	if vibration_enabled:
+		Input.vibrate_handheld(duration_ms)
+
+func bind_button_tweens(root: Node) -> void:
+	if not is_instance_valid(root):
+		return
+	if root is BaseButton and not root.has_meta("tween_bound"):
+		root.set_meta("tween_bound", true)
+		var btn := root as BaseButton
+		btn.button_down.connect(func():
+			if is_instance_valid(btn):
+				btn.pivot_offset = btn.size * 0.5
+				var t := btn.create_tween()
+				t.tween_property(btn, "scale", Vector2(0.95, 0.95), 0.06)
+		)
+		btn.button_up.connect(func():
+			if is_instance_valid(btn):
+				btn.pivot_offset = btn.size * 0.5
+				var t := btn.create_tween()
+				t.tween_property(btn, "scale", Vector2.ONE, 0.08)
+		)
+	for child in root.get_children():
+		bind_button_tweens(child)

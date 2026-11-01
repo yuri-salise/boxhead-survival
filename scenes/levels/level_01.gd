@@ -169,6 +169,31 @@ func _ready() -> void:
 			net_mgr.peer_disconnected.connect(_on_coop_peer_disconnected)
 		if not net_mgr.server_disconnected.is_connected(_on_coop_server_disconnected):
 			net_mgr.server_disconnected.connect(_on_coop_server_disconnected)
+	elif player:
+		var gs_init := get_node_or_null("/root/GameState")
+		if gs_init:
+			if "player_callsign" in gs_init:
+				player.custom_callsign = str(gs_init.player_callsign)
+			if gs_init.has_method("is_veteran_loadout_unlocked") and gs_init.is_veteran_loadout_unlocked():
+				player.add_armor(50.0)
+				if player.weapon_controller and player.weapon_controller.has_method("unlock_or_add_weapon"):
+					player.weapon_controller.unlock_or_add_weapon("SMG")
+				spawn_floating_text(player.global_position + Vector2(0, -82), "★ VETERAN STAR PERK: +50 ARMOR & MP5 SMG ★", Color(1.0, 0.85, 0.25))
+			if bool(gs_init.get("ai_companion_enabled")):
+				var bot_scene: PackedScene = load("res://scenes/actors/player.tscn")
+				if bot_scene:
+					var bot: CharacterBody2D = bot_scene.instantiate()
+					bot.name = "AllyBot"
+					bot.position = player.position + Vector2(68, 24)
+					bot.is_ai_bot = true
+					bot.player_index = 2
+					add_child(bot)
+					bot.add_to_group("players")
+					player2 = bot
+					if bot.has_signal("player_downed"):
+						bot.player_downed.connect(_on_squad_member_downed)
+					if bot.has_signal("player_revived"):
+						bot.player_revived.connect(_on_squad_member_revived)
 	
 	_setup_local_player_ui_and_controls()
 	
@@ -233,6 +258,21 @@ func _ready() -> void:
 			spawn_timer.start()
 	
 	_update_kills_display()
+	_show_level_start_objective_and_tutorial()
+	if gs and gs.has_method("bind_button_tweens"):
+		gs.bind_button_tweens(self)
+
+func _show_level_start_objective_and_tutorial() -> void:
+	var gs := get_node_or_null("/root/GameState")
+	var is_surv: bool = (gs != null and gs.selected_mode == "survival")
+	var goal_txt := "GOAL: SURVIVE ENDLESS WAVES OF INFECTED" if is_surv else ("GOAL: SURVIVE " + str(total_waves_count) + " WAVES IN SECTOR 0" + str(level_id))
+	if is_instance_valid(player):
+		spawn_floating_text(player.global_position + Vector2(0, -96), "★ " + goal_txt + " ★", Color(0.98, 0.86, 0.30))
+	if level_id == 1 and gs and not bool(gs.get("tutorial_seen")):
+		gs.tutorial_seen = true
+		gs.save_progress()
+		if is_instance_valid(player):
+			spawn_floating_text(player.global_position + Vector2(0, -118), "HINT: LEFT STICK MOVE · RIGHT STICK AIM/FIRE · TAP DASH TO DODGE", Color(0.55, 0.90, 1.0))
 
 func get_local_player() -> CharacterBody2D:
 	var net_mgr := get_node_or_null("/root/NetworkManager")
@@ -742,16 +782,16 @@ func _on_squad_member_died() -> void:
 func _check_all_players_dead() -> bool:
 	if is_instance_valid(player) and not player.is_dead and not bool(player.get("is_downed")):
 		return false
-	if is_instance_valid(player2) and not player2.is_dead and not bool(player2.get("is_downed")):
+	if is_instance_valid(player2) and not bool(player2.get("is_ai_bot")) and not player2.is_dead and not bool(player2.get("is_downed")):
 		return false
 	for p_id in squad_peers:
 		var sp: Node = squad_peers[p_id]
-		if is_instance_valid(sp) and not sp.get("is_dead") and not bool(sp.get("is_downed")):
+		if is_instance_valid(sp) and not bool(sp.get("is_ai_bot")) and not sp.get("is_dead") and not bool(sp.get("is_downed")):
 			return false
 	
 	var players := get_tree().get_nodes_in_group("players")
 	for p in players:
-		if is_instance_valid(p):
+		if is_instance_valid(p) and not bool(p.get("is_ai_bot")):
 			var dead: bool = bool(p.get("is_dead"))
 			var downed: bool = bool(p.get("is_downed"))
 			if not dead and not downed:
@@ -1265,6 +1305,14 @@ func _on_return_pressed() -> void:
 	if net_mgr and net_mgr.has_method("leave_game"):
 		net_mgr.leave_game()
 	get_tree().change_scene_to_file("res://scenes/ui/main_menu.tscn")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if pause_menu and not (death_panel and death_panel.visible) and not (result_screen and result_screen.visible):
+			if pause_menu.visible:
+				pause_menu.close_pause_menu()
+			else:
+				pause_menu.open_pause_menu()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
