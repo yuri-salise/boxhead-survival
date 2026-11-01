@@ -14,7 +14,14 @@ enum ZombieType {
 	BOOMER,
 	TANK,
 	SPITTER,
-	WITCH
+	WITCH,
+	SCREAMER,
+	STALKER,
+	LEAPER,
+	BRUTE,
+	PARASITE,
+	BUTCHER,
+	PHANTOM
 }
 
 const ZOMBIE_CONFIGS: Dictionary = {
@@ -76,7 +83,92 @@ const ZOMBIE_CONFIGS: Dictionary = {
 		"cooldown": 0.50,
 		"scale": 1.05,
 		"score": 60,
-		"skin": Color(0.80, 0.78, 0.76, 1.0)
+		"skin": Color(0.80, 0.78, 0.76, 1.0),
+		"eye_color": Color(0.95, 0.05, 0.05, 1.0)
+	},
+	ZombieType.SCREAMER: {
+		"name": "SCREAMER",
+		"hp": 80.0,
+		"speed": 158.0,
+		"damage": 16.0,
+		"cooldown": 0.70,
+		"scale": 1.02,
+		"score": 40,
+		"skin": Color(0.70, 0.74, 0.78, 1.0),
+		"sfx": "sfx_screamer",
+		"eye_color": Color(0.20, 0.95, 1.0, 1.0)
+	},
+	ZombieType.STALKER: {
+		"name": "STALKER",
+		"hp": 72.0,
+		"speed": 225.0,
+		"damage": 22.0,
+		"cooldown": 0.55,
+		"scale": 0.96,
+		"score": 45,
+		"skin": Color(0.20, 0.16, 0.26, 1.0),
+		"sfx": "sfx_stalker",
+		"eye_color": Color(0.88, 0.15, 1.0, 1.0)
+	},
+	ZombieType.LEAPER: {
+		"name": "LEAPER",
+		"hp": 64.0,
+		"speed": 215.0,
+		"damage": 20.0,
+		"cooldown": 0.55,
+		"scale": 0.95,
+		"score": 38,
+		"skin": Color(0.68, 0.18, 0.18, 1.0),
+		"sfx": "sfx_leaper",
+		"eye_color": Color(1.0, 0.58, 0.10, 1.0)
+	},
+	ZombieType.BRUTE: {
+		"name": "BRUTE",
+		"hp": 220.0,
+		"speed": 112.0,
+		"damage": 28.0,
+		"cooldown": 0.95,
+		"scale": 1.45,
+		"score": 55,
+		"skin": Color(0.28, 0.32, 0.36, 1.0),
+		"sfx": "sfx_brute",
+		"eye_color": Color(1.0, 0.45, 0.10, 1.0)
+	},
+	ZombieType.PARASITE: {
+		"name": "PARASITE",
+		"hp": 90.0,
+		"speed": 136.0,
+		"damage": 18.0,
+		"cooldown": 0.75,
+		"scale": 1.12,
+		"score": 42,
+		"skin": Color(0.54, 0.44, 0.26, 1.0),
+		"sfx": "sfx_parasite",
+		"eye_color": Color(0.95, 0.85, 0.15, 1.0)
+	},
+	ZombieType.BUTCHER: {
+		"name": "BUTCHER",
+		"hp": 165.0,
+		"speed": 148.0,
+		"damage": 30.0,
+		"cooldown": 0.72,
+		"scale": 1.28,
+		"score": 52,
+		"skin": Color(0.56, 0.34, 0.32, 1.0),
+		"sfx": "sfx_butcher",
+		"eye_color": Color(1.0, 0.08, 0.08, 1.0)
+	},
+	ZombieType.PHANTOM: {
+		"name": "PHANTOM",
+		"hp": 115.0,
+		"speed": 175.0,
+		"damage": 24.0,
+		"cooldown": 0.65,
+		"scale": 1.10,
+		"score": 50,
+		"skin": Color(0.26, 0.48, 0.46, 1.0),
+		"sfx": "sfx_phantom",
+		"eye_color": Color(0.20, 1.0, 0.65, 1.0)
 	}
 }
 
@@ -99,6 +191,8 @@ var target_sync_rot: float = 0.0
 var can_attack: bool = true
 var attack_timer: float = 0.0
 var spit_cooldown: float = 2.2
+var ability_cooldown: float = 1.5
+var vocal_timer: float = 2.0
 var is_enraged: bool = false
 var score_value: int = 10
 
@@ -143,6 +237,9 @@ func configure_type(p_type: int) -> void:
 	attack_cooldown = float(cfg["cooldown"])
 	score_value = int(cfg["score"])
 	is_enraged = false
+	ability_cooldown = randf_range(0.8, 1.8)
+	vocal_timer = randf_range(1.2, 3.0)
+	modulate.a = 0.35 if zombie_type == ZombieType.STALKER else 1.0
 	
 	has_left_arm = true
 	has_right_arm = true
@@ -204,6 +301,71 @@ func _physics_process(delta: float) -> void:
 		if zombie_type == ZombieType.WITCH and not is_enraged and dist < 165.0:
 			_trigger_witch_enrage()
 		
+		# Scary Variant Special Abilities & Audio Cues
+		ability_cooldown = maxf(0.0, ability_cooldown - delta)
+		vocal_timer -= delta
+		if vocal_timer <= 0.0 and dist < 420.0:
+			vocal_timer = randf_range(4.2, 7.5)
+			var cfg_sfx: String = str(ZOMBIE_CONFIGS.get(zombie_type, {}).get("sfx", ""))
+			if cfg_sfx != "":
+				var audio_mgr := get_node_or_null("/root/AudioManager")
+				if audio_mgr:
+					audio_mgr.play_sfx(cfg_sfx)
+		
+		# 6. SCREAMER: Sonic shriek at < 300px, enraging itself and nearby infected
+		if zombie_type == ZombieType.SCREAMER and not is_enraged and dist < 300.0:
+			is_enraged = true
+			speed *= 1.32
+			var audio_mgr := get_node_or_null("/root/AudioManager")
+			if audio_mgr:
+				audio_mgr.play_sfx("sfx_screamer")
+		
+		# 7. STALKER: Semi-invisible in darkness; uncloaks at < 195px or when caught in player's flashlight cone (Player Edge!)
+		if zombie_type == ZombieType.STALKER:
+			var caught_in_beam := false
+			var p_vis: Node2D = target_player.get_node_or_null("Visuals") if target_player else null
+			if p_vis and dist < 340.0:
+				var aim_dir := Vector2.RIGHT.rotated(p_vis.rotation)
+				var to_zombie := (global_position - target_player.global_position).normalized()
+				if aim_dir.dot(to_zombie) > 0.78:
+					caught_in_beam = true
+			if caught_in_beam:
+				modulate.a = move_toward(modulate.a, 1.0, delta * 5.0)
+				is_enraged = false
+			elif dist < 195.0:
+				if not is_enraged:
+					is_enraged = true
+					var audio_mgr := get_node_or_null("/root/AudioManager")
+					if audio_mgr:
+						audio_mgr.play_sfx("sfx_stalker")
+				modulate.a = move_toward(modulate.a, 1.0, delta * 4.5)
+			else:
+				modulate.a = move_toward(modulate.a, 0.30, delta * 2.5)
+		
+		# 8. LEAPER: High-velocity feral pounce when in mid-range (130..255px)
+		if zombie_type == ZombieType.LEAPER and ability_cooldown <= 0.0 and dist > 125.0 and dist < 255.0 and not is_crawling:
+			ability_cooldown = 3.4
+			is_enraged = true
+			knockback_velocity = dir * 340.0
+			var audio_mgr := get_node_or_null("/root/AudioManager")
+			if audio_mgr:
+				audio_mgr.play_sfx("sfx_leaper")
+		
+		# 10. PARASITE: Short-range bio-spit & chittering swarm
+		if zombie_type == ZombieType.PARASITE:
+			spit_cooldown -= delta
+			if dist < 230.0 and spit_cooldown <= 0.0:
+				_fire_acid_spit(dir)
+				spit_cooldown = 3.8
+		
+		# 11. BUTCHER: Heavy cleaver frenzy rush inside 210px
+		if zombie_type == ZombieType.BUTCHER and not is_enraged and dist < 210.0:
+			is_enraged = true
+			speed *= 1.24
+			var audio_mgr := get_node_or_null("/root/AudioManager")
+			if audio_mgr:
+				audio_mgr.play_sfx("sfx_butcher")
+		
 		# Spitter ranged acid attack
 		if zombie_type == ZombieType.SPITTER:
 			spit_cooldown -= delta
@@ -224,7 +386,11 @@ func _physics_process(delta: float) -> void:
 					var arena = z_parent.get_parent().get_node_or_null("ArenaEnvironment")
 					if arena and arena.has_method("get_speed_multiplier_at"):
 						terrain_speed_mult = arena.get_speed_multiplier_at(global_position)
+			if zombie_type == ZombieType.PHANTOM:
+				terrain_speed_mult = 1.0 # Phantom floats over mud and craters
 			move_spd *= terrain_speed_mult
+			if zombie_type == ZombieType.STALKER and modulate.a > 0.85 and not is_enraged:
+				move_spd *= 0.72 # Flashlight beam burns & slows the Stalker (Player Edge!)
 			if zombie_type == ZombieType.SPITTER and dist < 210.0:
 				move_spd = speed * 0.35
 			if is_crawling:
@@ -368,8 +534,27 @@ func take_damage(amount: float) -> void:
 	if zombie_type == ZombieType.WITCH and not is_enraged:
 		_trigger_witch_enrage()
 	
-	current_health = max(0.0, current_health - amount)
+	# 9. BRUTE: Heavy riot armor absorbs 30% of incoming damage while armor plate (>50% HP) is intact
+	var final_dmg := amount
+	if zombie_type == ZombieType.BRUTE and current_health > max_health * 0.5:
+		final_dmg = amount * 0.70
+	
+	current_health = max(0.0, current_health - final_dmg)
 	var new_ratio := current_health / maxf(1.0, max_health)
+	if zombie_type == ZombieType.BRUTE and not is_enraged and new_ratio <= 0.50 and current_health > 0.0:
+		is_enraged = true
+		speed *= 1.30
+		if audio_mgr:
+			audio_mgr.play_sfx("sfx_brute")
+	
+	# 12. PHANTOM: Phase-blinks laterally when struck if cooldown is ready
+	if zombie_type == ZombieType.PHANTOM and current_health > 0.0 and ability_cooldown <= 0.0:
+		ability_cooldown = 2.6
+		var side_sign := 1.0 if randf() < 0.5 else -1.0
+		var perp := last_hit_dir. orthogonal() * side_sign if last_hit_dir != Vector2.ZERO else Vector2(0, side_sign)
+		global_position += perp * 44.0
+		if audio_mgr:
+			audio_mgr.play_sfx("sfx_phantom")
 	
 	# Add visible flesh wound on torso
 	if torso_wounds.size() < 6:
@@ -403,10 +588,15 @@ func die() -> void:
 	
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
+		var cfg_sfx: String = str(ZOMBIE_CONFIGS.get(zombie_type, {}).get("sfx", ""))
 		if zombie_type == ZombieType.BOOMER:
 			audio_mgr.play_sfx("sfx_boomer")
+		elif cfg_sfx != "":
+			audio_mgr.play_sfx(cfg_sfx)
 		else:
 			audio_mgr.play_sfx("sfx_zombie_death")
+	
+	_grant_player_edge_bonus()
 	
 	var sc := get_scale_factor()
 	var skin := get_skin_color()
@@ -457,6 +647,79 @@ func _find_nearest_living_player() -> Node2D:
 				min_dist = d
 				nearest = p
 	return nearest
+
+func _grant_player_edge_bonus() -> void:
+	var p: Node2D = target_player if (is_instance_valid(target_player) and target_player.get("is_dead") != true) else _find_nearest_living_player()
+	if not is_instance_valid(p):
+		return
+	var scene := get_tree().current_scene if get_tree() else null
+	
+	match zombie_type:
+		ZombieType.SCREAMER:
+			# Sonic Backlash Pulse: stuns/knocks back and damages nearby zombies within 150px
+			if get_parent():
+				for z in get_parent().get_children():
+					if z != self and is_instance_valid(z) and z.get("is_dead") != true and z.has_method("take_damage"):
+						var dist := global_position.distance_to(z.global_position)
+						if dist <= 155.0:
+							var push_dir: Vector2 = (z.global_position - global_position).normalized()
+							if z.has_method("apply_hit_impulse"):
+								z.apply_hit_impulse(push_dir * 420.0)
+							z.take_damage(24.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "⚡ SONIC SHOCKWAVE EDGE!", Color(0.95, 0.45, 1.0))
+		
+		ZombieType.STALKER:
+			# Shadow Reflex Edge: Instant Dash reset + +10 HP
+			if "dash_cooldown_left" in p:
+				p.dash_cooldown_left = 0.0
+			if p.has_method("heal"):
+				p.heal(10.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "⚡ SHADOW EDGE: DASH READY +10 HP", Color(0.45, 0.90, 1.0))
+		
+		ZombieType.LEAPER:
+			# Feral Adrenaline Edge: 3.5s Adrenaline Rush speed & fire-rate boost
+			if "adrenaline_time_left" in p:
+				p.adrenaline_time_left = maxf(float(p.adrenaline_time_left), 3.5)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "⚡ FERAL ADRENALINE RUSH!", Color(1.0, 0.65, 0.20))
+		
+		ZombieType.BRUTE:
+			# Scavenged Riot Plate Edge: +20 Kevlar Armor
+			if p.has_method("add_armor"):
+				p.add_armor(20.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "🛡️ RIOT PLATE SCAVENGED +20 ARMOR", Color(0.35, 0.80, 1.0))
+		
+		ZombieType.PARASITE:
+			# Bio-Marrow Edge: +15 HP
+			if p.has_method("heal"):
+				p.heal(15.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "🧬 BIO-EXTRACT +15 HP", Color(0.55, 1.0, 0.35))
+		
+		ZombieType.BUTCHER:
+			# Cleaver Bandolier Edge: Refill unlocked weapons ammo
+			var wc = p.get_node_or_null("WeaponController")
+			if wc and wc.has_method("refill_all_unlocked_ammo"):
+				wc.refill_all_unlocked_ammo()
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "⚔️ BUTCHER STASH: AMMO REFILLED!", Color(1.0, 0.85, 0.25))
+		
+		ZombieType.PHANTOM:
+			# Soul Flare Edge: +15 HP, +15 Armor, & searing light burst to nearby undead
+			if p.has_method("heal"):
+				p.heal(15.0)
+			if p.has_method("add_armor"):
+				p.add_armor(15.0)
+			if get_parent():
+				for z in get_parent().get_children():
+					if z != self and is_instance_valid(z) and z.get("is_dead") != true and z.has_method("take_damage"):
+						if global_position.distance_to(z.global_position) <= 160.0:
+							z.take_damage(28.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "👻 SOUL FLARE: +15 HP / +15 ARMOR", Color(0.40, 1.0, 0.95))
 
 func _draw_arm_or_stump(start_p: Vector2, end_p: Vector2, arm_col: Color, width: float, claw_col: Color, claw_r: float, is_present: bool) -> void:
 	if is_present:
@@ -577,6 +840,111 @@ func _draw() -> void:
 				var eye_col := Color(1.0, 0.08, 0.08, 1.0) if is_enraged else Color(0.90, 0.45, 0.45, 0.75)
 				draw_circle(Vector2(7, -2.5), 2.0 if is_enraged else 1.3, eye_col)
 				draw_circle(Vector2(7, 2.5), 2.0 if is_enraged else 1.3, eye_col)
+		
+		ZombieType.SCREAMER:
+			# 6. SCREAMER: Pale straightjacket asylum horror with unhinged shrieking jaw & sonic rings
+			if is_enraged:
+				var sonic_r := 18.0 + fmod(anim_time * 36.0, 22.0)
+				draw_arc(Vector2(6, 0), sonic_r, -1.1, 1.1, 16, Color(0.95, 0.30, 0.95, 0.55), 2.0)
+			var jacket_c := Color(0.64, 0.60, 0.68, 1.0) if hurt_flash_timer <= 0.0 else Color(1.0, 0.45, 0.85, 1.0)
+			_draw_arm_or_stump(Vector2(3, -10), Vector2(19, -8 + sway), Color(0.72, 0.64, 0.76, 1.0), 4.2, Color(0.88, 0.15, 0.45, 1.0), 3.2, has_left_arm)
+			_draw_arm_or_stump(Vector2(3, 10), Vector2(19, 8 - sway), Color(0.72, 0.64, 0.76, 1.0), 4.2, Color(0.88, 0.15, 0.45, 1.0), 3.2, has_right_arm)
+			draw_rect(Rect2(Vector2(-10, -11), Vector2(17, 22)), jacket_c, true)
+			draw_line(Vector2(-8, -9), Vector2(5, 9), Color(0.28, 0.22, 0.30, 0.95), 2.2)
+			draw_line(Vector2(-8, 9), Vector2(5, -9), Color(0.28, 0.22, 0.30, 0.95), 2.2)
+			if has_head:
+				draw_circle(Vector2(3, 0), 8.0, Color(0.76, 0.68, 0.80, 1.0))
+				draw_circle(Vector2(9, 0), 4.2 if is_enraged else 2.6, Color(0.18, 0.02, 0.08, 0.98)) # Gaping screaming mouth
+				draw_circle(Vector2(7, -3.2), 1.9, Color(1.0, 0.22, 0.88, 1.0))
+				draw_circle(Vector2(7, 3.2), 1.9, Color(1.0, 0.22, 0.88, 1.0))
+		
+		ZombieType.STALKER:
+			# 7. STALKER: Obsidian shadow-draped nightcrawler with razor mantis talons & cyan eyes
+			var shadow_c := Color(0.12, 0.14, 0.20, 1.0) if hurt_flash_timer <= 0.0 else Color(0.45, 0.85, 1.0, 1.0)
+			_draw_arm_or_stump(Vector2(4, -10), Vector2(23, -5 + sway), Color(0.18, 0.22, 0.28, 1.0), 4.0, Color(0.25, 0.95, 1.0, 0.95), 3.8, has_left_arm)
+			_draw_arm_or_stump(Vector2(4, 10), Vector2(23, 5 - sway), Color(0.18, 0.22, 0.28, 1.0), 4.0, Color(0.25, 0.95, 1.0, 0.95), 3.8, has_right_arm)
+			var stalk_pts := PackedVector2Array([Vector2(-12, -10), Vector2(9, -7), Vector2(9, 7), Vector2(-12, 10)])
+			draw_colored_polygon(stalk_pts, shadow_c)
+			if has_head:
+				draw_circle(Vector2(4, 0), 7.4, Color(0.16, 0.18, 0.24, 1.0))
+				draw_circle(Vector2(8.5, -2.8), 2.1, Color(0.20, 0.98, 1.0, 1.0))
+				draw_circle(Vector2(8.5, 2.8), 2.1, Color(0.20, 0.98, 1.0, 1.0))
+		
+		ZombieType.LEAPER:
+			# 8. LEAPER: Hunched dorsal-spined feral predator with elongated leaping limbs
+			var leap_c := Color(0.46, 0.22, 0.14, 1.0) if hurt_flash_timer <= 0.0 else Color(1.0, 0.55, 0.25, 1.0)
+			_draw_arm_or_stump(Vector2(4, -11), Vector2(24, -7 + sway), Color(0.58, 0.34, 0.24, 1.0), 4.6, Color(0.95, 0.25, 0.10, 1.0), 3.8, has_left_arm)
+			_draw_arm_or_stump(Vector2(4, 11), Vector2(24, 7 - sway), Color(0.58, 0.34, 0.24, 1.0), 4.6, Color(0.95, 0.25, 0.10, 1.0), 3.8, has_right_arm)
+			draw_circle(Vector2(-2, 0), 11.5, leap_c)
+			# Dorsal bone spines
+			for sp_x in [-9.0, -4.0, 1.0]:
+				draw_circle(Vector2(sp_x, 0), 2.4, Color(0.92, 0.86, 0.74, 0.95))
+			if has_head:
+				draw_circle(Vector2(6, 0), 7.2, Color(0.58, 0.34, 0.24, 1.0))
+				draw_circle(Vector2(10, -2.6), 2.0, Color(1.0, 0.52, 0.08, 1.0))
+				draw_circle(Vector2(10, 2.6), 2.0, Color(1.0, 0.52, 0.08, 1.0))
+		
+		ZombieType.BRUTE:
+			# 9. BRUTE: Heavy SWAT riot-armored juggernaut with steel shoulder pauldrons & cracked visor
+			var armor_c := Color(0.22, 0.26, 0.32, 1.0) if hurt_flash_timer <= 0.0 else Color(0.75, 0.85, 1.0, 1.0)
+			_draw_arm_or_stump(Vector2(3, -14), Vector2(20, -10 + sway * 0.4), armor_c, 8.0, Color(0.55, 0.15, 0.15, 1.0), 5.2, has_left_arm)
+			_draw_arm_or_stump(Vector2(3, 14), Vector2(20, 10 - sway * 0.4), armor_c, 8.0, Color(0.55, 0.15, 0.15, 1.0), 5.2, has_right_arm)
+			draw_rect(Rect2(Vector2(-13, -15), Vector2(22, 30)), armor_c, true)
+			# Tactical riot chest plate & shoulder pauldrons
+			draw_rect(Rect2(Vector2(-8, -12), Vector2(14, 24)), Color(0.14, 0.17, 0.22, 1.0), true)
+			draw_circle(Vector2(1, -14), 5.5, Color(0.32, 0.38, 0.45, 1.0))
+			draw_circle(Vector2(1, 14), 5.5, Color(0.32, 0.38, 0.45, 1.0))
+			if has_head:
+				draw_circle(Vector2(5, 0), 8.2, Color(0.18, 0.22, 0.28, 1.0))
+				draw_line(Vector2(9, -4), Vector2(9, 4), Color(1.0, 0.18, 0.12, 0.98), 2.6)
+		
+		ZombieType.PARASITE:
+			# 10. PARASITE: Twitching bio-host with glowing green egg sacs & writhing tendrils
+			var host_c := Color(0.38, 0.46, 0.22, 1.0) if hurt_flash_timer <= 0.0 else Color(0.75, 1.0, 0.35, 1.0)
+			_draw_arm_or_stump(Vector2(2, -9), Vector2(17, -5 + sway), host_c, 3.8, Color(0.65, 1.0, 0.20, 1.0), 2.8, has_left_arm)
+			_draw_arm_or_stump(Vector2(2, 9), Vector2(17, 5 - sway), host_c, 3.8, Color(0.65, 1.0, 0.20, 1.0), 2.8, has_right_arm)
+			draw_rect(Rect2(Vector2(-9, -10), Vector2(16, 20)), host_c, true)
+			# Pulsing bioluminescent parasite cysts on back
+			var pulse := 0.8 + 0.25 * sin(anim_time * 9.0)
+			draw_circle(Vector2(-5, -6), 4.5 * pulse, Color(0.58, 1.0, 0.16, 0.92))
+			draw_circle(Vector2(-4, 6), 4.0 * pulse, Color(0.58, 1.0, 0.16, 0.92))
+			draw_circle(Vector2(-8, 0), 3.6 * pulse, Color(0.82, 1.0, 0.22, 0.92))
+			if has_head:
+				draw_circle(Vector2(4, 0), 7.0, Color(0.46, 0.56, 0.28, 1.0))
+				draw_circle(Vector2(8, -2.5), 1.8, Color(0.65, 1.0, 0.15, 1.0))
+				draw_circle(Vector2(8, 2.5), 1.8, Color(0.65, 1.0, 0.15, 1.0))
+		
+		ZombieType.BUTCHER:
+			# 11. BUTCHER: Blood-soaked slaughterhouse apron hulk wielding a heavy steel meat cleaver
+			var apron_c := Color(0.52, 0.12, 0.12, 1.0) if hurt_flash_timer <= 0.0 else Color(1.0, 0.35, 0.35, 1.0)
+			_draw_arm_or_stump(Vector2(3, -12), Vector2(19, -8 + sway * 0.5), Color(0.62, 0.44, 0.40, 1.0), 6.0, Color(0.75, 0.10, 0.10, 1.0), 4.0, has_left_arm)
+			_draw_arm_or_stump(Vector2(3, 12), Vector2(20, 8 - sway * 0.5), Color(0.62, 0.44, 0.40, 1.0), 6.0, Color(0.75, 0.10, 0.10, 1.0), 4.0, has_right_arm)
+			# Heavy bloody meat cleaver in right hand
+			if has_right_arm:
+				var cleaver_base := Vector2(18, 8 - sway * 0.5)
+				draw_rect(Rect2(cleaver_base, Vector2(12, 5.5)), Color(0.82, 0.85, 0.88, 1.0), true)
+				draw_line(cleaver_base + Vector2(12, 0), cleaver_base + Vector2(12, 5.5), Color(0.88, 0.06, 0.06, 0.98), 2.2)
+			draw_rect(Rect2(Vector2(-11, -13), Vector2(19, 26)), Color(0.38, 0.28, 0.26, 1.0), true)
+			draw_rect(Rect2(Vector2(-6, -11), Vector2(14, 22)), apron_c, true)
+			if has_head:
+				draw_circle(Vector2(4, 0), 8.0, Color(0.58, 0.42, 0.38, 1.0))
+				draw_circle(Vector2(9, -2.6), 1.9, Color(1.0, 0.22, 0.10, 1.0))
+				draw_circle(Vector2(9, 2.6), 1.9, Color(1.0, 0.22, 0.10, 1.0))
+		
+		ZombieType.PHANTOM:
+			# 12. PHANTOM: Spectral wraith with tattered ethereal shroud & blazing cyan eye sockets
+			var wraith_c := Color(0.18, 0.36, 0.42, 0.88) if hurt_flash_timer <= 0.0 else Color(0.55, 1.0, 1.0, 1.0)
+			draw_circle(Vector2(0, 0), 16.0, Color(0.20, 0.85, 0.95, 0.16 + 0.08 * sin(anim_time * 7.0)))
+			_draw_arm_or_stump(Vector2(3, -10), Vector2(21, -6 + sway), wraith_c, 4.2, Color(0.35, 1.0, 0.95, 0.95), 3.4, has_left_arm)
+			_draw_arm_or_stump(Vector2(3, 10), Vector2(21, 6 - sway), wraith_c, 4.2, Color(0.35, 1.0, 0.95, 0.95), 3.4, has_right_arm)
+			var shroud_pts := PackedVector2Array([
+				Vector2(-15, -12), Vector2(8, -10), Vector2(10, 0), Vector2(8, 10), Vector2(-15, 12), Vector2(-10, 0)
+			])
+			draw_colored_polygon(shroud_pts, wraith_c)
+			if has_head:
+				draw_circle(Vector2(3, 0), 7.8, Color(0.10, 0.18, 0.22, 0.95))
+				draw_circle(Vector2(8, -2.8), 2.1, Color(0.35, 1.0, 0.95, 1.0))
+				draw_circle(Vector2(8, 2.8), 2.1, Color(0.35, 1.0, 0.95, 1.0))
 	
 	# Draw visible bullet wounds & exposed white ribs on damaged zombie torso
 	for w in torso_wounds:
@@ -585,8 +953,8 @@ func _draw() -> void:
 	
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	
-	# Draw Overhead Health Bar when damaged or for Bosses (Tank / Witch / Boomer)
-	if not is_dead and (current_health < max_health or zombie_type == ZombieType.TANK or zombie_type == ZombieType.WITCH):
+	# Draw Overhead Health Bar when damaged or for Elite/Boss variants
+	if not is_dead and (current_health < max_health or zombie_type in [ZombieType.TANK, ZombieType.WITCH, ZombieType.BRUTE, ZombieType.BUTCHER, ZombieType.PHANTOM]):
 		var bar_w := 32.0 * sc
 		var bar_h := 4.5
 		var bar_pos := Vector2(-bar_w * 0.5, -24.0 * sc)

@@ -100,7 +100,19 @@ func _ready() -> void:
 		var generator := gen_scene.instantiate()
 		generator.position = Vector2(740, 240)
 		generator.generator_started.connect(_on_generator_started)
+		if generator.has_signal("generator_depleted"):
+			generator.generator_depleted.connect(_on_generator_depleted)
+		if generator.has_signal("generator_refueled"):
+			generator.generator_refueled.connect(_on_generator_refueled)
 		add_child(generator)
+	
+	var truck_scene: PackedScene = load("res://scenes/actors/fuel_truck.tscn")
+	if truck_scene:
+		var fuel_truck := truck_scene.instantiate()
+		fuel_truck.position = Vector2(890, 240)
+		if fuel_truck.has_signal("gasoline_collected"):
+			fuel_truck.gasoline_collected.connect(_on_gasoline_collected)
+		add_child(fuel_truck)
 	
 	var sentry_scene: PackedScene = load("res://scenes/actors/sentry_turret.tscn")
 	if sentry_scene:
@@ -493,23 +505,62 @@ func _process(delta: float) -> void:
 				occluders = cached_occluders
 			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, lp.global_position)
 			
+			# Real-time AI companion bot, co-op squadmate, & sentry turret flashlight cones (cuts darkness so zombies are visible!)
+			if horror_vignette.has_method("update_ally_flashlights"):
+				var ally_cones: Array = []
+				for p_node in get_tree().get_nodes_in_group("players"):
+					if is_instance_valid(p_node) and p_node != lp and p_node.get("is_dead") != true:
+						var p_vis: Node2D = p_node.get_node_or_null("Visuals")
+						var p_ang: float = float(p_vis.rotation) if p_vis else 0.0
+						ally_cones.append({
+							"world_pos": p_node.global_position,
+							"angle": p_ang
+						})
+				for t_node in get_tree().get_nodes_in_group("turrets"):
+					if is_instance_valid(t_node) and t_node.get("is_active") == true:
+						var raw_ang = t_node.get("aim_angle")
+						ally_cones.append({
+							"world_pos": t_node.global_position,
+							"angle": float(raw_ang) if raw_ang != null else 0.0
+						})
+				horror_vignette.update_ally_flashlights(ally_cones, lp.global_position)
+			
 			ambient_query_timer += delta
-			if ambient_query_timer >= 0.20 or cached_ambient_lights.is_empty():
+			if ambient_query_timer >= 0.08 or cached_ambient_lights.is_empty():
 				ambient_query_timer = 0.0
 				var ambients: Array = []
-				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
-					ambients.append_array(arena_env.get_ambient_lights(lp.global_position, 850.0))
-				var gens := get_tree().get_nodes_in_group("generators")
-				for g in gens:
+				# Priority 1: Outpost Generators (always first so never culled!)
+				for g in get_tree().get_nodes_in_group("generators"):
 					if is_instance_valid(g) and g.has_method("get_light_data"):
 						var ldata: Dictionary = g.get_light_data()
 						if not ldata.is_empty():
 							ambients.append(ldata)
+				# Priority 2: Active Sentry Turret Spotlights
+				for t in get_tree().get_nodes_in_group("turrets"):
+					if is_instance_valid(t) and t.has_method("get_spotlight_data"):
+						var sdata: Dictionary = t.get_spotlight_data()
+						if not sdata.is_empty():
+							ambients.append(sdata)
+				# Priority 3: Fuel Trucks
+				for ft in get_tree().get_nodes_in_group("fuel_trucks"):
+					if is_instance_valid(ft) and ft.has_method("get_light_data"):
+						var fdata: Dictionary = ft.get_light_data()
+						if not fdata.is_empty():
+							ambients.append(fdata)
+				# Priority 4: Environmental streetlights sorted by proximity to player
+				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
+					var env_lights: Array = arena_env.get_ambient_lights(lp.global_position, 850.0)
+					env_lights.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+						var pa: Vector2 = a.get("pos", Vector2.ZERO)
+						var pb: Vector2 = b.get("pos", Vector2.ZERO)
+						return lp.global_position.distance_squared_to(pa) < lp.global_position.distance_squared_to(pb)
+					)
+					ambients.append_array(env_lights)
 				cached_ambient_lights = ambients
 				if not has_turret_flash_active and horror_vignette.has_method("update_ambient_lights"):
 					horror_vignette.update_ambient_lights(cached_ambient_lights, lp.global_position)
 			
-			# Dynamic turret gunfire muzzle flash lights
+			# Dynamic turret gunfire muzzle flash lights (inserted at front for priority)
 			var turret_flash_lights: Array = []
 			var turrets := get_tree().get_nodes_in_group("turrets")
 			for t in turrets:
@@ -521,23 +572,30 @@ func _process(delta: float) -> void:
 			var is_turret_flashing := not turret_flash_lights.is_empty()
 			if is_turret_flashing or has_turret_flash_active:
 				has_turret_flash_active = is_turret_flashing
-				var combined_lights := cached_ambient_lights.duplicate()
-				combined_lights.append_array(turret_flash_lights)
+				var combined_lights := turret_flash_lights.duplicate()
+				combined_lights.append_array(cached_ambient_lights)
 				if horror_vignette.has_method("update_ambient_lights"):
 					horror_vignette.update_ambient_lights(combined_lights, lp.global_position)
 			
 			witch_query_timer += delta
-			if witch_query_timer >= 0.12 or cached_witch_eyes.is_empty():
+			if witch_query_timer >= 0.10 or cached_witch_eyes.is_empty():
 				witch_query_timer = 0.0
 				var witches: Array = []
 				if is_instance_valid(zombie_container):
 					for z in zombie_container.get_children():
-						if is_instance_valid(z) and not z.get("is_dead") and z.get("zombie_type") == 5: # ZombieType.WITCH == 5
-							witches.append({
-								"pos": z.global_position,
-								"rot": z.rotation,
-								"is_enraged": z.get("is_enraged") == true
-							})
+						if is_instance_valid(z) and z.get("is_dead") != true:
+							var raw_zt = z.get("zombie_type")
+							var zt: int = int(raw_zt) if raw_zt != null else 0
+							if zt == 5 or zt >= 6: # Witch + 7 new scary variants glow in the dark
+								var cfg_dict: Dictionary = ZombieScript.ZOMBIE_CONFIGS.get(zt, {})
+								var eye_c: Color = cfg_dict.get("eye_color", Color(1.0, 0.12, 0.12, 1.0))
+								var z_vis: Node2D = z.get_node_or_null("Visuals")
+								witches.append({
+									"pos": z.global_position,
+									"rot": float(z_vis.rotation) if z_vis else z.rotation,
+									"is_enraged": z.get("is_enraged") == true,
+									"eye_color": eye_c
+								})
 				cached_witch_eyes = witches
 				if horror_vignette.has_method("update_witch_eyes"):
 					horror_vignette.update_witch_eyes(cached_witch_eyes, lp.global_position)
@@ -819,6 +877,7 @@ func _handle_all_players_dead() -> void:
 		_on_level_lost(level_id, score_count, kills_count, "OUTPOST OVERRUN")
 
 func _on_generator_started(pos: Vector2) -> void:
+	ambient_query_timer = 999.0
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("unlock_achievement"):
 		gs.unlock_achievement("GENERATOR_POWER")
@@ -829,6 +888,19 @@ func _on_generator_started(pos: Vector2) -> void:
 	# Loud engine roars attract an immediate zombie swarm!
 	if wave_director and wave_director.has_method("trigger_herd_swarm"):
 		wave_director.trigger_herd_swarm(8, randf() * TAU)
+
+func _on_generator_depleted(pos: Vector2) -> void:
+	ambient_query_timer = 999.0
+	if is_instance_valid(player):
+		spawn_floating_text(pos + Vector2(0, -48), "⚠ GENERATOR OUT OF FUEL — FETCH GASOLINE FROM FUEL TRUCK! ⚠", Color(1.0, 0.28, 0.22))
+
+func _on_generator_refueled(pos: Vector2) -> void:
+	ambient_query_timer = 999.0
+	if is_instance_valid(player):
+		spawn_floating_text(pos + Vector2(0, -48), "⛽ FUEL ADDED — IGNITING GENERATOR (3.0s)...", Color(1.0, 0.78, 0.25))
+
+func _on_gasoline_collected(_p: Node2D, pos: Vector2) -> void:
+	spawn_floating_text(pos + Vector2(0, -48), "⛽ GASOLINE CANISTER COLLECTED — DELIVER TO GENERATOR!", Color(1.0, 0.85, 0.28))
 
 func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	if not is_instance_valid(player) or player.is_dead:
@@ -890,10 +962,38 @@ func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 	var z := spawn_test_zombie_at(pos, enemy_type)
 	if is_instance_valid(z):
 		z.set_meta("is_wave_enemy", true)
-		if enemy_type == ZombieScript.ZombieType.TANK:
+		_announce_special_spawn(enemy_type)
+
+func _announce_special_spawn(enemy_type: int) -> void:
+	if not is_instance_valid(player):
+		return
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	match enemy_type:
+		ZombieScript.ZombieType.TANK:
 			spawn_floating_text(player.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
-		elif enemy_type == ZombieScript.ZombieType.WITCH:
+		ZombieScript.ZombieType.WITCH:
 			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
+		ZombieScript.ZombieType.SCREAMER:
+			if audio_mgr: audio_mgr.play_sfx("sfx_screamer")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! SCREAMER SHRIEKING IN THE DARK !", Color(1.0, 0.25, 0.90))
+		ZombieScript.ZombieType.STALKER:
+			if audio_mgr: audio_mgr.play_sfx("sfx_stalker")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! SHADOW STALKER PROWLING — AIM FLASHLIGHT !", Color(0.25, 0.95, 1.0))
+		ZombieScript.ZombieType.LEAPER:
+			if audio_mgr: audio_mgr.play_sfx("sfx_leaper")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! FERAL LEAPER POUNCING !", Color(1.0, 0.55, 0.15))
+		ZombieScript.ZombieType.BRUTE:
+			if audio_mgr: audio_mgr.play_sfx("sfx_brute")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! ARMORED RIOT BRUTE INBOUND !", Color(0.55, 0.80, 1.0))
+		ZombieScript.ZombieType.PARASITE:
+			if audio_mgr: audio_mgr.play_sfx("sfx_parasite")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! BIO-PARASITE HOST DETECTED !", Color(0.65, 1.0, 0.20))
+		ZombieScript.ZombieType.BUTCHER:
+			if audio_mgr: audio_mgr.play_sfx("sfx_butcher")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! THE BUTCHER CLEAVER RUSH !", Color(1.0, 0.20, 0.15))
+		ZombieScript.ZombieType.PHANTOM:
+			if audio_mgr: audio_mgr.play_sfx("sfx_phantom")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "! PHANTOM WRAITH PHASE-SHIFTING !", Color(0.35, 1.0, 0.95))
 
 func _on_wave_completed(wave_num: int, total_waves: int) -> void:
 	var is_endless: bool = (total_waves <= 0)
@@ -1175,23 +1275,35 @@ func rpc_zombie_died(z_id: int, p_kills: int, p_score: int) -> void:
 
 func _pick_zombie_type_for_spawn() -> int:
 	total_spawned += 1
-	# Guarantee periodic special infected variety (Runner, Boomer, Spitter, Witch, Tanker)
+	# Guarantee periodic special & scary infected variety
 	if total_spawned % 12 == 0:
 		return ZombieScript.ZombieType.TANK
 	if total_spawned % 9 == 0:
 		return ZombieScript.ZombieType.WITCH
 	
 	var roll := randf()
-	if roll < 0.42:
+	if roll < 0.30:
 		return ZombieScript.ZombieType.WALKER
-	elif roll < 0.66:
+	elif roll < 0.48:
 		return ZombieScript.ZombieType.RUNNER
-	elif roll < 0.82:
+	elif roll < 0.56:
 		return ZombieScript.ZombieType.BOOMER
-	elif roll < 0.94:
+	elif roll < 0.64:
 		return ZombieScript.ZombieType.SPITTER
+	elif roll < 0.70:
+		return ZombieScript.ZombieType.SCREAMER
+	elif roll < 0.76:
+		return ZombieScript.ZombieType.STALKER
+	elif roll < 0.82:
+		return ZombieScript.ZombieType.LEAPER
+	elif roll < 0.87:
+		return ZombieScript.ZombieType.BRUTE
+	elif roll < 0.92:
+		return ZombieScript.ZombieType.PARASITE
+	elif roll < 0.96:
+		return ZombieScript.ZombieType.BUTCHER
 	else:
-		return ZombieScript.ZombieType.WITCH
+		return ZombieScript.ZombieType.PHANTOM
 
 func _on_spawn_timer_timeout() -> void:
 	if not is_instance_valid(player) or player.is_dead:
@@ -1207,18 +1319,15 @@ func _on_spawn_timer_timeout() -> void:
 	var z_type := _pick_zombie_type_for_spawn()
 	var z := spawn_test_zombie_at(pos, z_type)
 	if is_instance_valid(z):
-		if z_type == ZombieScript.ZombieType.TANK:
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
-		elif z_type == ZombieScript.ZombieType.WITCH:
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
+		_announce_special_spawn(z_type)
 
 func _on_zombie_drop_requested(world_pos: Vector2, z_type_name: String) -> void:
 	# Special infected have high/guaranteed supply drop chances; normal walkers have 35% chance
 	var drop_chance := 0.35
-	if z_type_name in ["TANKER", "WITCH"]:
+	if z_type_name in ["TANKER", "WITCH", "BRUTE", "BUTCHER", "PHANTOM"]:
 		drop_chance = 1.0
-	elif z_type_name in ["BOOMER", "SPITTER"]:
-		drop_chance = 0.72
+	elif z_type_name in ["BOOMER", "SPITTER", "SCREAMER", "STALKER", "LEAPER", "PARASITE"]:
+		drop_chance = 0.78
 	elif z_type_name == "RUNNER":
 		drop_chance = 0.45
 	

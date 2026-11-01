@@ -108,10 +108,12 @@ func _generate_endless_wave_config(wave_idx: int) -> Dictionary:
 	var boss_type := -1
 	if wave_num % 5 == 0:
 		boss_type = 3 # Tanker Boss every 5 waves
+	elif wave_num % 4 == 0:
+		boss_type = 9 if (wave_num % 8 == 0) else 11 # Brute or Butcher
 	elif wave_num % 3 == 0:
-		boss_type = 5 # Witch every 3 waves
+		boss_type = 12 if (wave_num % 6 == 0) else 5 # Phantom or Witch
 	elif wave_num % 2 == 0:
-		boss_type = 2 # Boomer every even wave
+		boss_type = 6 if (wave_num % 4 == 2) else 2 # Screamer or Boomer
 	return {
 		"total_enemies": count,
 		"spawn_interval": interval,
@@ -207,39 +209,73 @@ func _pick_enemy_type_for_current_wave() -> int:
 	
 	var roll := randf()
 	if current_wave_index == 0:
-		# Wave 1: Walkers, Runners, occasional Boomer/Spitter
-		if roll < 0.52:
+		# Wave 1: Walkers, Runners, plus early Scary Variants (Screamer, Stalker, Leaper, Parasite)
+		if roll < 0.42:
 			return 0 # WALKER
-		elif roll < 0.80:
+		elif roll < 0.66:
 			return 1 # RUNNER
-		elif roll < 0.92:
+		elif roll < 0.74:
 			return 2 # BOOMER
-		else:
+		elif roll < 0.81:
 			return 4 # SPITTER
-	elif current_wave_index == 1:
-		# Wave 2: Heavier mix of Runners, Boomers, Spitters, and Witches
-		if roll < 0.36:
-			return 0 # WALKER
-		elif roll < 0.65:
-			return 1 # RUNNER
-		elif roll < 0.82:
-			return 2 # BOOMER
-		elif roll < 0.94:
-			return 4 # SPITTER
-		else:
-			return 5 # WITCH
-	else:
-		# Wave 3+: Intense horde with all special infected
-		if roll < 0.30:
-			return 0 # WALKER
-		elif roll < 0.58:
-			return 1 # RUNNER
-		elif roll < 0.76:
-			return 2 # BOOMER
-		elif roll < 0.90:
-			return 4 # SPITTER
+		elif roll < 0.86:
+			return 6 # SCREAMER
+		elif roll < 0.91:
+			return 7 # STALKER
 		elif roll < 0.96:
+			return 8 # LEAPER
+		else:
+			return 10 # PARASITE
+	elif current_wave_index == 1:
+		# Wave 2: Heavier mix including Screamer, Stalker, Leaper, Parasite, Butcher, Phantom
+		if roll < 0.28:
+			return 0 # WALKER
+		elif roll < 0.48:
+			return 1 # RUNNER
+		elif roll < 0.56:
+			return 2 # BOOMER
+		elif roll < 0.64:
+			return 4 # SPITTER
+		elif roll < 0.70:
 			return 5 # WITCH
+		elif roll < 0.76:
+			return 6 # SCREAMER
+		elif roll < 0.82:
+			return 7 # STALKER
+		elif roll < 0.88:
+			return 8 # LEAPER
+		elif roll < 0.93:
+			return 10 # PARASITE
+		elif roll < 0.97:
+			return 11 # BUTCHER
+		else:
+			return 12 # PHANTOM
+	else:
+		# Wave 3+: Intense horde with all 13 special & scary infected variants
+		if roll < 0.22:
+			return 0 # WALKER
+		elif roll < 0.38:
+			return 1 # RUNNER
+		elif roll < 0.46:
+			return 2 # BOOMER
+		elif roll < 0.54:
+			return 4 # SPITTER
+		elif roll < 0.60:
+			return 5 # WITCH
+		elif roll < 0.66:
+			return 6 # SCREAMER
+		elif roll < 0.73:
+			return 7 # STALKER
+		elif roll < 0.80:
+			return 8 # LEAPER
+		elif roll < 0.86:
+			return 9 # BRUTE
+		elif roll < 0.91:
+			return 10 # PARASITE
+		elif roll < 0.96:
+			return 11 # BUTCHER
+		elif roll < 0.985:
+			return 12 # PHANTOM
 		else:
 			return 3 # TANK
 
