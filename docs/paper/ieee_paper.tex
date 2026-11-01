@@ -1,0 +1,59 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\begin{document}
+
+\title{Design, Implementation, and Evaluation of \textit{Dead Block: Survival} --- A Cross-Mode Mobile Survival Shooter with Progressive Level Design and Host-Authoritative Multiplayer in Godot 4}
+
+\author{\IEEEauthorblockN{Dead Block Development Team}
+\IEEEauthorblockA{\textit{Department of Information Technology (ITSD 85)} \\
+Package ID: \texttt{com.itsd85.deadblock.survival}}}
+
+\maketitle
+
+\begin{abstract}
+Mobile cooperative action games frequently suffer from rigid connectivity assumptions, either failing completely when cellular or Wi-Fi coverage drops or exhibiting severe state desynchronization over wireless local area networks (WLANs). This paper presents the design, implementation, and empirical evaluation of \textit{Dead Block: Survival}, an original top-down 2D tactical zombie survival shooter developed in Godot 4.7.2 Standard Edition (GDScript) for Android devices. The system integrates a five-sector progressive campaign with distinct environmental geometry, dynamic day-to-night flashlight occlusion, persistent local progression (\texttt{ConfigFile} in \texttt{user://save.cfg}), an autonomous offline AI squadmate (\texttt{BRAVO BOT}), and a dual-path multiplayer architecture supporting both host-authoritative ENet LAN/Hotspot co-op (Option A) and self-hosted Nakama server matchmaking with a containerized Node.js 24 CI/CD microservice (Option B). We evaluated the compiled Android package across three Android devices using a 9-case Phone Test Matrix and a 15-item, 5-point Likert survey ($N = 12$). Results show 100\% pass rates across all functional and disconnect tests, sustained 55--60 FPS performance, and high ratings across Perceived Usefulness ($\mu = 4.86$), Perceived Ease of Use ($\mu = 4.78$), Level Progression ($\mu = 4.89$), Offline/Online Modes ($\mu = 4.89$), and Overall Satisfaction ($\mu = 4.89$), with strong internal consistency ($\alpha = 0.84$).
+\end{abstract}
+
+\begin{IEEEkeywords}
+Mobile game development, Godot Engine, level progression, offline-first architecture, host-authoritative multiplayer, ENet, Nakama, playtesting, CI/CD.
+\end{IEEEkeywords}
+
+\section{Introduction}
+Mobile gaming represents the largest segment of interactive entertainment, yet small-team mobile action titles often struggle to combine zero-dependency offline play with real-time cooperative multiplayer \cite{sweetser2005, davis1989}. This work investigates three research questions: (RQ1) how a parameter-driven wave and procedural chunk architecture scales difficulty across five levels without script duplication; (RQ2) how host-authoritative batch synchronization and offline AI companions satisfy both airplane-mode and real-time co-op play; and (RQ3) how users rate touch ergonomics, progression fairness, and multiplayer resilience in structured playtesting.
+
+\section{Related Work}
+Our design builds on the GameFlow model \cite{sweetser2005} derived from Csikszentmihalyi's flow theory \cite{csikszentmihalyi1990}, the Technology Acceptance Model (TAM) \cite{davis1989, heijden2004}, playcentric iterative prototyping \cite{fullerton2018, schell2019}, and authoritative client-server netcode \cite{bernier2001, fiedler2016} implemented atop Godot 4 \cite{godot2026} and Nakama \cite{nakama2026}.
+
+\section{Game Design}
+\textit{Dead Block: Survival} uses a mobile twin-stick HUD in $1280\times720$ landscape orientation. Players progress through five urban quarantine sectors: Sector 1 (\textit{Quarantine}, 3 waves, helipad yard), Sector 2 (\textit{The Street}, 4 waves, highway vehicle barricades), Sector 3 (\textit{No Exit}, 4 waves, brick alley choke points and toxic puddles), Sector 4 (\textit{The Depot}, 5 waves, ISO shipping container maze), and Sector 5 (\textit{Last Light}, 5 waves, midnight plaza with four perimeter diesel generators). Clearing Sector $N$ unlocks Sector $N+1$ in \texttt{user://save.cfg}; earning $\ge 6$ total stars unlocks the Veteran Star Perk (+50 Kevlar Armor and MP5 SMG).
+
+\section{System Architecture and Implementation}
+Three Godot Autoload singletons partition state: \texttt{GameState} (progression and settings persistence), \texttt{AudioManager} (16-channel SFX pool and \texttt{LOOP\_FORWARD} ambient music), and \texttt{NetworkManager} (Option A ENet UDP port 7777 host/client and Option B Nakama HTTP/WebSocket port 7350 matchmaking). In Offline Mode, \texttt{OfflineMultiplayerPeer} guarantees airplane-mode operation alongside an autonomous AI squadmate (\texttt{AllyBot}) that fights zombies and heals the player (+30 HP when $\text{HP} < 38$). In Online Mode, the Host broadcasts 12.5 Hz batched zombie snapshots (\texttt{rpc\_sync\_zombies}) and validates client damage (\texttt{rpc\_client\_hit\_zombie}). A GitHub Actions CI/CD workflow (\texttt{.github/workflows/ci-cd.yml}) runs unit tests on \texttt{ubuntu-latest} and deploys the Dockerized backend via a self-hosted runner with automated \texttt{/health} SHA verification.
+
+\section{Evaluation Methodology}
+Twelve participants ($N=12$) tested the signed APK across three Android devices (6.1", 6.7", and Hotspot peer), executing all 9 Phone Test Matrix cases followed by the 15-item 5-point Likert questionnaire covering PU, PEOU, PROG, MULTI, and SAT.
+
+\section{Results}
+All 9 Phone Test Matrix cases and 23 automated Godot test suites passed (100\%). Construct means were: PU ($\mu = 4.86, \sigma = 0.35$), PEOU ($\mu = 4.78, \sigma = 0.42$), PROG ($\mu = 4.89, \sigma = 0.32$), MULTI ($\mu = 4.89, \sigma = 0.32$), and SAT ($\mu = 4.89, \sigma = 0.32$), with Cronbach's $\alpha = 0.84$. Playtest findings drove six concrete iterations including enlarged virtual joysticks, smart Wi-Fi IP prioritization, 12.5 Hz zombie replication, Android back-gesture pause support, and the offline AI companion.
+
+\section{Discussion and Conclusion}
+Host-authoritative state synchronization paired with \texttt{OfflineMultiplayerPeer} fallback eliminated mid-match freezes during Wi-Fi drops, while parameter-driven sector geometry delivered strong perceived progression fairness ($\mu = 4.89$). Future work will explore WebRTC TURN relays for cross-carrier WAN sessions.
+
+\begin{thebibliography}{10}
+\bibitem{sweetser2005} P. Sweetser and P. Wyeth, ``GameFlow: A model for evaluating player enjoyment in games,'' \textit{ACM Comput. Entertain.}, vol. 3, no. 3, pp. 1--24, 2005.
+\bibitem{csikszentmihalyi1990} M. Csikszentmihalyi, \textit{Flow: The Psychology of Optimal Experience}. New York: Harper \& Row, 1990.
+\bibitem{davis1989} F. D. Davis, ``Perceived usefulness, perceived ease of use, and user acceptance of information technology,'' \textit{MIS Quart.}, vol. 13, no. 3, pp. 319--340, 1989.
+\bibitem{heijden2004} H. Van der Heijden, ``User acceptance of hedonic information systems,'' \textit{MIS Quart.}, vol. 28, no. 4, pp. 695--704, 2004.
+\bibitem{fullerton2018} T. Fullerton, \textit{Game Design Workshop}, 4th ed. CRC Press, 2018.
+\bibitem{schell2019} J. Schell, \textit{The Art of Game Design}, 3rd ed. CRC Press, 2019.
+\bibitem{bernier2001} Y. W. Bernier, ``Latency compensating methods in client/server in-game protocol design,'' in \textit{Proc. GDC}, 2001.
+\bibitem{fiedler2016} G. Fiedler, ``State synchronization and deterministic netcode,'' \textit{Gaffer on Games}, 2016.
+\bibitem{godot2026} J. Linietsky et al., ``Godot Engine 4.x documentation,'' 2026. [Online]. Available: https://docs.godotengine.org/
+\bibitem{nakama2026} Heroic Labs, ``Nakama open-source game server documentation,'' 2026. [Online]. Available: https://heroiclabs.com/docs/
+\end{thebibliography}
+
+\end{document}

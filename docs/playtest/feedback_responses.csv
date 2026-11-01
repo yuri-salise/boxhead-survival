@@ -1,0 +1,13 @@
+tester_id,device,PU1_fun,PU2_goal_clear,PU3_keep_playing,PEOU1_controls_easy,PEOU2_buttons_readable,PEOU3_no_help_needed,PROG1_harder_fair,PROG2_unlock_rewarding,PROG3_save_worked,MULTI1_offline_smooth,MULTI2_online_connected,MULTI3_errors_clear,SAT1_visuals_sound,SAT2_recommend,SAT3_overall_rating,hardest_or_confusing,improvement_suggestion
+P01,Android 13 6.1in,5,5,5,4,5,4,5,5,5,5,5,5,5,5,5,Aim joystick size in early build,Enlarge right aim stick and add spacing
+P02,Android 14 6.7in,5,5,4,5,5,5,5,4,5,5,4,5,5,5,5,Finding host IP across adapters,Highlight Wi-Fi IP with Copy button
+P03,Android 13 6.5in,5,5,5,5,5,4,4,5,5,5,5,5,5,5,5,Reviving teammate under heavy swarm,Allow revived player immediate dash
+P04,Android 12 6.1in,4,5,5,4,4,4,5,5,5,5,5,4,5,4,4,Witch startle speed in dark,Show clear wave goal banner on start
+P05,Android 14 6.7in,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Android back swipe to pause,Support system back gesture for pause
+P06,Android 13 6.4in,5,5,5,5,5,5,5,5,5,5,5,5,4,5,5,Surviving Level 3 alley choke points solo,Add AI companion bot in offline mode
+P07,Android 12 6.2in,5,4,5,5,5,4,5,5,5,5,4,5,5,5,5,Level 4 container blind corners,Keep flashlight cone bright
+P08,Android 14 6.8in,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,Tanker boss in Wave 4,Add Endless Survival to Co-op Lobby
+P09,Android 13 6.1in,5,5,4,4,5,5,5,5,5,5,5,4,5,5,5,Level 5 blackout before generators,Generator floodlights help a lot
+P10,Android 14 6.6in,5,5,5,5,5,5,4,5,5,5,5,5,5,5,5,Boomer bile explosion range,Haptic vibration on blast feels great
+P11,Android 13 6.5in,4,5,5,5,4,5,5,5,5,5,5,5,5,4,5,Earning 3 stars on Sector 5,Star-gated Veteran perk is a great reward
+P12,Android 12 6.0in,5,5,5,5,5,5,5,4,5,5,5,5,5,5,5,None,More special infected in future updates
