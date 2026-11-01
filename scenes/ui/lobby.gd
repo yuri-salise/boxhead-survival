@@ -12,6 +12,7 @@ extends Control
 @onready var join_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow/JoinButton
 @onready var status_label: Label = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/StatusLabel
 @onready var players_label: Label = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/PlayersLabel
+@onready var mode_button: Button = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow/ModeButton")
 @onready var sector_option: OptionButton = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow/SectorOption
 @onready var start_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow/StartButton
 @onready var back_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow/BackButton
@@ -21,6 +22,8 @@ func _ready() -> void:
 		host_button.pressed.connect(_on_host_pressed)
 	if join_button:
 		join_button.pressed.connect(_on_join_pressed)
+	if mode_button:
+		mode_button.pressed.connect(_on_mode_button_pressed)
 	if start_button:
 		start_button.pressed.connect(_on_start_pressed)
 	if back_button:
@@ -40,10 +43,10 @@ func _ready() -> void:
 	
 	if sector_option:
 		sector_option.clear()
-		sector_option.add_item("SECTOR 01: OUTPOST QUARANTINE (3 WAVES)", 1)
-		sector_option.add_item("SECTOR 02: THE DEAD HIGHWAY (4 WAVES)", 2)
-		sector_option.add_item("SECTOR 03: INDUSTRIAL SLAUGHTERHOUSE (4 WAVES)", 3)
-		sector_option.add_item("SECTOR 04: CONTAINMENT DEPOT (5 WAVES)", 4)
+		sector_option.add_item("SECTOR 01: QUARANTINE (3 WAVES)", 1)
+		sector_option.add_item("SECTOR 02: THE STREET (4 WAVES)", 2)
+		sector_option.add_item("SECTOR 03: NO EXIT (5 WAVES)", 3)
+		sector_option.add_item("SECTOR 04: THE DEPOT (5 WAVES)", 4)
 		sector_option.add_item("SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES)", 5)
 		sector_option.select(0)
 	
@@ -61,6 +64,8 @@ func _ready() -> void:
 			net_mgr.peer_disconnected.connect(_on_peer_updated)
 		if not net_mgr.server_disconnected.is_connected(_on_server_disconnected):
 			net_mgr.server_disconnected.connect(_on_server_disconnected)
+		if net_mgr.has_signal("game_mode_changed") and not net_mgr.game_mode_changed.is_connected(_on_game_mode_changed):
+			net_mgr.game_mode_changed.connect(_on_game_mode_changed)
 	
 	_refresh_ui_state()
 
@@ -127,6 +132,34 @@ func _refresh_ui_state() -> void:
 		_update_players_display(net_mgr.connected_peers)
 	else:
 		_update_players_display([])
+	
+	if mode_button:
+		var mode_name: String = net_mgr.current_game_mode if (net_mgr and "current_game_mode" in net_mgr) else "campaign"
+		if mode_name == "survival":
+			mode_button.text = "🔥 ENDLESS SURVIVAL SWARMS (RECORD DEFENSE) 🔥"
+			mode_button.add_theme_color_override("font_color", Color(1.0, 0.55, 0.20))
+		else:
+			mode_button.text = "CAMPAIGN MISSION (CLEAR SECTOR WAVES)"
+			mode_button.add_theme_color_override("font_color", Color(0.95, 0.90, 0.85))
+		
+		# Only host or unjoined player can toggle the match mode
+		mode_button.disabled = (not am_host and in_session)
+
+func _on_mode_button_pressed() -> void:
+	var net_mgr := _get_network_manager()
+	if not net_mgr:
+		return
+	if net_mgr.connected_peers.size() > 0 and not net_mgr.is_host:
+		return
+	
+	var new_mode := "survival" if net_mgr.current_game_mode == "campaign" else "campaign"
+	net_mgr.current_game_mode = new_mode
+	if net_mgr.is_host and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		net_mgr.rpc_set_game_mode.rpc(new_mode)
+	_refresh_ui_state()
+
+func _on_game_mode_changed(_mode_name: String) -> void:
+	_refresh_ui_state()
 
 func _on_host_pressed() -> void:
 	var port := 7777
@@ -180,7 +213,7 @@ func _on_start_pressed() -> void:
 		lvl_id = sector_option.get_item_id(idx)
 	
 	if net_mgr.has_method("rpc_start_coop_mission"):
-		net_mgr.rpc_start_coop_mission.rpc(lvl_id)
+		net_mgr.rpc_start_coop_mission.rpc(lvl_id, net_mgr.current_game_mode)
 
 func _on_back_pressed() -> void:
 	var net_mgr := _get_network_manager()

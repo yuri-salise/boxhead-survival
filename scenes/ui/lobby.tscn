@@ -209,6 +209,23 @@ text = "CONNECT TO HOST"
 [node name="HSeparator3" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=866123437]
 layout_mode = 2
 
+[node name="ModeRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=766123499]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ModeLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow" unique_id=666123498]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_elite")
+theme_override_font_sizes/font_size = 13
+text = "MISSION TYPE:"
+
+[node name="ModeButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow" unique_id=566123497]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "CAMPAIGN MISSION (CLEAR SECTOR)"
+
 [node name="SectorRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=766123436]
 layout_mode = 2
 theme_override_constants/separation = 12
@@ -238,7 +255,7 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
-text = "SURVIVORS READY: 0 / 2"
+text = "SURVIVORS READY: 0 / 4"
 horizontal_alignment = 1
 
 [node name="HSeparator4" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=266123431]
@@ -253,7 +270,7 @@ custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
-text = "WAITING FOR 2ND SURVIVOR..."
+text = "WAITING FOR SQUADMATES..."
 
 [node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow" unique_id=855123428]
 custom_minimum_size = Vector2(220, 52)

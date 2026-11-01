@@ -7,6 +7,7 @@ signal peer_disconnected(id: int)
 signal server_disconnected()
 signal status_changed(message: String)
 signal game_started(level_id: int)
+signal game_mode_changed(mode_name: String)
 
 const DEFAULT_PORT: int = 7777
 const MAX_CLIENTS: int = 3 # 4-player Squad Co-op: Host (1) + up to 3 Guests (4 survivors total)
@@ -19,6 +20,7 @@ var is_connecting: bool = false
 var connection_timer: float = 0.0
 var connected_peers: Array[int] = []
 var selected_level_id: int = 1
+var current_game_mode: String = "campaign"
 
 func _ready() -> void:
 	# Keep NetworkManager processing across scene changes and pauses
@@ -203,6 +205,8 @@ func _on_peer_connected(id: int) -> void:
 		connected_peers.append(id)
 	status_changed.emit("Survivor (Peer " + str(id) + ") connected.")
 	peer_connected.emit(id)
+	if is_host and id != 1:
+		rpc_set_game_mode.rpc_id(id, current_game_mode)
 
 func _on_peer_disconnected(id: int) -> void:
 	if id in connected_peers:
@@ -238,7 +242,17 @@ func _handle_connection_timeout() -> void:
 	connection_failed.emit(msg)
 
 @rpc("authority", "call_local", "reliable")
-func rpc_start_coop_mission(level_id: int) -> void:
+func rpc_set_game_mode(mode_name: String) -> void:
+	var sender_id: int = 0
+	if is_inside_tree() and multiplayer != null and multiplayer.has_multiplayer_peer():
+		sender_id = multiplayer.get_remote_sender_id()
+	if sender_id != 0 and sender_id != 1:
+		return
+	current_game_mode = mode_name
+	game_mode_changed.emit(mode_name)
+
+@rpc("authority", "call_local", "reliable")
+func rpc_start_coop_mission(level_id: int, mode_name: String = "campaign") -> void:
 	var sender_id: int = 0
 	if is_inside_tree() and multiplayer != null and multiplayer.has_multiplayer_peer():
 		sender_id = multiplayer.get_remote_sender_id()
@@ -248,9 +262,10 @@ func rpc_start_coop_mission(level_id: int) -> void:
 		return
 	
 	selected_level_id = level_id
+	current_game_mode = mode_name
 	var gs := get_node_or_null("/root/GameState")
 	if gs:
-		gs.selected_mode = "online"
+		gs.selected_mode = "survival" if mode_name == "survival" else "online"
 		gs.current_level = level_id
 	
 	game_started.emit(level_id)
