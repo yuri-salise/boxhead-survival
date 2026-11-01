@@ -62,6 +62,26 @@ class ZombieTestRunner extends Node2D:
 		dummy_player.queue_free()
 		zombie.queue_free()
 		
+		# Test all 7 New Scary Zombie Variants + Audio Assets + Player Edge Bonuses
+		var expected_scary_variants := [
+			{"type": 6, "name": "SCREAMER", "sfx": "res://assets/audio/sfx_screamer.wav"},
+			{"type": 7, "name": "STALKER", "sfx": "res://assets/audio/sfx_stalker.wav"},
+			{"type": 8, "name": "LEAPER", "sfx": "res://assets/audio/sfx_leaper.wav"},
+			{"type": 9, "name": "BRUTE", "sfx": "res://assets/audio/sfx_brute.wav"},
+			{"type": 10, "name": "PARASITE", "sfx": "res://assets/audio/sfx_parasite.wav"},
+			{"type": 11, "name": "BUTCHER", "sfx": "res://assets/audio/sfx_butcher.wav"},
+			{"type": 12, "name": "PHANTOM", "sfx": "res://assets/audio/sfx_phantom.wav"}
+		]
+		for v in expected_scary_variants:
+			assert(FileAccess.file_exists(v["sfx"]), "Missing scary zombie audio file: " + str(v["sfx"]))
+			var sz = zombie_scene.instantiate()
+			add_child(sz)
+			sz.configure_type(int(v["type"]))
+			assert(sz.get_type_name() == v["name"], "Scary zombie type name mismatch for " + str(v["name"]))
+			assert(sz.max_health > 0.0, "Scary zombie max_health must be positive")
+			sz.queue_free()
+		print("7 Scary Zombie Variants & Audio Files: PASS")
+		
 		print("ALL ZOMBIE TESTS PASSED!")
 		get_tree().quit(0)
 

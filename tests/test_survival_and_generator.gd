@@ -67,6 +67,14 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		assert(vignette.active_witches.size() == 2, "vignette must register active witches for glowing eyes")
 		assert(vignette.active_witches[1]["is_enraged"] == true, "enraged witch status must be preserved")
 		
+		# Test Ally & Turret Flashlight Cones in Darkness Shader
+		var sample_allies: Array = [
+			{"world_pos": Vector2(710, 360), "angle": 0.4},
+			{"world_pos": Vector2(580, 420), "angle": -1.1}
+		]
+		vignette.update_ally_flashlights(sample_allies, Vector2(640, 360))
+		assert(vignette.ally_flashlights.size() == 2, "vignette must track ally/turret flashlight cones")
+		
 		arena.queue_free()
 		vignette.queue_free()
 		print("  -> Ambient Obstacle Lights & Witch Eyes: PASS")
@@ -111,8 +119,43 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		# Starting an already running generator returns false
 		assert(gen.start_generator() == false, "start_generator() should return false when already running")
 		
+		# Test Generator Fuel Countdown -> Depletion -> Fuel Truck Gasoline -> 3s Restart
+		gen._process(gen.fuel_duration + 0.5)
+		assert(gen.is_running == false, "Generator must shut down when fuel timer expires")
+		assert(gen.has_fuel == false, "Generator has_fuel must be false after fuel depletion")
+		
+		var TruckScene = load("res://scenes/actors/fuel_truck.tscn")
+		assert(TruckScene != null, "fuel_truck.tscn must load")
+		var truck = TruckScene.instantiate()
+		add_child(truck)
+		assert(truck.is_in_group("fuel_trucks"), "FuelTruck must be in fuel_trucks group")
+		
+		var PlayerScene = load("res://scenes/actors/player.tscn")
+		var dummy_p = PlayerScene.instantiate()
+		add_child(dummy_p)
+		assert(dummy_p.has_gasoline == false, "Player starts without gasoline")
+		assert(gen.can_interact(dummy_p) == false, "Depleted generator requires player to have gasoline")
+		
+		var got_gas: bool = truck.interact(dummy_p)
+		assert(got_gas == true, "FuelTruck interact must grant gasoline to player")
+		assert(dummy_p.has_gasoline == true, "Player has_gasoline must be true after FuelTruck interaction")
+		assert(gen.can_interact(dummy_p) == true, "Depleted generator can_interact must be true when player has gasoline")
+		
+		var refuel_ok: bool = gen.interact(dummy_p)
+		assert(refuel_ok == true, "Generator refuel interaction must succeed")
+		assert(dummy_p.has_gasoline == false, "Gasoline canister must be consumed upon refueling generator")
+		assert(gen.is_starting == true, "Generator must enter 3-second startup sequence")
+		assert(is_equal_approx(gen.startup_time_left, 3.0), "Generator startup timer must be 3.0 seconds")
+		
+		gen._process(1.5)
+		assert(gen.is_starting == true and gen.is_running == false, "Generator still starting at 1.5s")
+		gen._process(1.6)
+		assert(gen.is_starting == false and gen.is_running == true, "Generator must turn on after 3.0 seconds")
+		
+		dummy_p.queue_free()
+		truck.queue_free()
 		gen.queue_free()
-		print("  -> Generator Activation & Floodlight: PASS")
+		print("  -> Generator Activation, Fuel Timer, Fuel Truck & 3s Restart: PASS")
 
 	func _test_blood_decal_decay() -> void:
 		print("Test 3: Blood Decal & Severed Limb Lifetime Decay...")
