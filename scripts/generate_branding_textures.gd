@@ -41,15 +41,15 @@ func _init() -> void:
 	# Blit top and bottom hazard borders
 	for x in range(1280):
 		for y in range(12):
-			var stripe = ((x + y) / 16) % 2 == 0
+			var stripe = int(float(x + y) / 16.0) % 2 == 0
 			var hc = Color(0.85, 0.47, 0.02, 0.8) if stripe else Color(0.08, 0.09, 0.10, 0.9)
 			splash.set_pixel(x, y, hc)
 			splash.set_pixel(x, 719 - y, hc)
 
 	# Blit centered logo if available
 	if logo_img != null:
-		var lx = (1280 - logo_img.get_width()) / 2
-		var ly = (720 - logo_img.get_height()) / 2 - 20
+		var lx = int(float(1280 - logo_img.get_width()) / 2.0)
+		var ly = int(float(720 - logo_img.get_height()) / 2.0) - 20
 		splash.blend_rect(logo_img, Rect2i(0, 0, logo_img.get_width(), logo_img.get_height()), Vector2i(lx, ly))
 
 	var splash_err = splash.save_png("res://assets/art/boot_splash.png")
