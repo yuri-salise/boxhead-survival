@@ -106,7 +106,9 @@ func _generate_endless_wave_config(wave_idx: int) -> Dictionary:
 	var max_conc := mini(24, 7 + wave_num * 2)
 	var interval := maxf(0.50, 1.45 - wave_num * 0.05)
 	var boss_type := -1
-	if wave_num % 5 == 0:
+	if wave_num % 6 == 0:
+		boss_type = 13 # Necro + 7 Witches Coven Boss every 6 waves
+	elif wave_num % 5 == 0:
 		boss_type = 3 # Tanker Boss every 5 waves
 	elif wave_num % 4 == 0:
 		boss_type = 9 if (wave_num % 8 == 0) else 11 # Brute or Butcher
@@ -274,10 +276,12 @@ func _pick_enemy_type_for_current_wave() -> int:
 			return 10 # PARASITE
 		elif roll < 0.96:
 			return 11 # BUTCHER
-		elif roll < 0.985:
+		elif roll < 0.98:
 			return 12 # PHANTOM
-		else:
+		elif roll < 0.992:
 			return 3 # TANK
+		else:
+			return 13 # NECRO
 
 func notify_enemy_killed() -> void:
 	if not is_wave_active and not is_intermission:

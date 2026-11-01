@@ -395,15 +395,15 @@ func _get_preset_waves_for_level(lvl_id: int) -> Array[Dictionary]:
 				{"total_enemies": 12, "spawn_interval": 1.05, "max_concurrent": 12, "intermission": 2.2, "guaranteed_boss": 5},
 				{"total_enemies": 14, "spawn_interval": 0.95, "max_concurrent": 14, "intermission": 2.2, "guaranteed_boss": 3},
 				{"total_enemies": 16, "spawn_interval": 0.85, "max_concurrent": 16, "intermission": 2.4, "guaranteed_boss": 5},
-				{"total_enemies": 20, "spawn_interval": 0.78, "max_concurrent": 18, "intermission": 2.5, "guaranteed_boss": 3}
+				{"total_enemies": 20, "spawn_interval": 0.78, "max_concurrent": 18, "intermission": 2.5, "guaranteed_boss": 13}
 			]
 		5:
 			return [
 				{"total_enemies": 12, "spawn_interval": 1.10, "max_concurrent": 12, "intermission": 2.0, "guaranteed_boss": 5},
 				{"total_enemies": 15, "spawn_interval": 0.98, "max_concurrent": 14, "intermission": 2.2, "guaranteed_boss": 3},
-				{"total_enemies": 18, "spawn_interval": 0.88, "max_concurrent": 16, "intermission": 2.2, "guaranteed_boss": 5},
+				{"total_enemies": 18, "spawn_interval": 0.88, "max_concurrent": 16, "intermission": 2.2, "guaranteed_boss": 13},
 				{"total_enemies": 20, "spawn_interval": 0.78, "max_concurrent": 18, "intermission": 2.4, "guaranteed_boss": 3},
-				{"total_enemies": 24, "spawn_interval": 0.70, "max_concurrent": 20, "intermission": 2.5, "guaranteed_boss": 3}
+				{"total_enemies": 24, "spawn_interval": 0.70, "max_concurrent": 20, "intermission": 2.5, "guaranteed_boss": 13}
 			]
 		_:
 			return []
@@ -551,8 +551,8 @@ func _process(delta: float) -> void:
 				if is_instance_valid(arena_env) and arena_env.has_method("get_ambient_lights"):
 					var env_lights: Array = arena_env.get_ambient_lights(lp.global_position, 850.0)
 					env_lights.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-						var pa: Vector2 = a.get("pos", Vector2.ZERO)
-						var pb: Vector2 = b.get("pos", Vector2.ZERO)
+						var pa: Vector2 = a.get("world_pos", a.get("pos", Vector2.ZERO))
+						var pb: Vector2 = b.get("world_pos", b.get("pos", Vector2.ZERO))
 						return lp.global_position.distance_squared_to(pa) < lp.global_position.distance_squared_to(pb)
 					)
 					ambients.append_array(env_lights)
@@ -635,7 +635,7 @@ func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int 
 	
 	var gs := get_node_or_null("/root/GameState")
 	var is_survival: bool = (gs != null and gs.selected_mode == "survival")
-	var decal_limit := 48 if is_survival else 75
+	var decal_limit := 24 if is_survival else 36
 	
 	if blood_container.get_child_count() >= decal_limit:
 		var oldest := blood_container.get_child(0)
@@ -647,7 +647,7 @@ func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int 
 	blood_container.add_child(decal)
 	decal.setup(world_pos, hit_dir, splatter_type, scale_mult, active_splash)
 	if is_survival and decal.has_method("set_lifetime"):
-		decal.set_lifetime(7.5)
+		decal.set_lifetime(6.5)
 	return decal
 
 func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, skin_color: Color, scale_mult: float = 1.0) -> Node2D:
@@ -656,7 +656,7 @@ func spawn_severed_limb(world_pos: Vector2, hit_dir: Vector2, limb_kind: int, sk
 	
 	var gs := get_node_or_null("/root/GameState")
 	var is_survival: bool = (gs != null and gs.selected_mode == "survival")
-	var decal_limit := 48 if is_survival else 75
+	var decal_limit := 24 if is_survival else 36
 	
 	if blood_container.get_child_count() >= decal_limit:
 		var oldest := blood_container.get_child(0)
@@ -994,6 +994,9 @@ func _announce_special_spawn(enemy_type: int) -> void:
 		ZombieScript.ZombieType.PHANTOM:
 			if audio_mgr: audio_mgr.play_sfx("sfx_phantom")
 			spawn_floating_text(player.global_position + Vector2(0, -48), "! PHANTOM WRAITH PHASE-SHIFTING !", Color(0.35, 1.0, 0.95))
+		ZombieScript.ZombieType.NECRO:
+			if audio_mgr: audio_mgr.play_sfx("sfx_necro")
+			spawn_floating_text(player.global_position + Vector2(0, -48), "☠️ NECRO & 7 WITCHES COVEN BREACHED PERIMETER! ☠️", Color(0.18, 1.0, 0.28))
 
 func _on_wave_completed(wave_num: int, total_waves: int) -> void:
 	var is_endless: bool = (total_waves <= 0)
@@ -1178,7 +1181,27 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_ne
 	
 	if is_instance_valid(player):
 		zombie.set_target(player)
+	
+	# NECRO Boss Variant: Automatically spawns with a coven of 7 Witches orbiting around her!
+	var spawned_type: int = forced_type if forced_type >= 0 else int(zombie.get("zombie_type"))
+	if spawned_type == ZombieScript.ZombieType.NECRO and override_net_id <= 0:
+		_spawn_necro_witch_coven(zombie)
+	
 	return zombie
+
+func _spawn_necro_witch_coven(necro_zombie: Node2D) -> void:
+	if not is_instance_valid(necro_zombie) or not zombie_container:
+		return
+	var coven_refs: Array[Node2D] = []
+	for i in range(7):
+		var ang := (TAU * float(i)) / 7.0
+		var w_pos: Vector2 = necro_zombie.global_position + Vector2.from_angle(ang) * 76.0
+		var witch := spawn_test_zombie_at(w_pos, ZombieScript.ZombieType.WITCH)
+		if is_instance_valid(witch):
+			if witch.has_method("set_coven_leader"):
+				witch.set_coven_leader(necro_zombie, i, 7)
+			coven_refs.append(witch)
+	necro_zombie.set_meta("witch_coven", coven_refs)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_spawn_zombie(z_id: int, z_type: int, spawn_pos: Vector2) -> void:
@@ -1276,34 +1299,38 @@ func rpc_zombie_died(z_id: int, p_kills: int, p_score: int) -> void:
 func _pick_zombie_type_for_spawn() -> int:
 	total_spawned += 1
 	# Guarantee periodic special & scary infected variety
+	if total_spawned % 18 == 0:
+		return ZombieScript.ZombieType.NECRO
 	if total_spawned % 12 == 0:
 		return ZombieScript.ZombieType.TANK
 	if total_spawned % 9 == 0:
 		return ZombieScript.ZombieType.WITCH
 	
 	var roll := randf()
-	if roll < 0.30:
+	if roll < 0.28:
 		return ZombieScript.ZombieType.WALKER
-	elif roll < 0.48:
+	elif roll < 0.45:
 		return ZombieScript.ZombieType.RUNNER
-	elif roll < 0.56:
+	elif roll < 0.53:
 		return ZombieScript.ZombieType.BOOMER
-	elif roll < 0.64:
+	elif roll < 0.61:
 		return ZombieScript.ZombieType.SPITTER
-	elif roll < 0.70:
+	elif roll < 0.67:
 		return ZombieScript.ZombieType.SCREAMER
-	elif roll < 0.76:
+	elif roll < 0.73:
 		return ZombieScript.ZombieType.STALKER
-	elif roll < 0.82:
+	elif roll < 0.79:
 		return ZombieScript.ZombieType.LEAPER
-	elif roll < 0.87:
+	elif roll < 0.85:
 		return ZombieScript.ZombieType.BRUTE
-	elif roll < 0.92:
+	elif roll < 0.90:
 		return ZombieScript.ZombieType.PARASITE
-	elif roll < 0.96:
+	elif roll < 0.94:
 		return ZombieScript.ZombieType.BUTCHER
-	else:
+	elif roll < 0.98:
 		return ZombieScript.ZombieType.PHANTOM
+	else:
+		return ZombieScript.ZombieType.NECRO
 
 func _on_spawn_timer_timeout() -> void:
 	if not is_instance_valid(player) or player.is_dead:
@@ -1324,7 +1351,7 @@ func _on_spawn_timer_timeout() -> void:
 func _on_zombie_drop_requested(world_pos: Vector2, z_type_name: String) -> void:
 	# Special infected have high/guaranteed supply drop chances; normal walkers have 35% chance
 	var drop_chance := 0.35
-	if z_type_name in ["TANKER", "WITCH", "BRUTE", "BUTCHER", "PHANTOM"]:
+	if z_type_name in ["TANKER", "WITCH", "BRUTE", "BUTCHER", "PHANTOM", "NECRO"]:
 		drop_chance = 1.0
 	elif z_type_name in ["BOOMER", "SPITTER", "SCREAMER", "STALKER", "LEAPER", "PARASITE"]:
 		drop_chance = 0.78

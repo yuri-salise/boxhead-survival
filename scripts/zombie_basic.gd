@@ -21,7 +21,8 @@ enum ZombieType {
 	BRUTE,
 	PARASITE,
 	BUTCHER,
-	PHANTOM
+	PHANTOM,
+	NECRO
 }
 
 const ZOMBIE_CONFIGS: Dictionary = {
@@ -169,6 +170,19 @@ const ZOMBIE_CONFIGS: Dictionary = {
 		"skin": Color(0.26, 0.48, 0.46, 1.0),
 		"sfx": "sfx_phantom",
 		"eye_color": Color(0.20, 1.0, 0.65, 1.0)
+	},
+	ZombieType.NECRO: {
+		"name": "NECRO",
+		"hp": 550.0,
+		"speed": 106.0,
+		"damage": 44.0,
+		"cooldown": 0.78,
+		"scale": 1.68,
+		"score": 160,
+		"skin": Color(0.84, 0.08, 0.12, 1.0),
+		"sfx": "sfx_necro",
+		"eye_color": Color(0.15, 1.0, 0.25, 1.0),
+		"passive_heal_rate": 16.0
 	}
 }
 
@@ -212,6 +226,15 @@ var knockback_velocity: Vector2 = Vector2.ZERO
 var last_hit_dir: Vector2 = Vector2.RIGHT
 var terrain_speed_mult: float = 1.0
 var terrain_check_timer: float = 999.0
+var redraw_accum: float = 0.0
+var target_search_timer: float = 999.0
+
+# Necro Boss & 7-Witch Coven escort state
+var passive_heal_rate: float = 0.0
+var heal_pulse_timer: float = 0.0
+var necro_leader: Node2D = null
+var coven_index: int = 0
+var coven_total: int = 7
 
 @onready var visuals: Node2D = $Visuals
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -227,6 +250,11 @@ func _ready() -> void:
 			if child is ColorRect:
 				child.visible = false
 
+func set_coven_leader(leader: Node2D, slot_idx: int, total_slots: int = 7) -> void:
+	necro_leader = leader
+	coven_index = slot_idx
+	coven_total = max(1, total_slots)
+
 func configure_type(p_type: int) -> void:
 	zombie_type = p_type
 	var cfg: Dictionary = ZOMBIE_CONFIGS.get(zombie_type, ZOMBIE_CONFIGS[ZombieType.WALKER])
@@ -236,6 +264,8 @@ func configure_type(p_type: int) -> void:
 	attack_damage = float(cfg["damage"])
 	attack_cooldown = float(cfg["cooldown"])
 	score_value = int(cfg["score"])
+	passive_heal_rate = float(cfg.get("passive_heal_rate", 0.0))
+	heal_pulse_timer = 0.0
 	is_enraged = false
 	ability_cooldown = randf_range(0.8, 1.8)
 	vocal_timer = randf_range(1.2, 3.0)
@@ -275,8 +305,9 @@ func _physics_process(delta: float) -> void:
 	knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, 650.0 * delta)
 	
 	if is_dead:
-		queue_redraw()
 		return
+	
+	redraw_accum += delta
 	
 	if is_network_puppet:
 		if target_sync_pos != Vector2.ZERO:
@@ -286,16 +317,40 @@ func _physics_process(delta: float) -> void:
 				global_position = global_position.lerp(target_sync_pos, minf(1.0, delta * 15.0))
 		if visuals:
 			visuals.rotation = lerp_angle(visuals.rotation, target_sync_rot, minf(1.0, delta * 15.0))
-		if velocity.length_squared() > 4.0 or hurt_flash_timer > 0.0 or is_enraged or not has_legs:
+		if redraw_accum >= 0.055 or hurt_flash_timer > 0.0:
+			redraw_accum = 0.0
 			queue_redraw()
 		return
 	
-	if not is_instance_valid(target_player) or (target_player.get("is_dead") == true):
+	# 13. NECRO: Passive necromantic HP regeneration while alive
+	if passive_heal_rate > 0.0 and current_health > 0.0 and current_health < max_health:
+		current_health = minf(max_health, current_health + passive_heal_rate * delta)
+		heal_pulse_timer += delta
+		if heal_pulse_timer >= 1.25:
+			heal_pulse_timer = 0.0
+			var scene := get_tree().current_scene if get_tree() else null
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position + Vector2(0, -34), "+16 NECRO REGEN", Color(0.18, 1.0, 0.28))
+			queue_redraw()
+	
+	target_search_timer += delta
+	if not is_instance_valid(target_player) or (target_player.get("is_dead") == true) or target_search_timer >= 0.25:
+		target_search_timer = randf_range(0.0, 0.05)
 		target_player = _find_nearest_living_player()
 	
 	if is_instance_valid(target_player):
 		var dist := global_position.distance_to(target_player.global_position)
 		var dir := get_pursuit_direction()
+		var escorting_necro := false
+		
+		# 7-Witch Coven Formation: Witches orbit and advance around their NECRO leader
+		if zombie_type == ZombieType.WITCH and not is_enraged and is_instance_valid(necro_leader) and necro_leader.get("is_dead") != true:
+			escorting_necro = true
+			var orbit_ang := (TAU * float(coven_index) / float(max(1, coven_total))) + anim_time * 0.65
+			var desired_pos: Vector2 = necro_leader.global_position + Vector2.from_angle(orbit_ang) * 76.0
+			var to_slot := desired_pos - global_position
+			if to_slot.length_squared() > 16.0:
+				dir = to_slot.normalized()
 		
 		# Witch startle proximity check
 		if zombie_type == ZombieType.WITCH and not is_enraged and dist < 165.0:
@@ -378,16 +433,18 @@ func _physics_process(delta: float) -> void:
 				visuals.rotation = dir.angle()
 			
 			var move_spd := speed
+			if escorting_necro and is_instance_valid(necro_leader):
+				move_spd = maxf(speed, float(necro_leader.get("speed")) * 1.15)
 			terrain_check_timer += delta
-			if terrain_check_timer >= 0.20:
+			if terrain_check_timer >= 0.25:
 				terrain_check_timer = randf_range(-0.04, 0.04)
 				var z_parent := get_parent()
 				if z_parent and z_parent.get_parent():
 					var arena = z_parent.get_parent().get_node_or_null("ArenaEnvironment")
 					if arena and arena.has_method("get_speed_multiplier_at"):
 						terrain_speed_mult = arena.get_speed_multiplier_at(global_position)
-			if zombie_type == ZombieType.PHANTOM:
-				terrain_speed_mult = 1.0 # Phantom floats over mud and craters
+			if zombie_type == ZombieType.PHANTOM or zombie_type == ZombieType.NECRO:
+				terrain_speed_mult = 1.0 # Phantom & Necro glide over mud and craters
 			move_spd *= terrain_speed_mult
 			if zombie_type == ZombieType.STALKER and modulate.a > 0.85 and not is_enraged:
 				move_spd *= 0.72 # Flashlight beam burns & slows the Stalker (Player Edge!)
@@ -408,9 +465,11 @@ func _physics_process(delta: float) -> void:
 				var collider := collision.get_collider()
 				if is_instance_valid(collider) and collider.is_in_group("players"):
 					try_attack_target(collider)
-	
-	if not is_dead and (velocity.length_squared() > 4.0 or hurt_flash_timer > 0.0 or is_enraged or not has_legs):
-		queue_redraw()
+		
+		# Performance: throttle procedural _draw() to ~18 Hz and skip off-screen zombies (>820px away)
+		if dist < 820.0 and (redraw_accum >= 0.055 or hurt_flash_timer > 0.0):
+			redraw_accum = 0.0
+			queue_redraw()
 
 func _trigger_witch_enrage() -> void:
 	if is_enraged:
@@ -430,7 +489,7 @@ func _fire_acid_spit(dir: Vector2) -> void:
 	spit.init(global_position + dir * 20.0, dir, 440.0, 14.0, self, 1, Color(0.45, 0.95, 0.18), true)
 
 func apply_hit_impulse(impulse: Vector2) -> void:
-	var resist := 0.25 if zombie_type == ZombieType.TANK else 1.0
+	var resist := 0.20 if zombie_type == ZombieType.NECRO else (0.25 if zombie_type == ZombieType.TANK else 1.0)
 	knockback_velocity = impulse * resist
 	if impulse != Vector2.ZERO:
 		last_hit_dir = impulse.normalized()
@@ -720,6 +779,23 @@ func _grant_player_edge_bonus() -> void:
 							z.take_damage(28.0)
 			if scene and scene.has_method("spawn_floating_text"):
 				scene.spawn_floating_text(global_position, "👻 SOUL FLARE: +15 HP / +15 ARMOR", Color(0.40, 1.0, 0.95))
+		
+		ZombieType.NECRO:
+			# Necromancer Apex Edge: +60 HP, +50 Armor, Full Ammo Refill, & Coven Banish Shockwave!
+			if p.has_method("heal"):
+				p.heal(60.0)
+			if p.has_method("add_armor"):
+				p.add_armor(50.0)
+			var wc = p.get_node_or_null("WeaponController")
+			if wc and wc.has_method("refill_all_unlocked_ammo"):
+				wc.refill_all_unlocked_ammo()
+			if get_parent():
+				for z in get_parent().get_children():
+					if z != self and is_instance_valid(z) and z.get("is_dead") != true and z.has_method("take_damage"):
+						if global_position.distance_to(z.global_position) <= 190.0:
+							z.take_damage(45.0)
+			if scene and scene.has_method("spawn_floating_text"):
+				scene.spawn_floating_text(global_position, "☠️ NECRO VANQUISHED: +60 HP, +50 ARMOR & FULL AMMO!", Color(0.18, 1.0, 0.28))
 
 func _draw_arm_or_stump(start_p: Vector2, end_p: Vector2, arm_col: Color, width: float, claw_col: Color, claw_r: float, is_present: bool) -> void:
 	if is_present:
@@ -747,6 +823,11 @@ func _draw() -> void:
 	if zombie_type == ZombieType.WITCH:
 		var ring_col := Color(0.95, 0.15, 0.15, 0.45) if is_enraged else Color(0.85, 0.25, 0.25, 0.18 + 0.10 * sin(anim_time * 4.0))
 		draw_arc(Vector2.ZERO, 24.0 if is_enraged else 38.0, 0.0, TAU, 28, ring_col, 2.0)
+	elif zombie_type == ZombieType.NECRO:
+		# Glowing toxic green necromantic ritual sigil & healing aura around Necro
+		var aura_pulse := 0.38 + 0.22 * sin(anim_time * 5.0)
+		draw_arc(Vector2.ZERO, 34.0 * sc, 0.0, TAU, 24, Color(0.15, 1.0, 0.25, aura_pulse), 2.5)
+		draw_arc(Vector2.ZERO, 22.0 * sc, 0.0, TAU, 16, Color(0.88, 0.10, 0.14, aura_pulse * 0.85), 2.0)
 	
 	draw_set_transform(Vector2.ZERO, rot, Vector2(sc, sc))
 	
@@ -945,6 +1026,31 @@ func _draw() -> void:
 				draw_circle(Vector2(3, 0), 7.8, Color(0.10, 0.18, 0.22, 0.95))
 				draw_circle(Vector2(8, -2.8), 2.1, Color(0.35, 1.0, 0.95, 1.0))
 				draw_circle(Vector2(8, 2.8), 2.1, Color(0.35, 1.0, 0.95, 1.0))
+		
+		ZombieType.NECRO:
+			# 13. NECRO: Crimson blood-red Necromancer Sovereign with glowing toxic-green core, claws & eyes
+			var necro_red := Color(0.84, 0.08, 0.12, 1.0) if hurt_flash_timer <= 0.0 else Color(0.35, 1.0, 0.45, 1.0)
+			var glow_green := Color(0.15, 1.0, 0.25, 0.95)
+			draw_circle(Vector2(0, 0), 18.0, Color(0.15, 1.0, 0.25, 0.22 + 0.10 * sin(anim_time * 6.0)))
+			_draw_arm_or_stump(Vector2(3, -13), Vector2(23, -8 + sway * 0.5), necro_red, 6.2, glow_green, 4.4, has_left_arm)
+			_draw_arm_or_stump(Vector2(3, 13), Vector2(23, 8 - sway * 0.5), necro_red, 6.2, glow_green, 4.4, has_right_arm)
+			var robe_pts := PackedVector2Array([
+				Vector2(-16, -15), Vector2(10, -13), Vector2(13, 0), Vector2(10, 13), Vector2(-16, 15), Vector2(-11, 0)
+			])
+			draw_colored_polygon(robe_pts, necro_red)
+			draw_polyline(robe_pts + PackedVector2Array([robe_pts[0]]), glow_green, 1.8)
+			# Glowing green necromantic heart sigil on chest
+			draw_circle(Vector2(-2, 0), 4.8, glow_green)
+			if has_head:
+				draw_circle(Vector2(5, 0), 8.2, Color(0.68, 0.05, 0.09, 1.0))
+				# Horned crimson crown with glowing green tips
+				draw_line(Vector2(2, -6), Vector2(-4, -12), necro_red, 2.6)
+				draw_line(Vector2(2, 6), Vector2(-4, 12), necro_red, 2.6)
+				draw_circle(Vector2(-4, -12), 2.0, glow_green)
+				draw_circle(Vector2(-4, 12), 2.0, glow_green)
+				# Blazing toxic green eyes
+				draw_circle(Vector2(9.5, -3.0), 2.4, glow_green)
+				draw_circle(Vector2(9.5, 3.0), 2.4, glow_green)
 	
 	# Draw visible bullet wounds & exposed white ribs on damaged zombie torso
 	for w in torso_wounds:
@@ -954,11 +1060,11 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	
 	# Draw Overhead Health Bar when damaged or for Elite/Boss variants
-	if not is_dead and (current_health < max_health or zombie_type in [ZombieType.TANK, ZombieType.WITCH, ZombieType.BRUTE, ZombieType.BUTCHER, ZombieType.PHANTOM]):
+	if not is_dead and (current_health < max_health or zombie_type in [ZombieType.TANK, ZombieType.WITCH, ZombieType.BRUTE, ZombieType.BUTCHER, ZombieType.PHANTOM, ZombieType.NECRO]):
 		var bar_w := 32.0 * sc
 		var bar_h := 4.5
 		var bar_pos := Vector2(-bar_w * 0.5, -24.0 * sc)
 		var ratio := clampf(current_health / maxf(1.0, max_health), 0.0, 1.0)
 		draw_rect(Rect2(bar_pos, Vector2(bar_w, bar_h)), Color(0.08, 0.08, 0.10, 0.85), true)
-		var fill_c := Color(0.85, 0.20, 0.20, 0.95) if zombie_type != ZombieType.BOOMER else Color(0.55, 0.85, 0.20, 0.95)
+		var fill_c := Color(0.18, 1.0, 0.28, 0.98) if zombie_type == ZombieType.NECRO else (Color(0.85, 0.20, 0.20, 0.95) if zombie_type != ZombieType.BOOMER else Color(0.55, 0.85, 0.20, 0.95))
 		draw_rect(Rect2(bar_pos, Vector2(bar_w * ratio, bar_h)), fill_c, true)
