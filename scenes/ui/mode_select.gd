@@ -24,11 +24,11 @@ func _ready() -> void:
 		ai_btn.name = "AiCompanionToggleButton"
 		ai_btn.custom_minimum_size = Vector2(0, 40)
 		var update_ai_text := func():
-			var on := bool(gs.get("ai_companion_enabled"))
+			var on: bool = (gs.get("ai_companion_enabled") == true)
 			ai_btn.text = "OFFLINE AI SQUADMATE: " + ("ENABLED (BRAVO BOT)" if on else "SOLO ONLY (OFF)")
 		update_ai_text.call()
 		ai_btn.pressed.connect(func():
-			gs.ai_companion_enabled = not bool(gs.get("ai_companion_enabled"))
+			gs.ai_companion_enabled = not (gs.get("ai_companion_enabled") == true)
 			gs.save_progress()
 			update_ai_text.call()
 		)

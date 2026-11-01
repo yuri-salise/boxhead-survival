@@ -93,11 +93,11 @@ func _setup_bonus_settings_controls() -> void:
 	
 	var vib_btn := Button.new()
 	vib_btn.name = "VibrationToggle"
-	vib_btn.text = "VIBRATION / HAPTICS: " + ("ENABLED" if bool(gs.get("vibration_enabled")) else "OFF")
+	vib_btn.text = "VIBRATION / HAPTICS: " + ("ENABLED" if (gs.get("vibration_enabled") == true) else "OFF")
 	vib_btn.pressed.connect(func():
-		gs.vibration_enabled = not bool(gs.get("vibration_enabled"))
+		gs.vibration_enabled = not (gs.get("vibration_enabled") == true)
 		gs.save_progress()
-		vib_btn.text = "VIBRATION / HAPTICS: " + ("ENABLED" if bool(gs.get("vibration_enabled")) else "OFF")
+		vib_btn.text = "VIBRATION / HAPTICS: " + ("ENABLED" if (gs.get("vibration_enabled") == true) else "OFF")
 		if gs.vibration_enabled and gs.has_method("trigger_haptic"):
 			gs.trigger_haptic(35)
 	)
@@ -106,11 +106,11 @@ func _setup_bonus_settings_controls() -> void:
 	
 	var cb_btn := Button.new()
 	cb_btn.name = "ColorblindToggle"
-	cb_btn.text = "COLOR-BLIND MARKERS: " + ("ENABLED" if bool(gs.get("colorblind_mode")) else "OFF")
+	cb_btn.text = "COLOR-BLIND MARKERS: " + ("ENABLED" if (gs.get("colorblind_mode") == true) else "OFF")
 	cb_btn.pressed.connect(func():
-		gs.colorblind_mode = not bool(gs.get("colorblind_mode"))
+		gs.colorblind_mode = not (gs.get("colorblind_mode") == true)
 		gs.save_progress()
-		cb_btn.text = "COLOR-BLIND MARKERS: " + ("ENABLED" if bool(gs.get("colorblind_mode")) else "OFF")
+		cb_btn.text = "COLOR-BLIND MARKERS: " + ("ENABLED" if (gs.get("colorblind_mode") == true) else "OFF")
 	)
 	settings_vbox.add_child(cb_btn)
 	settings_vbox.move_child(cb_btn, settings_vbox.get_child_count() - 2)

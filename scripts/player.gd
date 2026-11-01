@@ -595,7 +595,7 @@ func _update_ai_bot_behavior(delta: float) -> void:
 		return
 	var leader: CharacterBody2D = null
 	for p in tree.get_nodes_in_group("players"):
-		if is_instance_valid(p) and p != self and not bool(p.get("is_ai_bot")):
+		if is_instance_valid(p) and p != self and p.get("is_ai_bot") != true:
 			leader = p as CharacterBody2D
 			break
 	if is_downed:
@@ -619,7 +619,7 @@ func _update_ai_bot_behavior(delta: float) -> void:
 		var z_cont := p_parent.get_node_or_null("ZombieContainer")
 		if z_cont:
 			for z in z_cont.get_children():
-				if is_instance_valid(z) and not bool(z.get("is_dead")):
+				if is_instance_valid(z) and z.has_method("take_damage") and z.get("is_dead") != true:
 					var d := global_position.distance_to(z.global_position)
 					if d < closest_z_dist:
 						closest_z_dist = d
@@ -800,6 +800,6 @@ func _draw() -> void:
 		var squad_colors: Array[Color] = [Color(0.95, 0.55, 0.40), Color(0.40, 0.75, 0.95), Color(0.95, 0.40, 0.40), Color(0.95, 0.85, 0.35)]
 		var tag_col: Color = squad_colors[s_idx]
 		var gs := get_node_or_null("/root/GameState")
-		if gs and bool(gs.get("colorblind_mode")):
+		if gs and gs.get("colorblind_mode") == true:
 			draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, Color(0.20, 0.95, 1.0, 0.85) if not is_ai_bot else Color(1.0, 0.90, 0.20, 0.85), 2.4)
 		draw_string(ThemeDB.fallback_font, Vector2(-70, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, tag_col)

@@ -201,7 +201,7 @@ func _pick_enemy_type_for_current_wave() -> int:
 	
 	# Spawn guaranteed boss halfway through the wave (or on last enemy if small wave)
 	if boss_type >= 0 and not boss_spawned_in_wave:
-		if enemies_spawned_in_wave >= int(total_enemies_in_wave / 2) or enemies_spawned_in_wave == total_enemies_in_wave - 1:
+		if enemies_spawned_in_wave >= int(float(total_enemies_in_wave) / 2.0) or enemies_spawned_in_wave == total_enemies_in_wave - 1:
 			boss_spawned_in_wave = true
 			return boss_type
 	

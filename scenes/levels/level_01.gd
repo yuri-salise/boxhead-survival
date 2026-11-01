@@ -178,7 +178,7 @@ func _ready() -> void:
 				if player.weapon_controller and player.weapon_controller.has_method("unlock_or_add_weapon"):
 					player.weapon_controller.unlock_or_add_weapon("SMG")
 				spawn_floating_text(player.global_position + Vector2(0, -82), "★ VETERAN STAR PERK: +50 ARMOR & MP5 SMG ★", Color(1.0, 0.85, 0.25))
-			if bool(gs.get("ai_companion_enabled")):
+			if gs and gs.get("ai_companion_enabled") == true:
 				var bot_scene: PackedScene = load("res://scenes/actors/player.tscn")
 				if bot_scene:
 					var bot: CharacterBody2D = bot_scene.instantiate()
@@ -266,7 +266,7 @@ func _show_level_start_objective_and_tutorial() -> void:
 	var goal_txt := "GOAL: SURVIVE ENDLESS WAVES OF INFECTED" if is_surv else ("GOAL: SURVIVE " + str(total_waves_count) + " WAVES IN SECTOR 0" + str(level_id))
 	if is_instance_valid(player):
 		spawn_floating_text(player.global_position + Vector2(0, -96), "★ " + goal_txt + " ★", Color(0.98, 0.86, 0.30))
-	if level_id == 1 and gs and not bool(gs.get("tutorial_seen")):
+	if level_id == 1 and gs and gs.get("tutorial_seen") != true:
 		gs.tutorial_seen = true
 		gs.save_progress()
 		if is_instance_valid(player):
@@ -778,20 +778,20 @@ func _on_squad_member_died() -> void:
 		_handle_all_players_dead()
 
 func _check_all_players_dead() -> bool:
-	if is_instance_valid(player) and not player.is_dead and not bool(player.get("is_downed")):
+	if is_instance_valid(player) and not player.is_dead and player.get("is_downed") != true:
 		return false
-	if is_instance_valid(player2) and not bool(player2.get("is_ai_bot")) and not player2.is_dead and not bool(player2.get("is_downed")):
+	if is_instance_valid(player2) and player2.get("is_ai_bot") != true and not player2.is_dead and player2.get("is_downed") != true:
 		return false
 	for p_id in squad_peers:
 		var sp: Node = squad_peers[p_id]
-		if is_instance_valid(sp) and not bool(sp.get("is_ai_bot")) and not sp.get("is_dead") and not bool(sp.get("is_downed")):
+		if is_instance_valid(sp) and sp.get("is_ai_bot") != true and sp.get("is_dead") != true and sp.get("is_downed") != true:
 			return false
 	
 	var players := get_tree().get_nodes_in_group("players")
 	for p in players:
-		if is_instance_valid(p) and not bool(p.get("is_ai_bot")):
-			var dead: bool = bool(p.get("is_dead"))
-			var downed: bool = bool(p.get("is_downed"))
+		if is_instance_valid(p) and p.get("is_ai_bot") != true:
+			var dead: bool = (p.get("is_dead") == true)
+			var downed: bool = (p.get("is_downed") == true)
 			if not dead and not downed:
 				return false
 	return true
