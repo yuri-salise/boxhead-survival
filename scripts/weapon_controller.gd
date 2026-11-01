@@ -18,6 +18,8 @@ const WEAPON_SPECS: Dictionary = {
 		"pellets": 1,
 		"spread": 0.03,
 		"pierce": 1,
+		"recoil_shake": 0.65,
+		"max_shake": 1.1,
 		"max_ammo": -1, # Infinite reserve
 		"pickup_ammo": -1,
 		"color": Color(0.98, 0.85, 0.35, 1.0)
@@ -30,6 +32,8 @@ const WEAPON_SPECS: Dictionary = {
 		"pellets": 1,
 		"spread": 0.11,
 		"pierce": 1,
+		"recoil_shake": 0.40,
+		"max_shake": 0.9,
 		"max_ammo": 150,
 		"pickup_ammo": 75,
 		"color": Color(0.98, 0.76, 0.25, 1.0)
@@ -42,6 +46,8 @@ const WEAPON_SPECS: Dictionary = {
 		"pellets": 6,
 		"spread": 0.28,
 		"pierce": 1,
+		"recoil_shake": 3.0,
+		"max_shake": 3.8,
 		"max_ammo": 36,
 		"pickup_ammo": 16,
 		"color": Color(1.0, 0.62, 0.22, 1.0)
@@ -54,6 +60,8 @@ const WEAPON_SPECS: Dictionary = {
 		"pellets": 1,
 		"spread": 0.05,
 		"pierce": 1,
+		"recoil_shake": 0.55,
+		"max_shake": 1.2,
 		"max_ammo": 100,
 		"pickup_ammo": 50,
 		"color": Color(1.0, 0.90, 0.45, 1.0)
@@ -66,6 +74,8 @@ const WEAPON_SPECS: Dictionary = {
 		"pellets": 1,
 		"spread": 0.01,
 		"pierce": 3,
+		"recoil_shake": 2.0,
+		"max_shake": 2.6,
 		"max_ammo": 24,
 		"pickup_ammo": 12,
 		"color": Color(1.0, 0.40, 0.30, 1.0)
@@ -106,9 +116,14 @@ func can_shoot() -> bool:
 	var ammo: int = ammo_counts.get(current_weapon_id, -1)
 	return ammo == -1 or ammo > 0
 
+func get_current_weapon_spec() -> Dictionary:
+	return WEAPON_SPECS.get(current_weapon_id, WEAPON_SPECS["PISTOL"])
+
 func equip_weapon(weapon_id: String) -> bool:
 	if not WEAPON_SPECS.has(weapon_id) or not unlocked_weapons.has(weapon_id):
 		return false
+	if current_weapon_id != weapon_id:
+		cooldown_remaining = 0.0
 	current_weapon_id = weapon_id
 	var spec: Dictionary = WEAPON_SPECS[weapon_id]
 	fire_rate = float(spec["fire_rate"])

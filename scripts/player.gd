@@ -45,12 +45,14 @@ var ghost_trail_points: Array[Dictionary] = []
 var adrenaline_time_left: float = 0.0
 var grenade_count: int = 2
 var max_grenades: int = 5
+var has_gasoline: bool = false
 
 # Animation & visual feedback
 var walk_cycle: float = 0.0
 var muzzle_flash_timer: float = 0.0
 var hurt_flash_timer: float = 0.0
 var camera_shake_strength: float = 0.0
+var last_shot_shake_frame: int = -1
 var player_camera: Camera2D = null
 
 # External input overrides (e.g. mobile virtual sticks or multiplayer sync)
@@ -111,15 +113,35 @@ func _ready() -> void:
 	
 	if weapon_controller and weapon_controller.has_signal("shot_fired"):
 		weapon_controller.shot_fired.connect(_on_weapon_shot_fired)
+	if weapon_controller and weapon_controller.has_signal("weapon_changed"):
+		weapon_controller.weapon_changed.connect(_on_player_weapon_changed)
 
 var muzzle_flash_scene: PackedScene = preload("res://scenes/effects/muzzle_flash.tscn")
 
-func add_camera_shake(intensity: float) -> void:
-	camera_shake_strength = minf(18.0, camera_shake_strength + intensity)
+func add_camera_shake(intensity: float, max_cap: float = 18.0) -> void:
+	camera_shake_strength = minf(max_cap, camera_shake_strength + intensity)
+
+func _on_player_weapon_changed(_w_id: String, _w_name: String, _ammo: int, _max_ammo: int) -> void:
+	camera_shake_strength = 0.0
+	if is_instance_valid(player_camera):
+		player_camera.offset = Vector2.ZERO
+	queue_redraw()
 
 func _on_weapon_shot_fired(_proj: Node2D) -> void:
+	var cur_frame := Engine.get_physics_frames()
+	if cur_frame == last_shot_shake_frame and last_shot_shake_frame >= 0:
+		return
+	last_shot_shake_frame = cur_frame
+	
 	muzzle_flash_timer = 0.06
-	add_camera_shake(2.2)
+	var recoil_shake := 1.0
+	var max_wep_shake := 2.0
+	if weapon_controller and weapon_controller.has_method("get_current_weapon_spec"):
+		var spec: Dictionary = weapon_controller.get_current_weapon_spec()
+		recoil_shake = float(spec.get("recoil_shake", 0.8))
+		max_wep_shake = float(spec.get("max_shake", 1.8))
+	camera_shake_strength = minf(max_wep_shake, camera_shake_strength + recoil_shake)
+	
 	if muzzle_flash_scene and get_parent():
 		var flash := muzzle_flash_scene.instantiate() as Node2D
 		flash.global_position = get_muzzle_position()
@@ -203,7 +225,8 @@ func _physics_process(delta: float) -> void:
 			aim_pos = global_position + stick_aim * 150.0
 			shooting = true
 		else:
-			aim_pos = get_global_mouse_position()
+			var cam_off: Vector2 = player_camera.offset if is_instance_valid(player_camera) else Vector2.ZERO
+			aim_pos = get_global_mouse_position() - cam_off
 			var pointer_on_touch_ui := false
 			if is_instance_valid(touch_controls) and touch_controls.has_method("is_using_touch_input"):
 				pointer_on_touch_ui = touch_controls.is_using_touch_input() or touch_controls._is_point_on_action_buttons(get_viewport().get_mouse_position())
@@ -666,18 +689,18 @@ func _draw() -> void:
 	if not is_dead:
 		var cone_outer := PackedVector2Array([
 			Vector2(14, 0),
-			Vector2(290, -95),
-			Vector2(320, 0),
-			Vector2(290, 95)
+			Vector2(315, -108),
+			Vector2(350, 0),
+			Vector2(315, 108)
 		])
-		draw_colored_polygon(cone_outer, Color(0.96, 0.92, 0.76, 0.065))
+		draw_colored_polygon(cone_outer, Color(0.96, 0.92, 0.76, 0.11 if is_ai_bot else 0.075))
 		var cone_inner := PackedVector2Array([
 			Vector2(14, 0),
-			Vector2(210, -48),
-			Vector2(235, 0),
-			Vector2(210, 48)
+			Vector2(230, -56),
+			Vector2(260, 0),
+			Vector2(230, 56)
 		])
-		draw_colored_polygon(cone_inner, Color(0.98, 0.95, 0.82, 0.085))
+		draw_colored_polygon(cone_inner, Color(0.98, 0.95, 0.82, 0.14 if is_ai_bot else 0.095))
 	
 	# 2. Animated Stepping Boots
 	var leg_stride := sin(walk_cycle) * 6.0 if velocity.length() > 15.0 else 0.0
@@ -712,6 +735,13 @@ func _draw() -> void:
 	
 	# Backpack / Survivor Pack on back
 	draw_rect(Rect2(Vector2(-15, -9), Vector2(6, 18)), Color(0.22, 0.19, 0.15, 1.0), true)
+	
+	# Red Gasoline Jerrycan strapped to pack when carrying fuel
+	if has_gasoline:
+		draw_rect(Rect2(Vector2(-19, -5), Vector2(6, 10)), Color(0.85, 0.16, 0.12, 1.0), true)
+		draw_rect(Rect2(Vector2(-19, -5), Vector2(6, 10)), Color(0.98, 0.82, 0.20, 0.90), false, 1.2)
+		draw_line(Vector2(-18, -3), Vector2(-14, 3), Color(0.98, 0.85, 0.25, 0.90), 1.2)
+		draw_line(Vector2(-18, 3), Vector2(-14, -3), Color(0.98, 0.85, 0.25, 0.90), 1.2)
 	
 	# Kevlar Armor Plate overlay when player has armor
 	if current_armor > 0.0:
@@ -803,3 +833,5 @@ func _draw() -> void:
 		if gs and gs.get("colorblind_mode") == true:
 			draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, Color(0.20, 0.95, 1.0, 0.85) if not is_ai_bot else Color(1.0, 0.90, 0.20, 0.85), 2.4)
 		draw_string(ThemeDB.fallback_font, Vector2(-70, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, tag_col)
+	if has_gasoline and not is_downed:
+		draw_string(ThemeDB.fallback_font, Vector2(-75, -39), "⛽ GASOLINE CAN READY", HORIZONTAL_ALIGNMENT_CENTER, 150, 11, Color(1.0, 0.86, 0.22))
