@@ -609,7 +609,7 @@ func _update_ai_bot_behavior(delta: float) -> void:
 			if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
 				tree.current_scene.spawn_floating_text(leader.global_position + Vector2(0, -52), "★ ALLY BOT MEDIC: +30 HP ★", Color(0.30, 0.95, 0.55))
 	if weapon_controller and weapon_controller.has_method("refill_all_unlocked_ammo"):
-		var cur_ammo: int = int(weapon_controller.ammo_by_weapon.get(weapon_controller.current_weapon_id, 10))
+		var cur_ammo: int = int(weapon_controller.ammo_counts.get(weapon_controller.current_weapon_id, 10)) if "ammo_counts" in weapon_controller else 10
 		if cur_ammo <= 2:
 			weapon_controller.refill_all_unlocked_ammo()
 	var closest_z: Node2D = null

@@ -83,6 +83,9 @@ var ammo_counts: Dictionary = {
 	"ASSAULT_RIFLE": 0,
 	"MAGNUM": 0
 }
+var ammo_by_weapon: Dictionary:
+	get:
+		return ammo_counts
 
 var cooldown_remaining: float = 0.0
 var fire_rate_multiplier: float = 1.0
@@ -156,8 +159,8 @@ func get_current_weapon_display() -> String:
 	return w_name + " [ " + str(ammo) + " / " + str(spec["max_ammo"]) + " ]"
 
 func try_fire(spawn_pos: Vector2, shoot_dir: Vector2, shooter: Node2D) -> Node2D:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if not can_shoot():
-		var audio_mgr := get_node_or_null("/root/AudioManager")
 		if audio_mgr and cooldown_remaining <= 0.0:
 			audio_mgr.play_sfx("sfx_dry_fire")
 		# Auto-fallback to pistol if out of ammo on special weapon
@@ -173,7 +176,6 @@ func try_fire(spawn_pos: Vector2, shoot_dir: Vector2, shooter: Node2D) -> Node2D
 	cooldown_remaining = fire_rate * fire_rate_multiplier
 	
 	# Play authentic sound effect for weapon
-	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		match current_weapon_id:
 			"PISTOL": audio_mgr.play_sfx("sfx_pistol")
