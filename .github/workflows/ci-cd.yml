@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Lint and Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+  deploy:
+    name: Build and Deploy to Server
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [ self-hosted, linux, deploy ]
+    steps:
+      - name: Check out code on server
+        uses: actions/checkout@v4
+
+      - name: Build and start container with Docker Compose
+        env:
+          APP_VERSION: ${{ github.sha }}
+        run: |
+          SHORT_SHA=$(echo "$APP_VERSION" | cut -c1-7)
+          export APP_VERSION=$SHORT_SHA
+          docker compose up -d --build --remove-orphans
+
+      - name: Wait for health check
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          for i in $(seq 1 15); do
+            RESPONSE=$(curl -fsS http://localhost:8080/health || true)
+            echo "Attempt $i: $RESPONSE"
+            if echo "$RESPONSE" | grep -q '"status":"ok"' && echo "$RESPONSE" | grep -q "$SHORT_SHA"; then
+              echo "Deployment verified: version $SHORT_SHA is live."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check failed after 15 attempts."
+          docker compose logs
+          exit 1
+
+      - name: Clean up old dangling images
+        run: docker image prune -f
