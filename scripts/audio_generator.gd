@@ -67,6 +67,27 @@ func _init():
 	# 21. Ambient Combat (Rhythmic tension heartbeat + gritty industrial drone, 6s seamless loop at 120 BPM)
 	_save_wav("res://assets/audio/ambient_combat.wav", _gen_ambient_combat(6.0, sample_rate), sample_rate)
 	
+	# 22. SFX Screamer (Banshee dissonant psychic wail)
+	_save_wav("res://assets/audio/sfx_screamer.wav", _gen_screamer(0.95, sample_rate), sample_rate)
+	
+	# 23. SFX Stalker (Phantom raspy shadow hiss + rattle)
+	_save_wav("res://assets/audio/sfx_stalker.wav", _gen_stalker(0.65, sample_rate), sample_rate)
+	
+	# 24. SFX Leaper (Feral predator snarl + pounce screech)
+	_save_wav("res://assets/audio/sfx_leaper.wav", _gen_leaper(0.55, sample_rate), sample_rate)
+	
+	# 25. SFX Brute (Armored juggernaut metallic bellow)
+	_save_wav("res://assets/audio/sfx_brute.wav", _gen_brute(0.75, sample_rate), sample_rate)
+	
+	# 26. SFX Parasite (Insectoid necro-hive chittering moan)
+	_save_wav("res://assets/audio/sfx_parasite.wav", _gen_parasite(0.70, sample_rate), sample_rate)
+	
+	# 27. SFX Butcher (Grinding bone-cleaver scrape + sadistic roar)
+	_save_wav("res://assets/audio/sfx_butcher.wav", _gen_butcher(0.80, sample_rate), sample_rate)
+	
+	# 28. SFX Phantom (Haunting spectral wail + dark resonance)
+	_save_wav("res://assets/audio/sfx_phantom.wav", _gen_phantom(0.90, sample_rate), sample_rate)
+	
 	print("All Audio Assets generated and saved successfully!")
 	quit(0)
 
@@ -333,6 +354,123 @@ func _gen_ambient_combat(dur: float, s_rate: int) -> PackedByteArray:
 		
 		var sample := clampf((kick + bass_drive + strings + noise) * edge_fade * 0.85, -1.0, 1.0)
 		var s16 := int(clampf(sample * 29000.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_screamer(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI) * exp(-progress * 0.8)
+		var f1 := 1680.0 + sin(t * 48.0) * 420.0 + progress * 380.0
+		var f2 := 2140.0 - cos(t * 62.0) * 310.0
+		var wail := sin(t * f1 * TAU) * 0.55 + sin(t * f2 * TAU) * 0.35 + sin(t * 195.0 * TAU) * 0.25
+		var grit := randf_range(-0.35, 0.35)
+		var sample := clampf((wail + grit) * env * 0.90, -1.0, 1.0)
+		var s16 := int(clampf(sample * 30500.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_stalker(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI) * exp(-progress * 1.4)
+		var rattle := 0.5 + 0.5 * sin(t * 95.0 * TAU)
+		var hiss := randf_range(-0.85, 0.85) * (0.4 + 0.6 * sin(t * 28.0))
+		var whisper := sin(t * (680.0 - progress * 240.0) * TAU) * 0.35 + sin(t * 88.0 * TAU) * 0.40 * rattle
+		var sample := clampf((hiss * 0.55 + whisper) * env * 0.88, -1.0, 1.0)
+		var s16 := int(clampf(sample * 30000.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_leaper(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := exp(-progress * 3.2) * sin(minf(1.0, progress * 6.0) * PI * 0.5)
+		var sweep_f := lerpf(160.0, 960.0, clampf(progress * 1.6, 0.0, 1.0)) + sin(t * 55.0) * 65.0
+		var snarl := sin(t * sweep_f * TAU) * 0.60 + sin(t * sweep_f * 1.48 * TAU) * 0.30
+		var rasp := randf_range(-0.45, 0.45)
+		var sample := clampf((snarl + rasp) * env * 0.90, -1.0, 1.0)
+		var s16 := int(clampf(sample * 30500.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_brute(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI) * exp(-progress * 1.2)
+		var sub_roar := sin(t * (68.0 + sin(t * 14.0) * 12.0) * TAU) * 0.65 + sin(t * 102.0 * TAU) * 0.35
+		var metal_clank := sin(t * 420.0 * TAU) * exp(-t * 18.0) * 0.55
+		var rumble := randf_range(-0.35, 0.35)
+		var sample := clampf((sub_roar + metal_clank + rumble) * env * 0.92, -1.0, 1.0)
+		var s16 := int(clampf(sample * 31000.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_parasite(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI)
+		var chitter_gate := 1.0 if sin(t * 22.0 * TAU) > -0.1 else 0.15
+		var bug_f := 1120.0 + sin(t * 85.0) * 280.0
+		var chitter := sin(t * bug_f * TAU) * chitter_gate * 0.55
+		var gargle := sin(t * (145.0 + sin(t * 32.0) * 35.0) * TAU) * 0.45
+		var wet := randf_range(-0.30, 0.30) * chitter_gate
+		var sample := clampf((chitter + gargle + wet) * env * 0.86, -1.0, 1.0)
+		var s16 := int(clampf(sample * 29500.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_butcher(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI) * exp(-progress * 0.9)
+		var scrape_f := lerpf(1350.0, 780.0, progress) + sin(t * 70.0) * 140.0
+		var blade := sin(t * scrape_f * TAU) * 0.42 + sin(t * scrape_f * 2.03 * TAU) * 0.24
+		var growl := sin(t * (82.0 - progress * 18.0) * TAU) * 0.55
+		var grind := randf_range(-0.45, 0.45)
+		var sample := clampf((blade + growl + grind * 0.5) * env * 0.90, -1.0, 1.0)
+		var s16 := int(clampf(sample * 30500.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_phantom(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI)
+		var trem := 0.65 + 0.35 * sin(t * 12.0 * TAU)
+		var choir := sin(t * 311.13 * TAU) * 0.38 + sin(t * 329.63 * TAU) * 0.35 + sin(t * 622.25 * TAU) * 0.25
+		var sub_void := sin(t * (55.0 + sin(t * 6.0) * 8.0) * TAU) * 0.35
+		var breath := randf_range(-0.18, 0.18)
+		var sample := clampf(((choir + sub_void) * trem + breath) * env * 0.88, -1.0, 1.0)
+		var s16 := int(clampf(sample * 29500.0, -32768.0, 32767.0))
 		bytes.encode_s16(i * 2, s16)
 	return bytes
 
