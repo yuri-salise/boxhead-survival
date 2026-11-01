@@ -86,6 +86,10 @@ local.properties
 *.wasm
 *.html
 *.js
+!src/**/*.js
+!test/**/*.js
+!eslint.config.js
+node_modules/
 
 # ------------------------------------------------------------------------------
 # Mono / .NET / C# (Safety fallback if opened in C# tools)
