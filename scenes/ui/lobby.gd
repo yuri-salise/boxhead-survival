@@ -67,7 +67,50 @@ func _ready() -> void:
 		if net_mgr.has_signal("game_mode_changed") and not net_mgr.game_mode_changed.is_connected(_on_game_mode_changed):
 			net_mgr.game_mode_changed.connect(_on_game_mode_changed)
 	
+	_setup_nakama_and_leaderboard_controls()
 	_refresh_ui_state()
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("bind_button_tweens"):
+		gs.bind_button_tweens(self)
+
+func _setup_nakama_and_leaderboard_controls() -> void:
+	var lobby_vbox := get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox")
+	if not lobby_vbox:
+		return
+	var opt_row := HBoxContainer.new()
+	opt_row.name = "NakamaOptionRow"
+	opt_row.add_theme_constant_override("separation", 10)
+	var nakama_btn := Button.new()
+	nakama_btn.name = "NakamaMatchmakeButton"
+	nakama_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	nakama_btn.text = "🌐 OPTION B: NAKAMA SERVER MATCHMAKE (PORT 7350)"
+	nakama_btn.pressed.connect(func():
+		var net_mgr := _get_network_manager()
+		var srv_ip := ip_input.text.strip_edges() if (ip_input and not ip_input.text.strip_edges().is_empty()) else "127.0.0.1"
+		if net_mgr and net_mgr.has_method("authenticate_nakama_device"):
+			net_mgr.authenticate_nakama_device(srv_ip, 7350)
+	)
+	var lb_btn := Button.new()
+	lb_btn.name = "LeaderboardButton"
+	lb_btn.text = "🏆 LEADERBOARD"
+	lb_btn.pressed.connect(func():
+		var net_mgr := _get_network_manager()
+		if net_mgr and "cached_leaderboard" in net_mgr and status_label:
+			var parts: Array[String] = []
+			for entry in net_mgr.cached_leaderboard.slice(0, 3):
+				parts.append("#" + str(entry["rank"]) + " " + str(entry["callsign"]) + ": " + str(entry["score"]) + " (W" + str(entry["wave"]) + ")")
+			status_label.text = "[ TOP SURVIVORS:  " + "   ·   ".join(PackedStringArray(parts)) + " ]"
+			status_label.add_theme_color_override("font_color", Color(0.98, 0.85, 0.28))
+	)
+	opt_row.add_child(nakama_btn)
+	opt_row.add_child(lb_btn)
+	lobby_vbox.add_child(opt_row)
+	if join_button and join_button.get_parent():
+		lobby_vbox.move_child(opt_row, join_button.get_parent().get_index() + 1)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_back_pressed()
 
 func _get_network_manager() -> Node:
 	return get_node_or_null("/root/NetworkManager")
