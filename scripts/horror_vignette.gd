@@ -14,9 +14,11 @@ var flashlight_angle: float = 0.0
 var flashlight_occluders: Array = []
 var flashlight_player_world_pos: Vector2 = Vector2.ZERO
 
-# Ambient Lights (Streetlights, beacon lamps, emergency generators)
+# Ambient Lights (Streetlights, beacon lamps, emergency generators, turrets, fuel trucks)
 var ambient_lights: Array = []
-# Witch glowing eyes in darkness
+# Ally / Bot / Turret directional flashlight cones
+var ally_flashlights: Array = []
+# Witch & scary special zombie glowing eyes in darkness
 var active_witches: Array = []
 
 # POV blood splatters & dripping streaks on the screen lens when bitten
@@ -36,7 +38,12 @@ uniform float u_cone_half = 0.44;
 uniform float u_beam_len = 430.0;
 uniform float u_inner_radius = 60.0;
 
-const int MAX_LIGHTS = 8;
+const int MAX_ALLIES = 6;
+uniform int u_ally_count = 0;
+uniform vec2 u_ally_screen_pos[MAX_ALLIES];
+uniform float u_ally_flashlight_angle[MAX_ALLIES];
+
+const int MAX_LIGHTS = 16;
 uniform int u_light_count = 0;
 uniform vec2 u_light_pos[MAX_LIGHTS];
 uniform float u_light_radius[MAX_LIGHTS];
@@ -81,13 +88,31 @@ void fragment() {
 			player_light = max(player_light, flash);
 		}
 		
+		for (int a = 0; a < u_ally_count; a++) {
+			vec2 to_ally = p - u_ally_screen_pos[a];
+			float ally_dist = length(to_ally);
+			if (ally_dist < u_inner_radius * 1.25) {
+				float a_inner = smoothstep(u_inner_radius * 1.25, u_inner_radius * 0.42, ally_dist);
+				player_light = max(player_light, a_inner);
+			}
+			if (ally_dist < u_beam_len * 0.96) {
+				float ally_ang = atan(to_ally.y, to_ally.x);
+				float ally_diff = abs(mod(ally_ang - u_ally_flashlight_angle[a] + 3.14159265, 6.2831853) - 3.14159265);
+				if (ally_diff < u_cone_half * 1.05) {
+					float a_cone = smoothstep(u_cone_half * 1.05, u_cone_half * 0.65, ally_diff);
+					float a_beam = smoothstep(u_beam_len * 0.96, u_beam_len * 0.58, ally_dist);
+					player_light = max(player_light, a_cone * a_beam);
+				}
+			}
+		}
+		
 		float ambient_light = 0.0;
 		vec3 ambient_tint = vec3(0.0);
 		for (int i = 0; i < u_light_count; i++) {
 			float d = distance(p, u_light_pos[i]);
 			float r = u_light_radius[i];
 			if (d < r) {
-				float l = smoothstep(r, r * 0.22, d) * u_light_color[i].a;
+				float l = smoothstep(r, r * 0.25, d) * u_light_color[i].a;
 				ambient_light = max(ambient_light, l);
 				ambient_tint += u_light_color[i].rgb * (l * 0.35);
 			}
@@ -171,6 +196,16 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 		darkness_mat.set_shader_parameter("u_shadow_count", mini(occluders.size(), 8))
 		darkness_mat.set_shader_parameter("u_shadow_obs_pos", shadow_positions)
 		darkness_mat.set_shader_parameter("u_shadow_obs_radius", shadow_radii)
+		
+		# Re-project world ambient lights and ally flashlight cones every frame so stationary world lights never drift when player moves
+		_sync_ambient_lights_to_shader(player_world_pos)
+		_sync_ally_lights_to_shader(player_world_pos)
+	
+	if active_witches.size() > 0:
+		for i in range(active_witches.size()):
+			var w: Dictionary = active_witches[i]
+			if w.has("world_pos"):
+				w["screen_pos"] = flashlight_screen_pos + (Vector2(w["world_pos"]) - player_world_pos)
 	
 	if night_factor > 0.01:
 		var pos_dist := flashlight_screen_pos.distance_squared_to(last_drawn_flashlight_pos)
@@ -180,32 +215,63 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 			last_drawn_flashlight_angle = flashlight_angle
 			queue_redraw()
 
+func _sync_ambient_lights_to_shader(player_world_pos: Vector2) -> void:
+	if not darkness_mat:
+		return
+	var light_positions: Array[Vector2] = []
+	var light_radii: Array[float] = []
+	var light_colors: Array[Vector4] = []
+	
+	for l in ambient_lights:
+		if light_positions.size() >= 16:
+			break
+		var wpos: Vector2 = l["world_pos"]
+		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
+		light_positions.append(spos)
+		light_radii.append(float(l.get("radius", 140.0)))
+		var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
+		light_colors.append(Vector4(col.r, col.g, col.b, col.a))
+	
+	while light_positions.size() < 16:
+		light_positions.append(Vector2(-9999, -9999))
+		light_radii.append(0.0)
+		light_colors.append(Vector4(0, 0, 0, 0))
+	
+	darkness_mat.set_shader_parameter("u_light_count", mini(ambient_lights.size(), 16))
+	darkness_mat.set_shader_parameter("u_light_pos", light_positions)
+	darkness_mat.set_shader_parameter("u_light_radius", light_radii)
+	darkness_mat.set_shader_parameter("u_light_color", light_colors)
+
+func _sync_ally_lights_to_shader(player_world_pos: Vector2) -> void:
+	if not darkness_mat:
+		return
+	var ally_positions: Array[Vector2] = []
+	var ally_angles: Array[float] = []
+	for a in ally_flashlights:
+		if ally_positions.size() >= 6:
+			break
+		var wpos: Vector2 = a["world_pos"]
+		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
+		ally_positions.append(spos)
+		ally_angles.append(float(a.get("angle", 0.0)))
+	while ally_positions.size() < 6:
+		ally_positions.append(Vector2(-9999, -9999))
+		ally_angles.append(0.0)
+	darkness_mat.set_shader_parameter("u_ally_count", mini(ally_flashlights.size(), 6))
+	darkness_mat.set_shader_parameter("u_ally_screen_pos", ally_positions)
+	darkness_mat.set_shader_parameter("u_ally_flashlight_angle", ally_angles)
+
 func update_ambient_lights(lights: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	ambient_lights = lights
+	flashlight_player_world_pos = player_world_pos
 	if darkness_mat and night_factor > 0.005:
-		var light_positions: Array[Vector2] = []
-		var light_radii: Array[float] = []
-		var light_colors: Array[Vector4] = []
-		
-		for l in lights:
-			if light_positions.size() >= 8:
-				break
-			var wpos: Vector2 = l["world_pos"]
-			var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
-			light_positions.append(spos)
-			light_radii.append(float(l.get("radius", 140.0)))
-			var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
-			light_colors.append(Vector4(col.r, col.g, col.b, col.a))
-		
-		while light_positions.size() < 8:
-			light_positions.append(Vector2(-9999, -9999))
-			light_radii.append(0.0)
-			light_colors.append(Vector4(0, 0, 0, 0))
-		
-		darkness_mat.set_shader_parameter("u_light_count", mini(lights.size(), 8))
-		darkness_mat.set_shader_parameter("u_light_pos", light_positions)
-		darkness_mat.set_shader_parameter("u_light_radius", light_radii)
-		darkness_mat.set_shader_parameter("u_light_color", light_colors)
+		_sync_ambient_lights_to_shader(player_world_pos)
+
+func update_ally_flashlights(allies: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
+	ally_flashlights = allies
+	flashlight_player_world_pos = player_world_pos
+	if darkness_mat and night_factor > 0.005:
+		_sync_ally_lights_to_shader(player_world_pos)
 
 func update_witch_eyes(witches: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	active_witches.clear()
@@ -213,9 +279,11 @@ func update_witch_eyes(witches: Array, player_world_pos: Vector2 = Vector2.ZERO)
 		var wpos: Vector2 = w["pos"]
 		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
 		active_witches.append({
+			"world_pos": wpos,
 			"screen_pos": spos,
 			"rot": float(w.get("rot", 0.0)),
-			"is_enraged": w.get("is_enraged", false) == true
+			"is_enraged": w.get("is_enraged", false) == true,
+			"eye_color": w.get("eye_color", Color(0.95, 0.05, 0.05, 1.0))
 		})
 	if active_witches.size() > 0 and night_factor > 0.02:
 		queue_redraw()
@@ -327,8 +395,9 @@ func _draw() -> void:
 			var eye_r := spos + fwd - perp * 2.8
 			
 			var p_glow := 0.65 + 0.35 * sin(pulse_time * 8.0)
-			var glow_col := Color(0.95, 0.05, 0.05, 0.35 * p_glow) if not is_enr else Color(1.0, 0.25, 0.05, 0.65 * p_glow)
-			var pupil_col := Color(1.0, 0.1, 0.1, 0.98) if not is_enr else Color(1.0, 0.85, 0.2, 1.0)
+			var base_eye: Color = w.get("eye_color", Color(0.95, 0.05, 0.05, 1.0))
+			var glow_col := Color(base_eye.r, base_eye.g, base_eye.b, (0.38 if not is_enr else 0.68) * p_glow)
+			var pupil_col := Color(minf(1.0, base_eye.r + 0.15), minf(1.0, base_eye.g + 0.15), minf(1.0, base_eye.b + 0.15), 0.98) if not is_enr else Color(1.0, 0.85, 0.2, 1.0)
 			
 			# Outer crimson glare aura
 			draw_circle(spos + fwd, 10.0 if not is_enr else 14.0, glow_col)

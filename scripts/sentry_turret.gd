@@ -146,7 +146,7 @@ func _acquire_target() -> void:
 		return
 	
 	for z in zombie_container.get_children():
-		if is_instance_valid(z) and not z.get("is_dead"):
+		if is_instance_valid(z) and z.has_method("take_damage") and z.get("is_dead") != true:
 			var d := global_position.distance_to(z.global_position)
 			if d < min_dist:
 				min_dist = d
@@ -172,8 +172,18 @@ func get_light_data() -> Dictionary:
 		var flash_pos: Vector2 = global_position + Vector2.from_angle(aim_angle) * 32.0
 		return {
 			"world_pos": flash_pos,
-			"radius": 240.0 * (0.65 + 0.35 * flash_ratio),
-			"color": Color(1.0, 0.92, 0.45, 0.96 * flash_ratio)
+			"radius": 320.0 * (0.75 + 0.25 * flash_ratio),
+			"color": Color(1.0, 0.92, 0.45, 1.0)
+		}
+	return {}
+
+func get_spotlight_data() -> Dictionary:
+	if is_active:
+		return {
+			"world_pos": global_position,
+			"radius": 310.0,
+			"color": Color(0.92, 0.96, 1.0, 0.96),
+			"angle": aim_angle
 		}
 	return {}
 
@@ -230,12 +240,32 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, 11.5, Color(0.32, 0.35, 0.38, 1.0))
 	draw_circle(Vector2.ZERO, 7.5, Color(0.20, 0.22, 0.24, 1.0))
 	
-	# Targeting Laser Sight & Status LED
+	# Targeting Laser Sight, Tactical Spotlight Cone & Status LED
 	if is_active:
+		# Steady 360-degree perimeter tactical floodlight glow on ground
+		draw_circle(Vector2.ZERO, 95.0, Color(0.88, 0.94, 1.0, 0.12))
+		draw_circle(Vector2.ZERO, 44.0, Color(0.95, 0.98, 1.0, 0.18))
+		
+		# Directional tactical spotlight beam along aim_dir
+		var cone_outer := PackedVector2Array([
+			aim_dir * 12.0,
+			aim_dir * 310.0 + perp * 105.0,
+			aim_dir * 340.0,
+			aim_dir * 310.0 - perp * 105.0
+		])
+		draw_colored_polygon(cone_outer, Color(0.92, 0.96, 1.0, 0.11))
+		var cone_inner := PackedVector2Array([
+			aim_dir * 12.0,
+			aim_dir * 225.0 + perp * 52.0,
+			aim_dir * 255.0,
+			aim_dir * 225.0 - perp * 52.0
+		])
+		draw_colored_polygon(cone_inner, Color(0.98, 0.98, 1.0, 0.15))
+		
 		# Green targeting laser beam
 		var laser_end := aim_dir * range_radius
-		draw_line(Vector2.ZERO, laser_end, Color(0.15, 0.95, 0.25, 0.28), 1.5)
-		draw_circle(Vector2.ZERO, 3.5, Color(0.2, 0.95, 0.3, 1.0)) # Green active LED
+		draw_line(Vector2.ZERO, laser_end, Color(0.15, 0.95, 0.25, 0.36), 1.8)
+		draw_circle(Vector2.ZERO, 3.8, Color(0.2, 0.95, 0.3, 1.0)) # Green active LED
 		
 		# Muzzle flash on shot — dynamic lighting on turret chassis & surrounding ground
 		if muzzle_flash_timer > 0.0:
