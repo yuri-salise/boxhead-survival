@@ -25,6 +25,9 @@ func _ready() -> void:
 		retry_button.pressed.connect(_on_retry_pressed)
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
+	var gs := get_node_or_null("/root/GameState")
+	if gs and gs.has_method("bind_button_tweens"):
+		gs.bind_button_tweens(self)
 
 func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_achs: Array = []) -> void:
 	current_level_id = level_id
@@ -57,6 +60,26 @@ func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_ac
 	
 	if next_level_button:
 		next_level_button.visible = (level_id < 5)
+	_spawn_unlock_particle_burst()
+
+func _spawn_unlock_particle_burst() -> void:
+	var burst := CPUParticles2D.new()
+	burst.name = "UnlockParticleBurst"
+	burst.position = size * 0.5 if size != Vector2.ZERO else Vector2(640, 320)
+	burst.emitting = true
+	burst.one_shot = true
+	burst.explosiveness = 0.92
+	burst.amount = 36
+	burst.lifetime = 1.2
+	burst.spread = 180.0
+	burst.gravity = Vector2(0, 140)
+	burst.initial_velocity_min = 120.0
+	burst.initial_velocity_max = 280.0
+	burst.scale_amount_min = 3.0
+	burst.scale_amount_max = 6.0
+	burst.color = Color(0.98, 0.85, 0.28, 0.95)
+	add_child(burst)
+	burst.finished.connect(burst.queue_free)
 
 func show_defeat(level_id: int, score: int, kills: int, reason: String = "OUTPOST OVERRUN") -> void:
 	current_level_id = level_id

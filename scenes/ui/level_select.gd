@@ -30,7 +30,15 @@ func _ready() -> void:
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
 	
+	var gs := _get_game_state()
+	if gs and gs.has_method("bind_button_tweens"):
+		gs.bind_button_tweens(self)
+	
 	refresh_ui()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_back_pressed()
 
 func _get_game_state() -> Node:
 	if is_instance_valid(custom_game_state):
@@ -72,7 +80,9 @@ func refresh_ui() -> void:
 				var title_str: String = str(defs[ach_id]["title"])
 				var has_it: bool = gs.has_achievement(ach_id)
 				badges.append(("★ " if has_it else "☆ ") + title_str)
-			achievements_label.text = "MEDALS:  " + "   ·   ".join(PackedStringArray(badges))
+			var total_st: int = gs.get_total_stars() if gs.has_method("get_total_stars") else 0
+			var perk_str := " [★ VETERAN PERK ACTIVE]" if total_st >= 6 else (" [★ " + str(total_st) + "/6 FOR VETERAN PERK]")
+			achievements_label.text = "STARS: " + str(total_st) + "/15" + perk_str + "  |  MEDALS:  " + "   ·   ".join(PackedStringArray(badges))
 		else:
 			achievements_label.text = "MEDALS:  ☆ UNTOUCHABLE   ·   ☆ NIGHT STALKER   ·   ☆ ANATOMY LESSON   ·   ☆ APEX PREDATOR"
 
