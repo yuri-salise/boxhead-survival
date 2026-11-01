@@ -536,7 +536,7 @@ func _process(delta: float) -> void:
 							witches.append({
 								"pos": z.global_position,
 								"rot": z.rotation,
-								"is_enraged": bool(z.get("is_enraged"))
+								"is_enraged": z.get("is_enraged") == true
 							})
 				cached_witch_eyes = witches
 				if horror_vignette.has_method("update_witch_eyes"):

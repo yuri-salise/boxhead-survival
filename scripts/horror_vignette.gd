@@ -215,7 +215,7 @@ func update_witch_eyes(witches: Array, player_world_pos: Vector2 = Vector2.ZERO)
 		active_witches.append({
 			"screen_pos": spos,
 			"rot": float(w.get("rot", 0.0)),
-			"is_enraged": bool(w.get("is_enraged", false))
+			"is_enraged": w.get("is_enraged", false) == true
 		})
 	if active_witches.size() > 0 and night_factor > 0.02:
 		queue_redraw()
@@ -319,7 +319,7 @@ func _draw() -> void:
 			if spos.x < -80 or spos.x > vp.x + 80 or spos.y < -80 or spos.y > vp.y + 80:
 				continue
 			var w_rot: float = float(w.get("rot", 0.0))
-			var is_enr: bool = bool(w.get("is_enraged", false))
+			var is_enr: bool = w.get("is_enraged", false) == true
 			
 			var fwd := Vector2(7.0, 0.0).rotated(w_rot)
 			var perp := Vector2(-fwd.y, fwd.x).normalized()
