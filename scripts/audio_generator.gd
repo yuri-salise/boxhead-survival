@@ -88,6 +88,9 @@ func _init():
 	# 28. SFX Phantom (Haunting spectral wail + dark resonance)
 	_save_wav("res://assets/audio/sfx_phantom.wav", _gen_phantom(0.90, sample_rate), sample_rate)
 	
+	# 29. SFX Necro (Abyssal necromancer ritual choir + 7-witch coven shriek + dread sub-bass)
+	_save_wav("res://assets/audio/sfx_necro.wav", _gen_necro(1.15, sample_rate), sample_rate)
+	
 	print("All Audio Assets generated and saved successfully!")
 	quit(0)
 
@@ -471,6 +474,26 @@ func _gen_phantom(dur: float, s_rate: int) -> PackedByteArray:
 		var breath := randf_range(-0.18, 0.18)
 		var sample := clampf(((choir + sub_void) * trem + breath) * env * 0.88, -1.0, 1.0)
 		var s16 := int(clampf(sample * 29500.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_necro(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		var progress := t / dur
+		var env := sin(progress * PI) * exp(-progress * 0.55)
+		# Deep abyssal necromancer sub-drone (46 Hz tritone + 65 Hz ritual pulse)
+		var pulse := 0.65 + 0.35 * sin(t * 9.0 * TAU)
+		var dark_sub := sin(t * (46.25 - progress * 8.0) * TAU) * 0.45 + sin(t * 65.41 * TAU) * 0.30
+		# Dissonant coven of 7 witches harmonic shriek (tritone & minor second cluster)
+		var coven_f := 1280.0 + sin(t * 28.0) * 260.0 + progress * 220.0
+		var coven_wail := sin(t * coven_f * TAU) * 0.32 + sin(t * (coven_f * 1.414) * TAU) * 0.24 + sin(t * 440.0 * TAU) * 0.20
+		var whisper := randf_range(-0.28, 0.28) * pulse
+		var sample := clampf((dark_sub * pulse + coven_wail + whisper) * env * 0.94, -1.0, 1.0)
+		var s16 := int(clampf(sample * 31000.0, -32768.0, 32767.0))
 		bytes.encode_s16(i * 2, s16)
 	return bytes
 

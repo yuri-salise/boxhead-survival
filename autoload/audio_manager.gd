@@ -43,6 +43,7 @@ const SFX_FILES: Dictionary = {
 	"sfx_parasite": "res://assets/audio/sfx_parasite.wav",
 	"sfx_butcher": "res://assets/audio/sfx_butcher.wav",
 	"sfx_phantom": "res://assets/audio/sfx_phantom.wav",
+	"sfx_necro": "res://assets/audio/sfx_necro.wav",
 	"sfx_player_hurt": "res://assets/audio/sfx_player_hurt.wav",
 	"sfx_dash": "res://assets/audio/sfx_dash.wav",
 	"sfx_explosion": "res://assets/audio/sfx_explosion.wav",
