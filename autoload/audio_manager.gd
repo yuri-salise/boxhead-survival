@@ -15,6 +15,13 @@ var sfx_volume: float = 1.0
 var music_volume: float = 0.8
 
 var music_player: AudioStreamPlayer = null
+var music_streams: Dictionary = {}
+var current_music_track: String = ""
+
+const MUSIC_FILES: Dictionary = {
+	"ambient_menu": "res://assets/audio/ambient_menu.wav",
+	"ambient_combat": "res://assets/audio/ambient_combat.wav"
+}
 
 const SFX_FILES: Dictionary = {
 	"sfx_pistol": "res://assets/audio/sfx_pistol.wav",
@@ -47,6 +54,14 @@ func _ready() -> void:
 		var stream: AudioStream = _load_wav_stream(path)
 		if stream:
 			sfx_streams[key] = stream
+	
+	for key in MUSIC_FILES.keys():
+		var path: String = MUSIC_FILES[key]
+		var stream: AudioStream = _load_wav_stream(path)
+		if stream:
+			if stream is AudioStreamWAV:
+				stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			music_streams[key] = stream
 	
 	# 2. Build AudioStreamPlayer polyphonic pool
 	for i in range(POOL_SIZE):
@@ -108,6 +123,27 @@ func play_sfx_at_pos(sfx_name: String, listener_pos: Vector2, emitter_pos: Vecto
 	var vol_db := linear_to_db(clampf(falloff, 0.01, 1.0))
 	return play_sfx(sfx_name, 1.0, vol_db)
 
+func play_music(track_name: String) -> void:
+	if not music_streams.has(track_name):
+		return
+	if current_music_track == track_name and is_instance_valid(music_player) and music_player.playing:
+		return
+	
+	current_music_track = track_name
+	if not is_instance_valid(music_player):
+		return
+	
+	var stream: AudioStream = music_streams[track_name]
+	music_player.stream = stream
+	music_player.volume_db = linear_to_db(clampf(music_volume, 0.01, 1.0))
+	if music_enabled:
+		music_player.play()
+
+func stop_music() -> void:
+	current_music_track = ""
+	if is_instance_valid(music_player) and music_player.playing:
+		music_player.stop()
+
 func set_sfx_enabled(enabled: bool) -> void:
 	sfx_enabled = enabled
 	if not sfx_enabled:
@@ -122,6 +158,11 @@ func set_music_enabled(enabled: bool) -> void:
 	if is_instance_valid(music_player):
 		if not music_enabled and music_player.playing:
 			music_player.stop()
+		elif music_enabled and not music_player.playing and not current_music_track.is_empty():
+			if music_streams.has(current_music_track):
+				music_player.stream = music_streams[current_music_track]
+				music_player.volume_db = linear_to_db(clampf(music_volume, 0.01, 1.0))
+				music_player.play()
 	save_audio_settings()
 	music_setting_changed.emit(music_enabled)
 
@@ -184,5 +225,9 @@ func _load_wav_stream(path: String) -> AudioStream:
 	stream.mix_rate = s_rate
 	stream.stereo = false
 	stream.data = pcm_data
+	if path.contains("ambient_"):
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = int(data_size / (2 if bits_per_sample == 16 else 1))
 	return stream
 

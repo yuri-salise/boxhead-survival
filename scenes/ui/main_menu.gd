@@ -37,6 +37,8 @@ func _ready() -> void:
 	if audio_mgr:
 		sfx_enabled = bool(audio_mgr.sfx_enabled)
 		music_enabled = bool(audio_mgr.music_enabled)
+		if audio_mgr.has_method("play_music"):
+			audio_mgr.play_music("ambient_menu")
 	
 	# Wire main menu buttons
 	play_button.pressed.connect(_on_play_button_pressed)

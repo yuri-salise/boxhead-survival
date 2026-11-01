@@ -36,9 +36,11 @@ func _ready() -> void:
 
 func _play_intro_audio() -> void:
 	var audio_mgr = get_node_or_null("/root/AudioManager")
-	if audio_mgr and audio_mgr.has_method("play_sfx"):
-		# Play dry fire or wave start stinger for apocalyptic mood
-		audio_mgr.play_sfx("sfx_wave_start")
+	if audio_mgr:
+		if audio_mgr.has_method("play_music"):
+			audio_mgr.play_music("ambient_menu")
+		if audio_mgr.has_method("play_sfx"):
+			audio_mgr.play_sfx("sfx_wave_start")
 
 func _start_prompt_animation() -> void:
 	if not prompt_label:

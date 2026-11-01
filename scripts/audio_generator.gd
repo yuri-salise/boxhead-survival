@@ -61,7 +61,13 @@ func _init():
 	# 19. SFX Defeat (Somber minor descent)
 	_save_wav("res://assets/audio/sfx_defeat.wav", _gen_chord([196.0, 233.1, 293.7, 392.0], 1.5, sample_rate), sample_rate)
 	
-	print("All 19 Audio Assets generated and saved successfully!")
+	# 20. Ambient Menu (Desolate horror atmospheric drone, 6s seamless loop)
+	_save_wav("res://assets/audio/ambient_menu.wav", _gen_ambient_menu(6.0, sample_rate), sample_rate)
+	
+	# 21. Ambient Combat (Rhythmic tension heartbeat + gritty industrial drone, 6s seamless loop at 120 BPM)
+	_save_wav("res://assets/audio/ambient_combat.wav", _gen_ambient_combat(6.0, sample_rate), sample_rate)
+	
+	print("All Audio Assets generated and saved successfully!")
 	quit(0)
 
 func _gen_gunshot(dur: float, start_f: float, end_f: float, intensity: float, s_rate: int) -> PackedByteArray:
@@ -263,6 +269,70 @@ func _gen_chord(freqs: Array, dur: float, s_rate: int) -> PackedByteArray:
 			sum += sin(t * float(f) * TAU)
 		var sample := clampf((sum / float(freqs.size())) * env * 0.85, -1.0, 1.0)
 		var s16 := int(clampf(sample * 30000.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_ambient_menu(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		# Low resonant drone (55Hz and 82.5Hz - dark and hollow)
+		var bass := sin(t * 55.0 * TAU) * 0.45 + sin(t * 82.5 * TAU) * 0.25
+		# Slow breathing tremolo modulation (0.33 Hz = 2 cycles in 6s)
+		var mod := 0.70 + 0.30 * sin(t * (TAU / 3.0))
+		# High eerie metallic resonance (520Hz + slight dissonance)
+		var metal := sin(t * 520.0 * TAU) * 0.08 + sin(t * 524.0 * TAU) * 0.06
+		# Distant dark rumble noise filtered
+		var rumble := sin(t * 32.0 * TAU) * 0.20
+		# Gentle tape hiss/crackle
+		var hiss := randf_range(-0.025, 0.025)
+		
+		var edge_fade := 1.0
+		var fade_samples := int(0.08 * s_rate)
+		if i < fade_samples:
+			edge_fade = float(i) / float(fade_samples)
+		elif i > total_samples - fade_samples:
+			edge_fade = float(total_samples - i) / float(fade_samples)
+		
+		var sample := clampf((bass * mod + metal * mod + rumble + hiss) * edge_fade * 0.75, -1.0, 1.0)
+		var s16 := int(clampf(sample * 28000.0, -32768.0, 32767.0))
+		bytes.encode_s16(i * 2, s16)
+	return bytes
+
+func _gen_ambient_combat(dur: float, s_rate: int) -> PackedByteArray:
+	var total_samples := int(dur * s_rate)
+	var bytes := PackedByteArray()
+	bytes.resize(total_samples * 2)
+	var beat_period := 0.5
+	for i in range(total_samples):
+		var t := float(i) / float(s_rate)
+		# 1. Driving Heartbeat / Sub-bass kick (0.5s intervals)
+		var beat_t := fmod(t, beat_period)
+		var kick_env := exp(-beat_t * 14.0)
+		var kick := sin(beat_t * (70.0 - beat_t * 30.0) * TAU) * kick_env * 0.55
+		
+		# 2. Industrial Bassline Drone (65.4 Hz C2 with harmonic distortion)
+		var bass_raw := sin(t * 65.41 * TAU) + 0.35 * sin(t * 130.82 * TAU)
+		var bass_drive := clampf(bass_raw * 1.5, -1.0, 1.0) * 0.32
+		
+		# 3. High Suspense Strings (Minor dissonance: 220Hz + 261.6Hz + 311.1Hz)
+		var string_pulse := 0.6 + 0.4 * sin(t * (TAU / 1.5))
+		var strings := (sin(t * 220.0 * TAU) * 0.06 + sin(t * 261.63 * TAU) * 0.06 + sin(t * 311.13 * TAU) * 0.05) * string_pulse
+		
+		# 4. Background tension noise pulse
+		var noise := randf_range(-0.04, 0.04) * kick_env
+		
+		var edge_fade := 1.0
+		var fade_samples := int(0.05 * s_rate)
+		if i < fade_samples:
+			edge_fade = float(i) / float(fade_samples)
+		elif i > total_samples - fade_samples:
+			edge_fade = float(total_samples - i) / float(fade_samples)
+		
+		var sample := clampf((kick + bass_drive + strings + noise) * edge_fade * 0.85, -1.0, 1.0)
+		var s16 := int(clampf(sample * 29000.0, -32768.0, 32767.0))
 		bytes.encode_s16(i * 2, s16)
 	return bytes
 
