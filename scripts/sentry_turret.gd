@@ -18,6 +18,8 @@ var current_target: Node2D = null
 var is_player_nearby: bool = false
 var anim_time: float = 0.0
 var muzzle_flash_timer: float = 0.0
+var target_scan_timer: float = 999.0
+var redraw_accum: float = 0.0
 
 @onready var interaction_area: Area2D = $InteractionArea
 @onready var prompt_label: Label = $PromptLabel
@@ -95,6 +97,7 @@ func activate_turret() -> bool:
 
 func _process(delta: float) -> void:
 	anim_time += delta
+	redraw_accum += delta
 	var needs_redraw: bool = false
 	
 	if muzzle_flash_timer > 0.0:
@@ -102,10 +105,13 @@ func _process(delta: float) -> void:
 		needs_redraw = true
 	
 	if is_active:
-		needs_redraw = true
+		if redraw_accum >= 0.045:
+			redraw_accum = 0.0
+			needs_redraw = true
 		active_time_left = maxf(0.0, active_time_left - delta)
 		if prompt_label:
-			prompt_label.text = "TURRET: " + str(int(ceil(active_time_left))) + "s"
+			var sec_left := int(ceil(active_time_left))
+			prompt_label.text = "TURRET: " + str(sec_left) + "s"
 			prompt_label.visible = true
 		
 		if active_time_left <= 0.0:
@@ -116,8 +122,11 @@ func _process(delta: float) -> void:
 			queue_redraw()
 			return
 		
-		# Acquire closest living zombie
-		_acquire_target()
+		# Acquire closest living zombie (throttled to 10 Hz for mobile CPU performance)
+		target_scan_timer += delta
+		if target_scan_timer >= 0.10 or not is_instance_valid(current_target) or current_target.get("is_dead") == true:
+			target_scan_timer = 0.0
+			_acquire_target()
 		if is_instance_valid(current_target):
 			var target_ang := (current_target.global_position - global_position).angle()
 			aim_angle = rotate_toward(aim_angle, target_ang, 8.5 * delta)
@@ -129,7 +138,8 @@ func _process(delta: float) -> void:
 		else:
 			# Idle sweep scan
 			aim_angle += 0.85 * delta
-	elif is_player_nearby:
+	elif is_player_nearby and redraw_accum >= 0.06:
+		redraw_accum = 0.0
 		needs_redraw = true
 	
 	if needs_redraw:

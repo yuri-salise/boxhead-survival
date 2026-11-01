@@ -283,7 +283,8 @@ func _physics_process(delta: float) -> void:
 	if is_coop_mode and network_sync_enabled and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		sync_state_to_peers.rpc(global_position, visuals.rotation if visuals else 0.0, velocity, current_health, current_armor, weapon_controller.current_weapon_id if weapon_controller else "PISTOL")
 	
-	queue_redraw()
+	if velocity.length_squared() > 4.0 or shooting or muzzle_flash_timer > 0.0 or hurt_flash_timer > 0.0 or is_dashing or is_downed or ghost_trail_points.size() > 0:
+		queue_redraw()
 
 @rpc("any_peer", "call_remote", "unreliable")
 func sync_input_to_host(p_move: Vector2, p_aim: Vector2, p_shooting: bool) -> void:

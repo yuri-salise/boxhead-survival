@@ -60,47 +60,55 @@ void fragment() {
 	} else {
 		vec2 p = UV * u_canvas_size;
 		vec2 to_pixel = p - u_player_screen_pos;
-		float dist = length(to_pixel);
-		float angle = atan(to_pixel.y, to_pixel.x);
-		float diff = abs(mod(angle - u_flashlight_angle + 3.14159265, 6.2831853) - 3.14159265);
+		float dist_sq = dot(to_pixel, to_pixel);
 		
 		float player_light = 0.0;
-		if (dist < u_inner_radius) {
-			player_light = smoothstep(u_inner_radius, u_inner_radius * 0.45, dist);
-		}
-		if (diff < u_cone_half && dist < u_beam_len) {
-			float cone_fade = smoothstep(u_cone_half, u_cone_half - 0.09, diff);
-			float beam_fade = smoothstep(u_beam_len, u_beam_len * 0.78, dist);
-			float flash = cone_fade * beam_fade;
-			for (int i = 0; i < u_shadow_count; i++) {
-				vec2 to_obs = u_shadow_obs_pos[i] - u_player_screen_pos;
-				float obs_dist = length(to_obs);
-				if (dist > obs_dist && obs_dist > 8.0) {
-					float obs_angle = atan(to_obs.y, to_obs.x);
-					float obs_diff = abs(mod(angle - obs_angle + 3.14159265, 6.2831853) - 3.14159265);
-					float shadow_w = atan(u_shadow_obs_radius[i], obs_dist);
-					if (obs_diff < shadow_w) {
-						float shadow_edge = smoothstep(shadow_w, shadow_w * 0.82, obs_diff);
-						flash *= (1.0 - shadow_edge);
+		if (dist_sq < u_beam_len * u_beam_len) {
+			float dist = sqrt(dist_sq);
+			if (dist < u_inner_radius) {
+				player_light = smoothstep(u_inner_radius, u_inner_radius * 0.45, dist);
+			}
+			float angle = atan(to_pixel.y, to_pixel.x);
+			float diff = abs(mod(angle - u_flashlight_angle + 3.14159265, 6.2831853) - 3.14159265);
+			if (diff < u_cone_half) {
+				float cone_fade = smoothstep(u_cone_half, u_cone_half - 0.09, diff);
+				float beam_fade = smoothstep(u_beam_len, u_beam_len * 0.78, dist);
+				float flash = cone_fade * beam_fade;
+				for (int i = 0; i < u_shadow_count; i++) {
+					vec2 to_obs = u_shadow_obs_pos[i] - u_player_screen_pos;
+					float obs_dist_sq = dot(to_obs, to_obs);
+					if (dist_sq > obs_dist_sq && obs_dist_sq > 64.0) {
+						float obs_dist = sqrt(obs_dist_sq);
+						float obs_angle = atan(to_obs.y, to_obs.x);
+						float obs_diff = abs(mod(angle - obs_angle + 3.14159265, 6.2831853) - 3.14159265);
+						float shadow_w = atan(u_shadow_obs_radius[i], obs_dist);
+						if (obs_diff < shadow_w) {
+							float shadow_edge = smoothstep(shadow_w, shadow_w * 0.82, obs_diff);
+							flash *= (1.0 - shadow_edge);
+						}
 					}
 				}
+				player_light = max(player_light, flash);
 			}
-			player_light = max(player_light, flash);
 		}
 		
+		float max_ally_beam = u_beam_len * 0.96;
+		float max_ally_beam_sq = max_ally_beam * max_ally_beam;
+		float ally_inner = u_inner_radius * 1.25;
 		for (int a = 0; a < u_ally_count; a++) {
 			vec2 to_ally = p - u_ally_screen_pos[a];
-			float ally_dist = length(to_ally);
-			if (ally_dist < u_inner_radius * 1.25) {
-				float a_inner = smoothstep(u_inner_radius * 1.25, u_inner_radius * 0.42, ally_dist);
-				player_light = max(player_light, a_inner);
-			}
-			if (ally_dist < u_beam_len * 0.96) {
+			float ally_dist_sq = dot(to_ally, to_ally);
+			if (ally_dist_sq < max_ally_beam_sq) {
+				float ally_dist = sqrt(ally_dist_sq);
+				if (ally_dist < ally_inner) {
+					float a_inner = smoothstep(ally_inner, u_inner_radius * 0.42, ally_dist);
+					player_light = max(player_light, a_inner);
+				}
 				float ally_ang = atan(to_ally.y, to_ally.x);
 				float ally_diff = abs(mod(ally_ang - u_ally_flashlight_angle[a] + 3.14159265, 6.2831853) - 3.14159265);
 				if (ally_diff < u_cone_half * 1.05) {
 					float a_cone = smoothstep(u_cone_half * 1.05, u_cone_half * 0.65, ally_diff);
-					float a_beam = smoothstep(u_beam_len * 0.96, u_beam_len * 0.58, ally_dist);
+					float a_beam = smoothstep(max_ally_beam, u_beam_len * 0.58, ally_dist);
 					player_light = max(player_light, a_cone * a_beam);
 				}
 			}
@@ -109,9 +117,11 @@ void fragment() {
 		float ambient_light = 0.0;
 		vec3 ambient_tint = vec3(0.0);
 		for (int i = 0; i < u_light_count; i++) {
-			float d = distance(p, u_light_pos[i]);
+			vec2 dvec = p - u_light_pos[i];
 			float r = u_light_radius[i];
-			if (d < r) {
+			float d_sq = dot(dvec, dvec);
+			if (d_sq < r * r) {
+				float d = sqrt(d_sq);
 				float l = smoothstep(r, r * 0.25, d) * u_light_color[i].a;
 				ambient_light = max(ambient_light, l);
 				ambient_tint += u_light_color[i].rgb * (l * 0.35);
@@ -165,6 +175,27 @@ func set_night_mode(enabled: bool) -> void:
 var last_drawn_flashlight_pos: Vector2 = Vector2(-9999.0, -9999.0)
 var last_drawn_flashlight_angle: float = -9999.0
 
+# Pre-allocated shader uniform buffers to eliminate per-frame Array GC allocations
+var _shadow_pos_buf: Array[Vector2] = []
+var _shadow_rad_buf: Array[float] = []
+var _light_pos_buf: Array[Vector2] = []
+var _light_rad_buf: Array[float] = []
+var _light_col_buf: Array[Vector4] = []
+var _ally_pos_buf: Array[Vector2] = []
+var _ally_ang_buf: Array[float] = []
+
+func _ensure_shader_buffers() -> void:
+	if _shadow_pos_buf.size() != 8:
+		_shadow_pos_buf.resize(8)
+		_shadow_rad_buf.resize(8)
+	if _light_pos_buf.size() != 16:
+		_light_pos_buf.resize(16)
+		_light_rad_buf.resize(16)
+		_light_col_buf.resize(16)
+	if _ally_pos_buf.size() != 6:
+		_ally_pos_buf.resize(6)
+		_ally_ang_buf.resize(6)
+
 func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluders: Array = [], player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	flashlight_screen_pos = screen_pos
 	flashlight_angle = angle_rad
@@ -172,6 +203,7 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 	flashlight_player_world_pos = player_world_pos
 	
 	if darkness_mat and night_factor > 0.005:
+		_ensure_shader_buffers()
 		var c_size: Vector2 = size if size != Vector2.ZERO else get_viewport_rect().size
 		darkness_mat.set_shader_parameter("u_canvas_size", c_size)
 		darkness_mat.set_shader_parameter("u_player_screen_pos", screen_pos)
@@ -179,23 +211,20 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 		darkness_mat.set_shader_parameter("u_inner_radius", lerpf(90.0, 52.0, night_factor))
 		
 		# Pass occluder shadows to shader (capped to 8 closest for high mobile FPS)
-		var shadow_positions: Array[Vector2] = []
-		var shadow_radii: Array[float] = []
-		for obs in occluders:
-			if shadow_positions.size() >= 8:
-				break
-			var world_pos: Vector2 = obs["world_pos"]
-			var obs_spos: Vector2 = screen_pos + (world_pos - player_world_pos)
-			shadow_positions.append(obs_spos)
-			shadow_radii.append(float(obs.get("radius", 16.0)))
+		var s_count := mini(occluders.size(), 8)
+		for i in range(8):
+			if i < s_count:
+				var obs: Dictionary = occluders[i]
+				var world_pos: Vector2 = obs["world_pos"]
+				_shadow_pos_buf[i] = screen_pos + (world_pos - player_world_pos)
+				_shadow_rad_buf[i] = float(obs.get("radius", 16.0))
+			else:
+				_shadow_pos_buf[i] = Vector2(-9999, -9999)
+				_shadow_rad_buf[i] = 0.0
 		
-		while shadow_positions.size() < 8:
-			shadow_positions.append(Vector2(-9999, -9999))
-			shadow_radii.append(0.0)
-		
-		darkness_mat.set_shader_parameter("u_shadow_count", mini(occluders.size(), 8))
-		darkness_mat.set_shader_parameter("u_shadow_obs_pos", shadow_positions)
-		darkness_mat.set_shader_parameter("u_shadow_obs_radius", shadow_radii)
+		darkness_mat.set_shader_parameter("u_shadow_count", s_count)
+		darkness_mat.set_shader_parameter("u_shadow_obs_pos", _shadow_pos_buf)
+		darkness_mat.set_shader_parameter("u_shadow_obs_radius", _shadow_rad_buf)
 		
 		# Re-project world ambient lights and ally flashlight cones every frame so stationary world lights never drift when player moves
 		_sync_ambient_lights_to_shader(player_world_pos)
@@ -206,60 +235,52 @@ func update_flashlight_transform(screen_pos: Vector2, angle_rad: float, occluder
 			var w: Dictionary = active_witches[i]
 			if w.has("world_pos"):
 				w["screen_pos"] = flashlight_screen_pos + (Vector2(w["world_pos"]) - player_world_pos)
-	
-	if night_factor > 0.01:
-		var pos_dist := flashlight_screen_pos.distance_squared_to(last_drawn_flashlight_pos)
-		var ang_diff := absf(wrapf(flashlight_angle - last_drawn_flashlight_angle, -PI, PI))
-		if pos_dist >= 4.0 or ang_diff >= 0.015:
-			last_drawn_flashlight_pos = flashlight_screen_pos
-			last_drawn_flashlight_angle = flashlight_angle
-			queue_redraw()
+		if night_factor > 0.02:
+			var pos_dist := flashlight_screen_pos.distance_squared_to(last_drawn_flashlight_pos)
+			if pos_dist >= 4.0:
+				last_drawn_flashlight_pos = flashlight_screen_pos
+				queue_redraw()
 
 func _sync_ambient_lights_to_shader(player_world_pos: Vector2) -> void:
 	if not darkness_mat:
 		return
-	var light_positions: Array[Vector2] = []
-	var light_radii: Array[float] = []
-	var light_colors: Array[Vector4] = []
+	_ensure_shader_buffers()
+	var l_count := mini(ambient_lights.size(), 16)
+	for i in range(16):
+		if i < l_count:
+			var l: Dictionary = ambient_lights[i]
+			var wpos: Vector2 = l["world_pos"]
+			_light_pos_buf[i] = flashlight_screen_pos + (wpos - player_world_pos)
+			_light_rad_buf[i] = float(l.get("radius", 140.0))
+			var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
+			_light_col_buf[i] = Vector4(col.r, col.g, col.b, col.a)
+		else:
+			_light_pos_buf[i] = Vector2(-9999, -9999)
+			_light_rad_buf[i] = 0.0
+			_light_col_buf[i] = Vector4(0, 0, 0, 0)
 	
-	for l in ambient_lights:
-		if light_positions.size() >= 16:
-			break
-		var wpos: Vector2 = l["world_pos"]
-		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
-		light_positions.append(spos)
-		light_radii.append(float(l.get("radius", 140.0)))
-		var col: Color = l.get("color", Color(1.0, 1.0, 1.0, 1.0))
-		light_colors.append(Vector4(col.r, col.g, col.b, col.a))
-	
-	while light_positions.size() < 16:
-		light_positions.append(Vector2(-9999, -9999))
-		light_radii.append(0.0)
-		light_colors.append(Vector4(0, 0, 0, 0))
-	
-	darkness_mat.set_shader_parameter("u_light_count", mini(ambient_lights.size(), 16))
-	darkness_mat.set_shader_parameter("u_light_pos", light_positions)
-	darkness_mat.set_shader_parameter("u_light_radius", light_radii)
-	darkness_mat.set_shader_parameter("u_light_color", light_colors)
+	darkness_mat.set_shader_parameter("u_light_count", l_count)
+	darkness_mat.set_shader_parameter("u_light_pos", _light_pos_buf)
+	darkness_mat.set_shader_parameter("u_light_radius", _light_rad_buf)
+	darkness_mat.set_shader_parameter("u_light_color", _light_col_buf)
 
 func _sync_ally_lights_to_shader(player_world_pos: Vector2) -> void:
 	if not darkness_mat:
 		return
-	var ally_positions: Array[Vector2] = []
-	var ally_angles: Array[float] = []
-	for a in ally_flashlights:
-		if ally_positions.size() >= 6:
-			break
-		var wpos: Vector2 = a["world_pos"]
-		var spos: Vector2 = flashlight_screen_pos + (wpos - player_world_pos)
-		ally_positions.append(spos)
-		ally_angles.append(float(a.get("angle", 0.0)))
-	while ally_positions.size() < 6:
-		ally_positions.append(Vector2(-9999, -9999))
-		ally_angles.append(0.0)
-	darkness_mat.set_shader_parameter("u_ally_count", mini(ally_flashlights.size(), 6))
-	darkness_mat.set_shader_parameter("u_ally_screen_pos", ally_positions)
-	darkness_mat.set_shader_parameter("u_ally_flashlight_angle", ally_angles)
+	_ensure_shader_buffers()
+	var a_count := mini(ally_flashlights.size(), 6)
+	for i in range(6):
+		if i < a_count:
+			var a: Dictionary = ally_flashlights[i]
+			var wpos: Vector2 = a["world_pos"]
+			_ally_pos_buf[i] = flashlight_screen_pos + (wpos - player_world_pos)
+			_ally_ang_buf[i] = float(a.get("angle", 0.0))
+		else:
+			_ally_pos_buf[i] = Vector2(-9999, -9999)
+			_ally_ang_buf[i] = 0.0
+	darkness_mat.set_shader_parameter("u_ally_count", a_count)
+	darkness_mat.set_shader_parameter("u_ally_screen_pos", _ally_pos_buf)
+	darkness_mat.set_shader_parameter("u_ally_flashlight_angle", _ally_ang_buf)
 
 func update_ambient_lights(lights: Array, player_world_pos: Vector2 = Vector2.ZERO) -> void:
 	ambient_lights = lights
