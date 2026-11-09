@@ -1,27 +1,30 @@
-# ITSD 85 Individual Contribution Log
+# ITSD 85 Individual Contribution Log (Solo Developer)
 
 **Course:** ITSD 85 – Special Topics in Software Development  
 **Laboratory Title:** Mobile Game Development with Level Progression and Offline/Online Multiplayer  
 **Game Title:** Dead Block: Survival  
 **Student Name:** [Your Full Name]  
-**Student ID / Email:** [Your ID / Email]  
-**Role in Team:** [e.g., Lead Developer / Networking & Gameplay Engineer / UI & Audio Designer]  
-**GitHub Account Username:** [@your-github-handle]  
-**Repository URL:** https://github.com/[your-team]/[your-repo]  
+**Student ID / Email:** pacaljoenel08@gmail.com  
+**Role:** Solo Developer (100% Architecture, Gameplay, AI, UI, Audio, Networking, Testing & CI/CD)  
+**GitHub Account Username:** [@yurizz-crypto](https://github.com/yurizz-crypto)  
+**Primary Test Device:** Samsung Galaxy A56 (Android 15 / One UI 7)  
 **Date Submitted:** November 9, 2026  
 
 ---
 
-## 1. Summary of Individual Contributions
+## 1. Summary of Individual Contributions (100% Project Scope)
+
+As a solo developer, I designed, implemented, and empirically verified all components of the project:
 
 | Contribution Area | Specific Features / Modules Implemented | Associated Files |
 | :--- | :--- | :--- |
-| **Core Gameplay & AI** | Built player twin-stick locomotion, tactical dash invulnerability, and offline `BRAVO BOT` companion with kiting and medical heal logic. | `scripts/player.gd`, `scripts/weapon_controller.gd` |
+| **Core Gameplay & AI** | Built player twin-stick locomotion, tactical dash invulnerability, and offline `BRAVO BOT` companion with autonomous kiting and medical heal logic. | `scripts/player.gd`, `scripts/weapon_controller.gd` |
 | **Enemy Engineering** | Implemented 14 specialized zombie variants including the apex boss `Necro` (passive healing aura, witch coven), Boomer explosions, and Spitter acid mortars. | `scripts/zombie_basic.gd`, `scenes/actors/zombie_basic.tscn` |
-| **Progressive Level Design** | Designed Sectors 1–5 procedural chunk generation, vehicle roadblocks, and blackout plaza generator defense stations. | `scripts/arena_environment.gd`, `scenes/levels/level_01.tscn`..`05.tscn` |
+| **Progressive Level Design** | Designed Sectors 1–5 procedural chunk generation, vehicle roadblocks, toxic puddles, and blackout plaza generator defense stations. | `scripts/arena_environment.gd`, `scenes/levels/level_01.tscn`..`05.tscn` |
 | **Multiplayer Networking** | Built host-authoritative ENet LAN synchronization at 12.5 Hz, client hit verification, squadmate revive, and graceful disconnect recovery. | `autoload/network_manager.gd`, `scenes/ui/lobby.gd` |
+| **UI & Audio** | Created high-contrast survival UI, virtual joysticks, 21 synthesized 16-bit sound effects, and looping ambient music. | `autoload/audio_manager.gd`, `scenes/ui/` |
 | **Testing & CI/CD** | Authored headless test suites (23 Godot suites + Node.js suite) and configured GitHub Actions automated deployment. | `tests/`, `.github/workflows/ci-cd.yml` |
-| **Academic Paper** | Authored Sections III (Game Design), IV (Architecture), and V (Methodology) in the IEEE conference paper. | `docs/paper/ieee_paper.md`, `docs/paper.pdf` |
+| **Academic Paper** | Wrote all 8 sections and the Appendix of the IEEE conference paper, analyzing the Samsung Galaxy A56 hardware metrics and Likert evaluation. | `docs/paper/ieee_paper.md`, `docs/paper.pdf` |
 
 ---
 

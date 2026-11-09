@@ -1,7 +1,7 @@
 # Design, Implementation, and Evaluation of Dead Block: Survival — A Cross-Mode Mobile Survival Shooter with Progressive Level Design and Host-Authoritative Multiplayer in Godot 4
 
-**Authors:** Dead Block Development Team  
-*Department of Information Technology — ITSD 85 Special Topics in Information Technology*  
+**Author:** Solo Developer (`yurizz-crypto` / pacaljoenel08@gmail.com)  
+*Department of Information Technology — ITSD 85 Special Topics in Information Technology, BSIT 4-A*  
 
 ---
 
@@ -89,10 +89,10 @@ In Online Co-op (Option A: ENet UDP `7777` and Option B: Nakama/Docker `7350`/`8
 ## V. Evaluation Methodology
 
 ### A. Participants and Apparatus
-Twelve participants ($N = 12$, undergraduate IT students familiar with mobile games) evaluated *Dead Block: Survival* across three physical Android test configurations:
-- **Phone A:** 6.1" FHD+ Android 13 smartphone (`1080×2400`).
-- **Phone B:** 6.7" FHD+ Android 14 smartphone (`1080×2412`, 20:9 aspect ratio).
-- **Device C:** Host/Peer mobile hotspot testbed.
+Twelve participants ($N = 12$, undergraduate IT students familiar with mobile games) evaluated *Dead Block: Survival*. Physical device verification was conducted primarily on a **Samsung Galaxy A56 smartphone** (6.6" Super AMOLED display, `1080×2340`, Android 15 / One UI 7) evaluated in tandem with a networked Windows 11 PC host/peer over local Wi-Fi and mobile hotspot connections:
+- **Phone 1 (Primary Target):** Samsung Galaxy A56 (`1080×2340`, Android 15, One UI 7).
+- **Device 2 (Host / Co-op Peer):** Windows 11 PC running desktop Godot client over LAN / Hotspot UDP 7777.
+- **Phone 2 (Secondary Testbed):** Secondary Android test phone (6.1" Android 13).
 
 ### B. Procedure and Instrument
 Each participant completed a 5–8 minute unassisted playtest session covering: (1) Offline Campaign with the AI Companion on Sectors 1–3 in Airplane Mode, (2) Persistence verification by closing and reopening the app, and (3) a 2-player Online Co-op Campaign and Survival session, including an intentional Wi-Fi disconnect test. Participants then completed the standardized 15-item, 5-point Likert questionnaire ($1 = \text{Strongly Disagree}$ to $5 = \text{Strongly Agree}$) spanning five constructs: **Perceived Usefulness (`PU`)**, **Perceived Ease of Use (`PEOU`)**, **Level Progression (`PROG`)**, **Offline & Online Modes (`MULTI`)**, and **Overall Satisfaction (`SAT`)**.
