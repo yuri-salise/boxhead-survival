@@ -5,18 +5,24 @@ signal save_requested()
 signal retry_requested()
 signal main_menu_requested()
 
-@onready var backdrop: ColorRect = $PauseBackdrop
-@onready var status_label: Label = $CenterContainer/PausePanel/PauseMargin/PauseVBox/SaveStatusLabel
-@onready var resume_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/ResumeButton
-@onready var graphics_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/GraphicsButton
-@onready var resolution_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/ResolutionButton
-@onready var save_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/SaveButton
-@onready var retry_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/RetryButton
-@onready var main_menu_button: Button = $CenterContainer/PausePanel/PauseMargin/PauseVBox/MainMenuButton
+@onready var backdrop: ColorRect = get_node_or_null("PauseBackdrop")
+@onready var pause_panel: PanelContainer = find_child("PausePanel", true, false) as PanelContainer
+@onready var pause_scroll: ScrollContainer = find_child("PauseScroll", true, false) as ScrollContainer
+@onready var status_label: Label = find_child("SaveStatusLabel", true, false) as Label
+@onready var resume_button: Button = find_child("ResumeButton", true, false) as Button
+@onready var graphics_button: Button = find_child("GraphicsButton", true, false) as Button
+@onready var resolution_button: Button = find_child("ResolutionButton", true, false) as Button
+@onready var save_button: Button = find_child("SaveButton", true, false) as Button
+@onready var retry_button: Button = find_child("RetryButton", true, false) as Button
+@onready var main_menu_button: Button = find_child("MainMenuButton", true, false) as Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
 	
 	if resume_button:
 		resume_button.pressed.connect(_on_resume_pressed)
@@ -31,6 +37,20 @@ func _ready() -> void:
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
 	_refresh_settings_buttons()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if pause_panel:
+		pause_panel.custom_minimum_size.x = clampf(vp_size.x - 32.0, 320.0, 500.0)
+		pause_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 480.0)
+	if pause_scroll:
+		pause_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 440.0)
 
 func open_pause_menu() -> void:
 	visible = true

@@ -1,21 +1,23 @@
 extends Control
 
-@onready var local_ip_label: Label = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/LocalIpLabel
-@onready var host_banner_panel: PanelContainer = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel")
-@onready var host_ip_display: Label = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox/HostIpDisplay")
-@onready var host_alt_ips_label: Label = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostAltIpsLabel")
-@onready var copy_ip_button: Button = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox/CopyIpButton")
+@onready var lobby_panel: PanelContainer = find_child("LobbyPanel", true, false) as PanelContainer
+@onready var lobby_scroll: ScrollContainer = find_child("LobbyScroll", true, false) as ScrollContainer
+@onready var local_ip_label: Label = find_child("LocalIpLabel", true, false) as Label
+@onready var host_banner_panel: PanelContainer = find_child("HostBannerPanel", true, false) as PanelContainer
+@onready var host_ip_display: Label = find_child("HostIpDisplay", true, false) as Label
+@onready var host_alt_ips_label: Label = find_child("HostAltIpsLabel", true, false) as Label
+@onready var copy_ip_button: Button = find_child("CopyIpButton", true, false) as Button
 
-@onready var host_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostRow/HostButton
-@onready var ip_input: LineEdit = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow/IpInput
-@onready var port_input: LineEdit = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow/PortInput
-@onready var join_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow/JoinButton
-@onready var status_label: Label = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/StatusLabel
-@onready var players_label: Label = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/PlayersLabel
-@onready var mode_button: Button = get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow/ModeButton")
-@onready var sector_option: OptionButton = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow/SectorOption
-@onready var start_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow/StartButton
-@onready var back_button: Button = $CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow/BackButton
+@onready var host_button: Button = find_child("HostButton", true, false) as Button
+@onready var ip_input: LineEdit = find_child("IpInput", true, false) as LineEdit
+@onready var port_input: LineEdit = find_child("PortInput", true, false) as LineEdit
+@onready var join_button: Button = find_child("JoinButton", true, false) as Button
+@onready var status_label: Label = find_child("StatusLabel", true, false) as Label
+@onready var players_label: Label = find_child("PlayersLabel", true, false) as Label
+@onready var mode_button: Button = find_child("ModeButton", true, false) as Button
+@onready var sector_option: OptionButton = find_child("SectorOption", true, false) as OptionButton
+@onready var start_button: Button = find_child("StartButton", true, false) as Button
+@onready var back_button: Button = find_child("BackButton", true, false) as Button
 
 func _ready() -> void:
 	if host_button:
@@ -28,6 +30,10 @@ func _ready() -> void:
 		start_button.pressed.connect(_on_start_pressed)
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
+	
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
 	
 	if copy_ip_button:
 		copy_ip_button.pressed.connect(func():
@@ -73,8 +79,22 @@ func _ready() -> void:
 	if gs and gs.has_method("bind_button_tweens"):
 		gs.bind_button_tweens(self)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if lobby_panel:
+		lobby_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 840.0)
+		lobby_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 260.0, 560.0)
+	if lobby_scroll:
+		lobby_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 220.0, 500.0)
+
 func _setup_nakama_and_leaderboard_controls() -> void:
-	var lobby_vbox := get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox")
+	var lobby_vbox := find_child("LobbyVBox", true, false) as VBoxContainer
 	if not lobby_vbox:
 		return
 	var opt_row := HBoxContainer.new()

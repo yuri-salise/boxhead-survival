@@ -33,21 +33,30 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="ResultPanel" type="PanelContainer" parent="CenterContainer" unique_id=615243890]
-custom_minimum_size = Vector2(560, 440)
+custom_minimum_size = Vector2(540, 420)
 layout_mode = 2
 
 [node name="ResultMargin" type="MarginContainer" parent="CenterContainer/ResultPanel" unique_id=514263780]
 layout_mode = 2
-theme_override_constants/margin_left = 34
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 34
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
 
-[node name="ResultVBox" type="VBoxContainer" parent="CenterContainer/ResultPanel/ResultMargin" unique_id=413256790]
+[node name="ResultScroll" type="ScrollContainer" parent="CenterContainer/ResultPanel/ResultMargin" unique_id=514263799]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="ResultVBox" type="VBoxContainer" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll" unique_id=413256790]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 14
 
-[node name="OutcomeTitle" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=312456789]
+[node name="OutcomeTitle" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=312456789]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 38
@@ -55,7 +64,7 @@ theme_override_colors/font_color = Color(0.35, 0.92, 0.48, 1)
 text = "SECTOR CLEARED // SURVIVED"
 horizontal_alignment = 1
 
-[node name="StarsLabel" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=213456788]
+[node name="StarsLabel" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=213456788]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 28
@@ -63,7 +72,7 @@ theme_override_colors/font_color = Color(0.98, 0.82, 0.25, 1)
 text = "★ ★ ★   RATING (3/3)"
 horizontal_alignment = 1
 
-[node name="StatsLabel" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=112345677]
+[node name="StatsLabel" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=112345677]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 15
@@ -71,7 +80,7 @@ theme_override_colors/font_color = Color(0.9, 0.92, 0.95, 1)
 text = "ZONE 01   ·   INFECTED KILLED: 0   ·   SCORE: 0"
 horizontal_alignment = 1
 
-[node name="UnlockBanner" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=192837465]
+[node name="UnlockBanner" type="Label" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=192837465]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
@@ -79,22 +88,22 @@ theme_override_colors/font_color = Color(0.45, 0.88, 0.55, 1)
 text = "[ PROGRESS SAVED — SECTOR 02 UNLOCKED ]"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=293847561]
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=293847561]
 layout_mode = 2
 
-[node name="NextLevelButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=394857612]
+[node name="NextLevelButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=394857612]
 custom_minimum_size = Vector2(0, 56)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "DEPLOY TO NEXT SECTOR"
 
-[node name="RetryButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=495867123]
+[node name="RetryButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=495867123]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
 text = "RETRY ZONE"
 
-[node name="MainMenuButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultVBox" unique_id=596871234]
+[node name="MainMenuButton" type="Button" parent="CenterContainer/ResultPanel/ResultMargin/ResultScroll/ResultVBox" unique_id=596871234]
 custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 theme_override_font_sizes/font_size = 22

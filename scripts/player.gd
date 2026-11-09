@@ -559,6 +559,17 @@ func revive(restore_hp: float = 40.0) -> void:
 	queue_redraw()
 
 @rpc("any_peer", "call_local", "reliable")
+func rpc_sync_gasoline(p_has_gas: bool) -> void:
+	has_gasoline = p_has_gas
+	queue_redraw()
+
+func sync_gasoline_state(p_has_gas: bool) -> void:
+	has_gasoline = p_has_gas
+	queue_redraw()
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_sync_gasoline.rpc(p_has_gas)
+
+@rpc("any_peer", "call_local", "reliable")
 func rpc_sync_downed(downed: bool) -> void:
 	if not is_inside_tree() or multiplayer == null:
 		return

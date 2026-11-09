@@ -4,13 +4,15 @@ signal next_level_requested(next_level_id: int)
 signal retry_requested()
 signal main_menu_requested()
 
-@onready var outcome_title: Label = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/OutcomeTitle
-@onready var stars_label: Label = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/StarsLabel
-@onready var stats_label: Label = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/StatsLabel
-@onready var unlock_banner: Label = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/UnlockBanner
-@onready var next_level_button: Button = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/NextLevelButton
-@onready var retry_button: Button = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/RetryButton
-@onready var main_menu_button: Button = $CenterContainer/ResultPanel/ResultMargin/ResultVBox/MainMenuButton
+@onready var result_panel: PanelContainer = find_child("ResultPanel", true, false) as PanelContainer
+@onready var result_scroll: ScrollContainer = find_child("ResultScroll", true, false) as ScrollContainer
+@onready var outcome_title: Label = find_child("OutcomeTitle", true, false) as Label
+@onready var stars_label: Label = find_child("StarsLabel", true, false) as Label
+@onready var stats_label: Label = find_child("StatsLabel", true, false) as Label
+@onready var unlock_banner: Label = find_child("UnlockBanner", true, false) as Label
+@onready var next_level_button: Button = find_child("NextLevelButton", true, false) as Button
+@onready var retry_button: Button = find_child("RetryButton", true, false) as Button
+@onready var main_menu_button: Button = find_child("MainMenuButton", true, false) as Button
 
 var current_level_id: int = 1
 var is_victory: bool = false
@@ -18,6 +20,10 @@ var is_victory: bool = false
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
+	
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
 	
 	if next_level_button:
 		next_level_button.pressed.connect(_on_next_level_pressed)
@@ -28,6 +34,20 @@ func _ready() -> void:
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("bind_button_tweens"):
 		gs.bind_button_tweens(self)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if result_panel:
+		result_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 540.0)
+		result_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 440.0)
+	if result_scroll:
+		result_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 400.0)
 
 func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_achs: Array = []) -> void:
 	current_level_id = level_id

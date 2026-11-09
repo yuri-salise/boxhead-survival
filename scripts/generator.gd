@@ -61,7 +61,7 @@ func _process(delta: float) -> void:
 			is_starting = false
 			has_fuel = true
 			fuel_time_left = fuel_duration
-			start_generator()
+			_do_start_generator()
 	elif is_running:
 		needs_redraw = true
 		fuel_time_left = maxf(0.0, fuel_time_left - delta)
@@ -70,13 +70,11 @@ func _process(delta: float) -> void:
 			prompt_label.text = "GENERATOR: " + str(int(ceil(fuel_time_left))) + "s [FUEL]"
 		
 		if fuel_time_left <= 0.0:
-			is_running = false
-			has_fuel = false
-			if prompt_label:
-				prompt_label.visible = true
-				prompt_label.text = "OUT OF FUEL — GET GAS FROM TRUCK"
-			generator_depleted.emit(global_position)
-			queue_redraw()
+			if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+				if multiplayer.is_server():
+					rpc_sync_deplete_generator.rpc()
+				return
+			_do_deplete_generator()
 			return
 		
 		# Generate smoke puffs from exhaust pipe
@@ -118,7 +116,9 @@ func interact(p_actor: Node2D = null) -> bool:
 		return false
 	if not has_fuel:
 		if is_instance_valid(p_actor) and p_actor.get("has_gasoline") == true:
-			p_actor.has_gasoline = false
+			p_actor.set("has_gasoline", false)
+			if p_actor.has_method("sync_gasoline_state"):
+				p_actor.sync_gasoline_state(false)
 			p_actor.queue_redraw()
 			return refuel_and_restart()
 		return _try_refuel_from_player()
@@ -134,17 +134,39 @@ func _try_refuel_from_player() -> bool:
 	if tree:
 		for p in tree.get_nodes_in_group("players"):
 			if is_instance_valid(p) and p.get("has_gasoline") == true:
-				p.has_gasoline = false
+				p.set("has_gasoline", false)
+				if p.has_method("sync_gasoline_state"):
+					p.sync_gasoline_state(false)
 				p.queue_redraw()
 				return refuel_and_restart()
 		if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
 			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -48), "⛽ OUT OF FUEL! COLLECT GASOLINE FROM FUEL TRUCK! ⛽", Color(1.0, 0.45, 0.20))
 	return false
 
+@rpc("any_peer", "call_local", "reliable")
+func rpc_sync_refuel_and_restart() -> void:
+	_do_refuel_and_restart()
+
+@rpc("any_peer", "call_local", "reliable")
+func rpc_sync_start_generator() -> void:
+	_do_start_generator()
+
+@rpc("authority", "call_local", "reliable")
+func rpc_sync_deplete_generator() -> void:
+	_do_deplete_generator()
+
 func refuel_and_restart() -> bool:
 	if is_running or is_starting:
 		return false
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_sync_refuel_and_restart.rpc()
+		return true
+	return _do_refuel_and_restart()
+
+func _do_refuel_and_restart() -> bool:
 	is_starting = true
+	is_running = false
+	has_fuel = true
 	startup_time_left = maxf(0.1, restart_delay)
 	if prompt_label:
 		prompt_label.visible = true
@@ -182,9 +204,15 @@ func start_generator() -> bool:
 		return false
 	if not has_fuel:
 		return _try_refuel_from_player()
-	
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_sync_start_generator.rpc()
+		return true
+	return _do_start_generator()
+
+func _do_start_generator() -> bool:
 	is_running = true
 	is_starting = false
+	has_fuel = true
 	if fuel_time_left <= 0.0:
 		fuel_time_left = fuel_duration
 	if prompt_label:
@@ -211,6 +239,49 @@ func start_generator() -> bool:
 	queue_redraw()
 	return true
 
+func _do_deplete_generator() -> void:
+	is_running = false
+	is_starting = false
+	has_fuel = false
+	fuel_time_left = 0.0
+	if prompt_label:
+		prompt_label.visible = true
+		prompt_label.text = "OUT OF FUEL — GET GAS FROM TRUCK"
+	generator_depleted.emit(global_position)
+	queue_redraw()
+
+func get_sync_state() -> Dictionary:
+	return {
+		"is_running": is_running,
+		"is_starting": is_starting,
+		"has_fuel": has_fuel,
+		"fuel_time_left": fuel_time_left,
+		"startup_time_left": startup_time_left
+	}
+
+func apply_sync_state(data: Dictionary) -> void:
+	var was_running := is_running
+	is_running = data.get("is_running", false)
+	is_starting = data.get("is_starting", false)
+	has_fuel = data.get("has_fuel", false)
+	fuel_time_left = float(data.get("fuel_time_left", 0.0))
+	startup_time_left = float(data.get("startup_time_left", 0.0))
+	if prompt_label:
+		if is_starting:
+			prompt_label.visible = true
+			prompt_label.text = "IGNITING: " + str(snappedf(startup_time_left, 0.1)) + "s"
+		elif is_running:
+			prompt_label.visible = true
+			prompt_label.text = "GENERATOR: " + str(int(ceil(fuel_time_left))) + "s [FUEL]"
+		elif not has_fuel:
+			prompt_label.visible = true
+			prompt_label.text = "OUT OF FUEL — GET GAS FROM TRUCK"
+		else:
+			prompt_label.visible = is_player_nearby
+			prompt_label.text = "GENERATOR [READY] - HOLD TO START"
+	if was_running != is_running:
+		queue_redraw()
+
 func get_light_data() -> Dictionary:
 	if is_starting:
 		var prog := clampf(1.0 - (startup_time_left / maxf(0.1, restart_delay)), 0.15, 1.0)
@@ -234,7 +305,9 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 		player_proximity_changed.emit(true)
 		# Auto-refuel if generator is out of fuel and player walks up carrying gasoline!
 		if not is_running and not is_starting and not has_fuel and body.get("has_gasoline") == true:
-			body.has_gasoline = false
+			body.set("has_gasoline", false)
+			if body.has_method("sync_gasoline_state"):
+				body.sync_gasoline_state(false)
 			body.queue_redraw()
 			refuel_and_restart()
 			return

@@ -125,7 +125,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.48, 0.53, 0.58, 1)
 theme_override_fonts/font = ExtResource("4_special")
 theme_override_font_sizes/font_size = 12
-text = "SOLO CAMPAIGN & TWO-PLAYER CO-OP"
+text = "SOLO CAMPAIGN & 2-4 PLAYER SQUAD CO-OP"
 horizontal_alignment = 1
 
 [node name="FooterLabel" type="Label" parent="."]

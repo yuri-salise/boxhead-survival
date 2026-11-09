@@ -55,6 +55,7 @@ var player2: CharacterBody2D = null
 var squad_peers: Dictionary = {}
 var next_zombie_net_id: int = 1
 var net_zombie_sync_timer: float = 0.0
+var net_interactable_sync_timer: float = 0.0
 var title_font: Font = preload("res://assets/fonts/BebasNeue-Regular.ttf")
 
 # Mobile performance caching for flashlight occluders & lights
@@ -98,6 +99,7 @@ func _ready() -> void:
 	var gen_scene: PackedScene = load("res://scenes/actors/generator.tscn")
 	if gen_scene:
 		var generator := gen_scene.instantiate()
+		generator.name = "Generator"
 		generator.position = Vector2(740, 240)
 		generator.generator_started.connect(_on_generator_started)
 		if generator.has_signal("generator_depleted"):
@@ -109,6 +111,7 @@ func _ready() -> void:
 	var truck_scene: PackedScene = load("res://scenes/actors/fuel_truck.tscn")
 	if truck_scene:
 		var fuel_truck := truck_scene.instantiate()
+		fuel_truck.name = "FuelTruck"
 		fuel_truck.position = Vector2(890, 240)
 		if fuel_truck.has_signal("gasoline_collected"):
 			fuel_truck.gasoline_collected.connect(_on_gasoline_collected)
@@ -117,12 +120,14 @@ func _ready() -> void:
 	var sentry_scene: PackedScene = load("res://scenes/actors/sentry_turret.tscn")
 	if sentry_scene:
 		var sentry := sentry_scene.instantiate()
+		sentry.name = "SentryTurret"
 		sentry.position = Vector2(640, 440)
 		add_child(sentry)
 	
 	var crate_scene: PackedScene = load("res://scenes/actors/supply_crate.tscn")
 	if crate_scene:
 		var crate := crate_scene.instantiate()
+		crate.name = "SupplyCrate"
 		crate.position = Vector2(530, 260)
 		add_child(crate)
 	
@@ -628,6 +633,12 @@ func _process(delta: float) -> void:
 				if net_zombie_sync_timer >= 0.08:
 					net_zombie_sync_timer = 0.0
 					_broadcast_zombie_sync_state()
+				
+				# Periodic Host-Authoritative Interactables Synchronization (1.25 Hz)
+				net_interactable_sync_timer += delta
+				if net_interactable_sync_timer >= 0.8:
+					net_interactable_sync_timer = 0.0
+					_broadcast_interactable_sync_state()
 
 func spawn_blood_decal(world_pos: Vector2, hit_dir: Vector2, splatter_type: int = -1, scale_mult: float = 1.0, active_splash: bool = true) -> Node2D:
 	if not blood_container:
@@ -1266,6 +1277,29 @@ func rpc_sync_zombies(batch: Array) -> void:
 			z.set("target_sync_pos", Vector2(float(item[1]), float(item[2])))
 			z.set("target_sync_rot", float(item[3]))
 			z.set("current_health", float(item[4]))
+
+func _broadcast_interactable_sync_state() -> void:
+	var gen_dict: Dictionary = {}
+	for g in get_tree().get_nodes_in_group("generators"):
+		if is_instance_valid(g) and g.has_method("get_sync_state"):
+			gen_dict[str(g.get_path())] = g.get_sync_state()
+	var turret_dict: Dictionary = {}
+	for t in get_tree().get_nodes_in_group("turrets"):
+		if is_instance_valid(t) and t.has_method("get_sync_state"):
+			turret_dict[str(t.get_path())] = t.get_sync_state()
+	if not gen_dict.is_empty() or not turret_dict.is_empty():
+		rpc_sync_interactables.rpc(gen_dict, turret_dict)
+
+@rpc("authority", "call_remote", "unreliable")
+func rpc_sync_interactables(gen_states: Dictionary, turret_states: Dictionary) -> void:
+	for path in gen_states:
+		var g = get_node_or_null(NodePath(path))
+		if is_instance_valid(g) and g.has_method("apply_sync_state"):
+			g.apply_sync_state(gen_states[path])
+	for path in turret_states:
+		var t = get_node_or_null(NodePath(path))
+		if is_instance_valid(t) and t.has_method("apply_sync_state"):
+			t.apply_sync_state(turret_states[path])
 
 func report_client_zombie_hit(z_id: int, amount: float, hit_dir: Vector2) -> void:
 	var net_mgr := get_node_or_null("/root/NetworkManager")

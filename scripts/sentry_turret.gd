@@ -68,7 +68,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.keycode == KEY_E:
 			activate_turret()
 
+@rpc("any_peer", "call_local", "reliable")
+func rpc_sync_activate_turret() -> void:
+	_execute_activate_turret()
+
+@rpc("authority", "call_local", "reliable")
+func rpc_sync_deactivate_turret() -> void:
+	_execute_deactivate_turret()
+
 func activate_turret() -> bool:
+	if is_active:
+		return false
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_sync_activate_turret.rpc()
+		return true
+	return _execute_activate_turret()
+
+func _execute_activate_turret() -> bool:
 	if is_active:
 		return false
 	
@@ -95,6 +111,14 @@ func activate_turret() -> bool:
 	queue_redraw()
 	return true
 
+func _execute_deactivate_turret() -> void:
+	is_active = false
+	active_time_left = 0.0
+	if prompt_label:
+		prompt_label.visible = is_player_nearby
+		prompt_label.text = "TAP TO ACTIVATE TURRET"
+	queue_redraw()
+
 func _process(delta: float) -> void:
 	anim_time += delta
 	redraw_accum += delta
@@ -115,11 +139,11 @@ func _process(delta: float) -> void:
 			prompt_label.visible = true
 		
 		if active_time_left <= 0.0:
-			is_active = false
-			if prompt_label:
-				prompt_label.visible = is_player_nearby
-				prompt_label.text = "TAP TO ACTIVATE TURRET"
-			queue_redraw()
+			if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+				if multiplayer.is_server():
+					rpc_sync_deactivate_turret.rpc()
+				return
+			_execute_deactivate_turret()
 			return
 		
 		# Acquire closest living zombie (throttled to 10 Hz for mobile CPU performance)
@@ -175,6 +199,28 @@ func _fire_shot() -> void:
 		var proj = projectile_scene.instantiate()
 		get_parent().add_child(proj)
 		proj.init(spawn_pos, dir, 820.0, bullet_damage, self, 0, Color(0.98, 0.85, 0.25), false)
+
+func get_sync_state() -> Dictionary:
+	return {
+		"is_active": is_active,
+		"active_time_left": active_time_left,
+		"aim_angle": aim_angle
+	}
+
+func apply_sync_state(data: Dictionary) -> void:
+	var was_active := is_active
+	is_active = data.get("is_active", false)
+	active_time_left = float(data.get("active_time_left", 0.0))
+	aim_angle = float(data.get("aim_angle", aim_angle))
+	if prompt_label:
+		if is_active:
+			prompt_label.text = "TURRET: " + str(int(ceil(active_time_left))) + "s"
+			prompt_label.visible = true
+		else:
+			prompt_label.visible = is_player_nearby
+			prompt_label.text = "TAP TO ACTIVATE TURRET"
+	if was_active != is_active:
+		queue_redraw()
 
 func get_light_data() -> Dictionary:
 	if muzzle_flash_timer > 0.0:

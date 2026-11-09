@@ -69,6 +69,8 @@ func dispense_gasoline(target_player: Node2D = null) -> bool:
 		return false
 	
 	recipient.set("has_gasoline", true)
+	if recipient.has_method("sync_gasoline_state"):
+		recipient.sync_gasoline_state(true)
 	recipient.queue_redraw()
 	
 	var audio_mgr = get_node_or_null("/root/AudioManager")

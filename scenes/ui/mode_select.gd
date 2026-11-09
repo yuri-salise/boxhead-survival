@@ -1,12 +1,18 @@
 extends Control
 
-@onready var solo_button: Button = $CenterContainer/ModePanel/ModeMargin/ModeVBox/SoloCampaignButton
-@onready var survival_button: Button = get_node_or_null("CenterContainer/ModePanel/ModeMargin/ModeVBox/SurvivalModeButton")
-@onready var coop_button: Button = $CenterContainer/ModePanel/ModeMargin/ModeVBox/CoopLobbyButton
-@onready var back_button: Button = $CenterContainer/ModePanel/ModeMargin/ModeVBox/BackButton
-@onready var status_label: Label = $CenterContainer/ModePanel/ModeMargin/ModeVBox/StatusLabel
+@onready var mode_panel: PanelContainer = find_child("ModePanel", true, false) as PanelContainer
+@onready var mode_scroll: ScrollContainer = find_child("ModeScroll", true, false) as ScrollContainer
+@onready var solo_button: Button = find_child("SoloCampaignButton", true, false) as Button
+@onready var survival_button: Button = find_child("SurvivalModeButton", true, false) as Button
+@onready var coop_button: Button = find_child("CoopLobbyButton", true, false) as Button
+@onready var back_button: Button = find_child("BackButton", true, false) as Button
+@onready var status_label: Label = find_child("StatusLabel", true, false) as Label
 
 func _ready() -> void:
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
+	
 	if solo_button:
 		solo_button.pressed.connect(_on_solo_pressed)
 	if survival_button:
@@ -41,8 +47,20 @@ func _ready() -> void:
 		status_label.text = "[ SURVIVAL RECORD: WAVE " + str(gs.survival_best_wave) + "  ·  SCORE " + str(gs.survival_best_score) + " ]"
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		_on_back_pressed()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if mode_panel:
+		mode_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 560.0)
+		mode_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 460.0)
+	if mode_scroll:
+		mode_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 420.0)
 
 func _get_game_state() -> Node:
 	return get_node_or_null("/root/GameState")

@@ -48,21 +48,30 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="LobbyPanel" type="PanelContainer" parent="CenterContainer" unique_id=687123453]
-custom_minimum_size = Vector2(880, 600)
+custom_minimum_size = Vector2(840, 520)
 layout_mode = 2
 
 [node name="LobbyMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel" unique_id=587123452]
 layout_mode = 2
-theme_override_constants/margin_left = 34
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 34
-theme_override_constants/margin_bottom = 18
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 14
 
-[node name="LobbyVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin" unique_id=487123451]
+[node name="LobbyScroll" type="ScrollContainer" parent="CenterContainer/LobbyPanel/LobbyMargin" unique_id=587123499]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="LobbyVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll" unique_id=487123451]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 8
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=387123450]
+[node name="TitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=387123450]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 36
@@ -70,7 +79,7 @@ theme_override_colors/font_color = Color(0.94, 0.95, 0.96, 1)
 text = "SURVIVOR CO-OP LOBBY"
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=287123449]
+[node name="SubtitleLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=287123449]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
@@ -78,7 +87,7 @@ theme_override_colors/font_color = Color(0.85, 0.55, 0.22, 1)
 text = "[ 2 TO 4 SURVIVOR LAN / MOBILE HOTSPOT CO-OP ]"
 horizontal_alignment = 1
 
-[node name="GuideLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123447]
+[node name="GuideLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=187123447]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 12
@@ -87,7 +96,7 @@ text = "💡 Each device on your Wi-Fi has a DIFFERENT IP. One player clicks HOS
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="LocalIpLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123448]
+[node name="LocalIpLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=187123448]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 12
@@ -96,23 +105,23 @@ text = "THIS DEVICE'S IP:  DETECTING..."
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="HostBannerPanel" type="PanelContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=187123446]
+[node name="HostBannerPanel" type="PanelContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=187123446]
 visible = false
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_host_banner")
 
-[node name="HostBannerMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel" unique_id=187123445]
+[node name="HostBannerMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel" unique_id=187123445]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 6
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 6
 
-[node name="HostBannerVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin" unique_id=187123444]
+[node name="HostBannerVBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin" unique_id=187123444]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="HostBannerTitle" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123443]
+[node name="HostBannerTitle" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123443]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 22
@@ -120,7 +129,7 @@ theme_override_colors/font_color = Color(1, 0.85, 0.25, 1)
 text = "★ YOU ARE HOSTING — SHARE THIS IP WITH JOINERS: ★"
 horizontal_alignment = 1
 
-[node name="HostBannerInstruction" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123442]
+[node name="HostBannerInstruction" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123442]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
@@ -128,12 +137,12 @@ theme_override_colors/font_color = Color(0.9, 0.92, 0.95, 1)
 text = "TELL OTHER SURVIVORS TO ENTER THIS IP IN THEIR \"JOIN\" BOX:"
 horizontal_alignment = 1
 
-[node name="HostIpBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123441]
+[node name="HostIpBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123441]
 layout_mode = 2
 alignment = 1
 theme_override_constants/separation = 12
 
-[node name="HostIpDisplay" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123440]
+[node name="HostIpDisplay" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123440]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 30
@@ -141,12 +150,12 @@ theme_override_colors/font_color = Color(0.35, 1, 0.55, 1)
 text = "👉  127.0.0.1  (PORT: 7777)  👈"
 horizontal_alignment = 1
 
-[node name="CopyIpButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123439]
+[node name="CopyIpButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123439]
 custom_minimum_size = Vector2(90, 36)
 layout_mode = 2
 text = "📋 COPY"
 
-[node name="HostAltIpsLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123438]
+[node name="HostAltIpsLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123438]
 visible = false
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
@@ -155,94 +164,94 @@ theme_override_colors/font_color = Color(0.65, 0.68, 0.72, 1)
 text = "Alternative network adapters: ..."
 horizontal_alignment = 1
 
-[node name="HSeparator1" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=977123447]
+[node name="HSeparator1" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=977123447]
 layout_mode = 2
 
-[node name="HostRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=877123446]
+[node name="HostRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=877123446]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="HostLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostRow" unique_id=777123445]
+[node name="HostLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostRow" unique_id=777123445]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
 text = "HOST SESSION:"
 
-[node name="HostButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/HostRow" unique_id=677123444]
+[node name="HostButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostRow" unique_id=677123444]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "HOST CO-OP MATCH (BECOME HOST)"
 
-[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=577123443]
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=577123443]
 layout_mode = 2
 
-[node name="JoinRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=477123442]
+[node name="JoinRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=477123442]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="JoinLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=377123441]
+[node name="JoinLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/JoinRow" unique_id=377123441]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
 text = "JOIN SESSION:"
 
-[node name="IpInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=277123440]
+[node name="IpInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/JoinRow" unique_id=277123440]
 custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Enter Host IP (e.g. 192.168.1.100)"
 
-[node name="PortInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=177123439]
+[node name="PortInput" type="LineEdit" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/JoinRow" unique_id=177123439]
 custom_minimum_size = Vector2(80, 48)
 layout_mode = 2
 text = "7777"
 placeholder_text = "7777"
 
-[node name="JoinButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/JoinRow" unique_id=966123438]
+[node name="JoinButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/JoinRow" unique_id=966123438]
 custom_minimum_size = Vector2(180, 48)
 layout_mode = 2
 text = "CONNECT TO HOST"
 
-[node name="HSeparator3" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=866123437]
+[node name="HSeparator3" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=866123437]
 layout_mode = 2
 
-[node name="ModeRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=766123499]
+[node name="ModeRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=766123499]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="ModeLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow" unique_id=666123498]
+[node name="ModeLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/ModeRow" unique_id=666123498]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
 text = "MISSION TYPE:"
 
-[node name="ModeButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow" unique_id=566123497]
+[node name="ModeButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/ModeRow" unique_id=566123497]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "CAMPAIGN MISSION (CLEAR SECTOR)"
 
-[node name="SectorRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=766123436]
+[node name="SectorRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=766123436]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="SectorLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow" unique_id=666123435]
+[node name="SectorLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/SectorRow" unique_id=666123435]
 custom_minimum_size = Vector2(160, 0)
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
 text = "TARGET SECTOR:"
 
-[node name="SectorOption" type="OptionButton" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/SectorRow" unique_id=566123434]
+[node name="SectorOption" type="OptionButton" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/SectorRow" unique_id=566123434]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="StatusLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=466123433]
+[node name="StatusLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=466123433]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 13
@@ -250,7 +259,7 @@ theme_override_colors/font_color = Color(0.85, 0.85, 0.88, 1)
 text = "[ STATUS: READY TO HOST OR JOIN ]"
 horizontal_alignment = 1
 
-[node name="PlayersLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=366123432]
+[node name="PlayersLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=366123432]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 22
@@ -258,21 +267,21 @@ theme_override_colors/font_color = Color(0.95, 0.82, 0.35, 1)
 text = "SURVIVORS READY: 0 / 4"
 horizontal_alignment = 1
 
-[node name="HSeparator4" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=266123431]
+[node name="HSeparator4" type="HSeparator" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=266123431]
 layout_mode = 2
 
-[node name="ActionRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox" unique_id=166123430]
+[node name="ActionRow" type="HBoxContainer" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox" unique_id=166123430]
 layout_mode = 2
 theme_override_constants/separation = 16
 
-[node name="StartButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow" unique_id=955123429]
+[node name="StartButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/ActionRow" unique_id=955123429]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 size_flags_horizontal = 3
 disabled = true
 text = "WAITING FOR SQUADMATES..."
 
-[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ActionRow" unique_id=855123428]
+[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/ActionRow" unique_id=855123428]
 custom_minimum_size = Vector2(220, 52)
 layout_mode = 2
 text = "RETURN TO MENU"

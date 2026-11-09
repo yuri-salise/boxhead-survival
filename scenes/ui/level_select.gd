@@ -8,24 +8,26 @@ const LEVEL_NAMES: Dictionary = {
 	5: "SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES · MIDNIGHT -> DAWN)"
 }
 
-@onready var level_buttons: Array[Button] = [
-	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level1Button,
-	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level2Button,
-	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level3Button,
-	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level4Button,
-	$CenterContainer/LevelPanel/LevelMargin/LevelVBox/Level5Button
-]
-@onready var back_button: Button = $CenterContainer/LevelPanel/LevelMargin/LevelVBox/BottomRow/BackButton
-@onready var achievements_label: Label = $CenterContainer/LevelPanel/LevelMargin/LevelVBox/AchievementsLabel
+@onready var level_panel: PanelContainer = find_child("LevelPanel", true, false) as PanelContainer
+@onready var level_scroll: ScrollContainer = find_child("LevelScroll", true, false) as ScrollContainer
+@onready var back_button: Button = find_child("BackButton", true, false) as Button
+@onready var achievements_label: Label = find_child("AchievementsLabel", true, false) as Label
 
+var level_buttons: Array[Button] = []
 var custom_game_state: Node = null
 
 func _ready() -> void:
-	for i in range(level_buttons.size()):
-		var lvl_id := i + 1
-		var btn := level_buttons[i]
+	level_buttons.clear()
+	for i in range(1, 6):
+		var btn = find_child("Level" + str(i) + "Button", true, false) as Button
 		if btn:
+			level_buttons.append(btn)
+			var lvl_id := i
 			btn.pressed.connect(func(): _on_level_selected(lvl_id))
+	
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
 	
 	if back_button:
 		back_button.pressed.connect(_on_back_pressed)
@@ -37,8 +39,20 @@ func _ready() -> void:
 	refresh_ui()
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
 		_on_back_pressed()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if level_panel:
+		level_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 840.0)
+		level_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 260.0, 560.0)
+	if level_scroll:
+		level_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 220.0, 500.0)
 
 func _get_game_state() -> Node:
 	if is_instance_valid(custom_game_state):

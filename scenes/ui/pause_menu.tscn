@@ -33,21 +33,30 @@ grow_vertical = 2
 mouse_filter = 2
 
 [node name="PausePanel" type="PanelContainer" parent="CenterContainer" unique_id=930376248]
-custom_minimum_size = Vector2(520, 520)
+custom_minimum_size = Vector2(500, 420)
 layout_mode = 2
 
 [node name="PauseMargin" type="MarginContainer" parent="CenterContainer/PausePanel" unique_id=788358536]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
 
-[node name="PauseVBox" type="VBoxContainer" parent="CenterContainer/PausePanel/PauseMargin" unique_id=233606933]
+[node name="PauseScroll" type="ScrollContainer" parent="CenterContainer/PausePanel/PauseMargin" unique_id=788358599]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="PauseVBox" type="VBoxContainer" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll" unique_id=233606933]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="PauseTitle" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=168063289]
+[node name="PauseTitle" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=168063289]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_8uki6")
 theme_override_font_sizes/font_size = 34
@@ -55,7 +64,7 @@ theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
 text = "OUTPOST PAUSED"
 horizontal_alignment = 1
 
-[node name="SaveStatusLabel" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1518822248]
+[node name="SaveStatusLabel" type="Label" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1518822248]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_0bnpd")
 theme_override_font_sizes/font_size = 13
@@ -63,40 +72,40 @@ theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
 text = "[ TACTICAL FIELD TERMINAL // GAME PAUSED ]"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1883606371]
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1883606371]
 layout_mode = 2
 
-[node name="ResumeButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012932]
+[node name="ResumeButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1317012932]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "RESUME SURVIVAL"
 
-[node name="GraphicsButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012933]
+[node name="GraphicsButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1317012933]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 19
 text = "GRAPHICS: BALANCED"
 
-[node name="ResolutionButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1317012934]
+[node name="ResolutionButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1317012934]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 19
 text = "RESOLUTION: 100%"
 
-[node name="SaveButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1852370492]
+[node name="SaveButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1852370492]
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_font_sizes/font_size = 19
 text = "SAVE PROGRESS"
 
-[node name="RetryButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1681719678]
+[node name="RetryButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1681719678]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "RETRY ZONE"
 
-[node name="MainMenuButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseVBox" unique_id=1292362883]
+[node name="MainMenuButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseScroll/PauseVBox" unique_id=1292362883]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 theme_override_font_sizes/font_size = 20

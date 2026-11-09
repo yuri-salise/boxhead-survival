@@ -198,38 +198,47 @@ mouse_filter = 2
 
 [node name="PlayDialog" type="PanelContainer" parent="ModalLayer/ModalsCenter" unique_id=1142076605]
 visible = false
-custom_minimum_size = Vector2(560, 360)
+custom_minimum_size = Vector2(540, 340)
 layout_mode = 2
 
 [node name="PlayMargin" type="MarginContainer" parent="ModalLayer/ModalsCenter/PlayDialog" unique_id=412596827]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
 
-[node name="PlayVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin" unique_id=1704867358]
+[node name="PlayScroll" type="ScrollContainer" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin" unique_id=412596899]
 layout_mode = 2
-theme_override_constants/separation = 16
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
 
-[node name="PlayTitle" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=1488841483]
+[node name="PlayVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll" unique_id=1704867358]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 14
+
+[node name="PlayTitle" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=1488841483]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_x2yvf")
 theme_override_font_sizes/font_size = 30
 theme_override_colors/font_color = Color(0.92, 0.94, 0.96, 1)
 text = "MISSION DISPATCH // LEVEL 01"
 
-[node name="PlayTag" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=1507611936]
+[node name="PlayTag" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=1507611936]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m1kxf")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
 text = "[ QUARANTINE ZONE // FIRST WAVE ]"
 
-[node name="PlaySeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=396633605]
+[node name="PlaySeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=396633605]
 layout_mode = 2
 
-[node name="PlayDesc" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=1978904122]
+[node name="PlayDesc" type="Label" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=1978904122]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m1kxf")
 theme_override_font_sizes/font_size = 14
@@ -239,111 +248,129 @@ text = "Objective: Eliminate initial walker incursions and secure the perimeter.
 Entering the arena initiates the Phase 0 combat testbed."
 autowrap_mode = 3
 
-[node name="StartLevelButton" type="Button" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=365365974]
+[node name="StartLevelButton" type="Button" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=365365974]
 custom_minimum_size = Vector2(0, 52)
 layout_mode = 2
 text = "DEPLOY TO QUARANTINE (LEVEL 1)"
 
-[node name="PlayBackButton" type="Button" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox" unique_id=16124798]
+[node name="PlayBackButton" type="Button" parent="ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayScroll/PlayVBox" unique_id=16124798]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "ABORT / BACK"
 
 [node name="SettingsDialog" type="PanelContainer" parent="ModalLayer/ModalsCenter" unique_id=1465910217]
 visible = false
-custom_minimum_size = Vector2(560, 490)
+custom_minimum_size = Vector2(540, 420)
 layout_mode = 2
 
 [node name="SettingsMargin" type="MarginContainer" parent="ModalLayer/ModalsCenter/SettingsDialog" unique_id=1962669901]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
 
-[node name="SettingsVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin" unique_id=649494993]
+[node name="SettingsScroll" type="ScrollContainer" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin" unique_id=1962669999]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="SettingsVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll" unique_id=649494993]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 12
 
-[node name="SettingsTitle" type="Label" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=399339282]
+[node name="SettingsTitle" type="Label" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=399339282]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_x2yvf")
 theme_override_font_sizes/font_size = 30
 text = "SURVIVAL AUDIO & DISPLAY"
 
-[node name="SettingsTag" type="Label" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=1361240986]
+[node name="SettingsTag" type="Label" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=1361240986]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m1kxf")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
 text = "[ CONFIGURATION // LOCAL STORAGE ]"
 
-[node name="SetSeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=1172630146]
+[node name="SetSeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=1172630146]
 layout_mode = 2
 
-[node name="GraphicsToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=184920485]
+[node name="GraphicsToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=184920485]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "GRAPHICS: BALANCED"
 
-[node name="ResolutionToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=184920486]
+[node name="ResolutionToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=184920486]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "RESOLUTION: 100%"
 
-[node name="SFXToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=873859855]
+[node name="SFXToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=873859855]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "SOUND FX: ENABLED"
 
-[node name="MusicToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=843423324]
+[node name="MusicToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=843423324]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "MUSIC: ENABLED"
 
-[node name="ScreenModeToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=744075807]
+[node name="ScreenModeToggle" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=744075807]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "DISPLAY: WINDOWED"
 
-[node name="SettingsBackButton" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox" unique_id=1915327720]
+[node name="SettingsBackButton" type="Button" parent="ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsScroll/SettingsVBox" unique_id=1915327720]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "CONFIRM & BACK"
 
 [node name="CreditsDialog" type="PanelContainer" parent="ModalLayer/ModalsCenter" unique_id=1055320352]
 visible = false
-custom_minimum_size = Vector2(620, 460)
+custom_minimum_size = Vector2(580, 400)
 layout_mode = 2
 
 [node name="CreditsMargin" type="MarginContainer" parent="ModalLayer/ModalsCenter/CreditsDialog" unique_id=1572768158]
 layout_mode = 2
-theme_override_constants/margin_left = 32
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 32
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 20
 
-[node name="CreditsVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin" unique_id=1991902175]
+[node name="CreditsScroll" type="ScrollContainer" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin" unique_id=1572768999]
 layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
+
+[node name="CreditsVBox" type="VBoxContainer" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll" unique_id=1991902175]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
 theme_override_constants/separation = 14
 
-[node name="CreditsTitle" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox" unique_id=171457550]
+[node name="CreditsTitle" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll/CreditsVBox" unique_id=171457550]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("3_x2yvf")
 theme_override_font_sizes/font_size = 30
 text = "OUTPOST RECORDS // CREDITS"
 
-[node name="CreditsTag" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox" unique_id=1692105635]
+[node name="CreditsTag" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll/CreditsVBox" unique_id=1692105635]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m1kxf")
 theme_override_font_sizes/font_size = 13
 theme_override_colors/font_color = Color(0.85, 0.55, 0.2, 1)
 text = "[ ATTRIBUTION & OPEN SOURCE LEDGER ]"
 
-[node name="CreditsSeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox" unique_id=32538818]
+[node name="CreditsSeparator" type="HSeparator" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll/CreditsVBox" unique_id=32538818]
 layout_mode = 2
 
-[node name="CreditsText" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox" unique_id=1301358790]
+[node name="CreditsText" type="Label" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll/CreditsVBox" unique_id=1301358790]
 layout_mode = 2
 theme_override_fonts/font = ExtResource("2_m1kxf")
 theme_override_font_sizes/font_size = 13
@@ -363,7 +390,7 @@ All scene architectures, UI layouts, and GDScripts are original project assets.
 Full attribution tracked in docs/CREDITS.md."
 autowrap_mode = 3
 
-[node name="CreditsBackButton" type="Button" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox" unique_id=198321251]
+[node name="CreditsBackButton" type="Button" parent="ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsScroll/CreditsVBox" unique_id=198321251]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
 text = "RETURN TO BASE"

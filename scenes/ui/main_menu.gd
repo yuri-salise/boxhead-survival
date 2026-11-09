@@ -1,30 +1,34 @@
 extends Control
 
 # Modal layer and backdrop
-@onready var modal_layer: Control = $ModalLayer
-@onready var modal_backdrop: ColorRect = $ModalLayer/ModalOverlayBackdrop
-@onready var play_dialog: PanelContainer = $ModalLayer/ModalsCenter/PlayDialog
-@onready var settings_dialog: PanelContainer = $ModalLayer/ModalsCenter/SettingsDialog
-@onready var credits_dialog: PanelContainer = $ModalLayer/ModalsCenter/CreditsDialog
+@onready var modal_layer: Control = find_child("ModalLayer", true, false) as Control
+@onready var modal_backdrop: ColorRect = find_child("ModalOverlayBackdrop", true, false) as ColorRect
+@onready var play_dialog: PanelContainer = find_child("PlayDialog", true, false) as PanelContainer
+@onready var settings_dialog: PanelContainer = find_child("SettingsDialog", true, false) as PanelContainer
+@onready var credits_dialog: PanelContainer = find_child("CreditsDialog", true, false) as PanelContainer
+
+@onready var play_scroll: ScrollContainer = find_child("PlayScroll", true, false) as ScrollContainer
+@onready var settings_scroll: ScrollContainer = find_child("SettingsScroll", true, false) as ScrollContainer
+@onready var credits_scroll: ScrollContainer = find_child("CreditsScroll", true, false) as ScrollContainer
 
 # Main menu buttons
-@onready var play_button: Button = $MarginContainer/MainLayout/MenuColumn/ButtonsContainer/PlayButton
-@onready var settings_button: Button = $MarginContainer/MainLayout/MenuColumn/ButtonsContainer/SettingsButton
-@onready var credits_button: Button = $MarginContainer/MainLayout/MenuColumn/ButtonsContainer/CreditsButton
-@onready var quit_button: Button = $MarginContainer/MainLayout/MenuColumn/ButtonsContainer/QuitButton
+@onready var play_button: Button = find_child("PlayButton", true, false) as Button
+@onready var settings_button: Button = find_child("SettingsButton", true, false) as Button
+@onready var credits_button: Button = find_child("CreditsButton", true, false) as Button
+@onready var quit_button: Button = find_child("QuitButton", true, false) as Button
 
 # Dialog controls
-@onready var start_level_button: Button = $ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox/StartLevelButton
-@onready var play_back_button: Button = $ModalLayer/ModalsCenter/PlayDialog/PlayMargin/PlayVBox/PlayBackButton
+@onready var start_level_button: Button = find_child("StartLevelButton", true, false) as Button
+@onready var play_back_button: Button = find_child("PlayBackButton", true, false) as Button
 
-@onready var graphics_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/GraphicsToggle
-@onready var resolution_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/ResolutionToggle
-@onready var sfx_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/SFXToggle
-@onready var music_toggle_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/MusicToggle
-@onready var screen_mode_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/ScreenModeToggle
-@onready var settings_back_button: Button = $ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox/SettingsBackButton
+@onready var graphics_toggle_button: Button = find_child("GraphicsToggle", true, false) as Button
+@onready var resolution_toggle_button: Button = find_child("ResolutionToggle", true, false) as Button
+@onready var sfx_toggle_button: Button = find_child("SFXToggle", true, false) as Button
+@onready var music_toggle_button: Button = find_child("MusicToggle", true, false) as Button
+@onready var screen_mode_button: Button = find_child("ScreenModeToggle", true, false) as Button
+@onready var settings_back_button: Button = find_child("SettingsBackButton", true, false) as Button
 
-@onready var credits_back_button: Button = $ModalLayer/ModalsCenter/CreditsDialog/CreditsMargin/CreditsVBox/CreditsBackButton
+@onready var credits_back_button: Button = find_child("CreditsBackButton", true, false) as Button
 
 var sfx_enabled: bool = true
 var music_enabled: bool = true
@@ -32,6 +36,10 @@ var is_fullscreen: bool = false
 
 func _ready() -> void:
 	_hide_all_dialogs()
+	
+	if get_viewport():
+		get_viewport().size_changed.connect(_update_responsive_layout)
+	_update_responsive_layout()
 	
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
@@ -74,8 +82,32 @@ func _ready() -> void:
 	if gs and gs.has_method("bind_button_tweens"):
 		gs.bind_button_tweens(self)
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
+		_update_responsive_layout()
+
+func _update_responsive_layout() -> void:
+	if not is_inside_tree():
+		return
+	var vp_size := get_viewport_rect().size
+	if play_dialog:
+		play_dialog.custom_minimum_size.x = clampf(vp_size.x - 32.0, 300.0, 540.0)
+		play_dialog.custom_minimum_size.y = clampf(vp_size.y - 32.0, 220.0, 360.0)
+	if play_scroll:
+		play_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 180.0, 310.0)
+	if settings_dialog:
+		settings_dialog.custom_minimum_size.x = clampf(vp_size.x - 32.0, 320.0, 540.0)
+		settings_dialog.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 480.0)
+	if settings_scroll:
+		settings_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 430.0)
+	if credits_dialog:
+		credits_dialog.custom_minimum_size.x = clampf(vp_size.x - 32.0, 320.0, 600.0)
+		credits_dialog.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 450.0)
+	if credits_scroll:
+		credits_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 400.0)
+
 func _setup_bonus_settings_controls() -> void:
-	var settings_vbox := get_node_or_null("ModalLayer/ModalsCenter/SettingsDialog/SettingsMargin/SettingsVBox")
+	var settings_vbox := find_child("SettingsVBox", true, false) as VBoxContainer
 	var gs := get_node_or_null("/root/GameState")
 	if not settings_vbox or not gs:
 		return
