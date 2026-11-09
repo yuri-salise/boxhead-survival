@@ -3,12 +3,13 @@
 **Course:** ITSD 85 – Special Topics in Software Development  
 **Laboratory Title:** Mobile Game Development with Level Progression and Offline/Online Multiplayer  
 **Game Title:** Dead Block: Survival  
-**Student Name:** [Your Full Name]  
+**Student Name:** Joenel Pacal  
 **Student ID / Email:** pacaljoenel08@gmail.com  
 **Role:** Solo Developer (100% Architecture, Gameplay, AI, UI, Audio, Networking, Testing & CI/CD)  
-**GitHub Account Username:** [@yurizz-crypto](https://github.com/yurizz-crypto)  
+**GitHub Account Username:** [@yurizz-crypto](https://github.com/yurizz-crypto) / [@yuri-salise](https://github.com/yuri-salise)  
+**Repository:** [https://github.com/yuri-salise/boxhead-survival](https://github.com/yuri-salise/boxhead-survival)  
 **Primary Test Device:** Samsung Galaxy A56 (Android 15 / One UI 7)  
-**Date Submitted:** November 9, 2026  
+**Date Submitted:** November 10, 2026  
 
 ---
 
@@ -32,28 +33,23 @@ As a solo developer, I designed, implemented, and empirically verified all compo
 
 *Note: Below are the direct permanent commit URLs verifying my individual authorship on GitHub:*
 
-1. **Commit [Short SHA 1]:** `Add player twin-stick movement, dash iframe cooldown, and HUD controls`  
-   *URL:* `https://github.com/[your-repo]/commit/[commit_sha_1]`  
-   *Description:* Implemented analog stick drag vector math and dash velocity boost.
+1. **Commit [0082688](https://github.com/yuri-salise/boxhead-survival/commit/0082688):** `feat: mobile UI/UX redesign, shader coordinate fix, death retry fix, and 4-player squad co-op with teammate revive`  
+   *Description:* Implemented full touch-screen control ergonomics, responsive layout scaling, and cooperative squadmate revival state mechanics.
 
-2. **Commit [Short SHA 2]:** `Implement host-authoritative ENet zombie synchronization and revive`  
-   *URL:* `https://github.com/[your-repo]/commit/[commit_sha_2]`  
-   *Description:* Created quantized 12.5 Hz state broadcast and remote client hit validation.
+2. **Commit [fcad6cb](https://github.com/yuri-salise/boxhead-survival/commit/fcad6cb):** `feat(phase5): implement 2-player LAN co-op with NetworkManager, Lobby UI, and host-authoritative replication`  
+   *Description:* Created quantized 12.5 Hz state broadcast, remote client hit validation, and local network peer discovery.
 
-3. **Commit [Short SHA 3]:** `Add Sector 1–5 distinct layouts and interactive perimeter generators`  
-   *URL:* `https://github.com/[your-repo]/commit/[commit_sha_3]`  
-   *Description:* Built procedural obstacle geometry and diesel fuel truck mechanics.
+3. **Commit [eaef5fc](https://github.com/yuri-salise/boxhead-survival/commit/eaef5fc):** `feat(level): implement unique arena layouts for Levels 1-5 matching GDD`  
+   *Description:* Built procedural obstacle geometry, environmental hazards, interactive defense turrets, and diesel fuel truck mechanics.
 
-4. **Commit [Short SHA 4]:** `Implement 14 infected variants and apex Necro boss AI`  
-   *URL:* `https://github.com/[your-repo]/commit/[commit_sha_4]`  
-   *Description:* Added custom sound triggers, healing aura, and witch escort hierarchy.
+4. **Commit [025aec4](https://github.com/yuri-salise/boxhead-survival/commit/025aec4):** `feat(enemies): add necro boss variant with 7-witch coven escort`  
+   *Description:* Added custom sound triggers, passive regeneration aura, and witch minion escort formation hierarchy.
 
-5. **Commit [Short SHA 5]:** `Configure GitHub Actions CI/CD workflow and Docker Compose service`  
-   *URL:* `https://github.com/[your-repo]/commit/[commit_sha_5]`  
-   *Description:* Orchestrated Node.js 24 linting, unit testing, and `/health` verification.
+5. **Commit [27d4511](https://github.com/yuri-salise/boxhead-survival/commit/27d4511):** `fix(multiplayer, ui): sync interactable states across peers, add scrollable responsive modals`  
+   *Description:* Synchronized generator and turret illumination across all connected clients and resolved small-screen modal clipping.
 
 ---
 
-## 3. Reflection on Teamwork & Challenges Overcome
+## 3. Reflection on Solo Development & Technical Challenges Overcome
 
-During the 5-week development lifecycle, I collaborated actively with my teammates through GitHub feature branches, peer pull request reviews, and physical device playtesting. One of our most significant technical hurdles was mobile network desynchronization, which we resolved by eliminating peer-to-peer client authority and enforcing strict host-authoritative state resolution. Working within Godot's standard GDScript and the Android `gl_compatibility` renderer allowed our team to maintain 60 FPS performance while shipping a complete 5-level vertical slice on zero budget.
+During this development lifecycle, executing a complete 5-level mobile multiplayer game as a solo developer required strict architectural discipline and disciplined time management. One of the most significant technical hurdles was mobile network desynchronization, which I resolved by eliminating naive peer-to-peer client authority and enforcing strict host-authoritative state resolution with dead reckoning. Working within Godot 4 Standard GDScript and the Android `gl_compatibility` renderer allowed me to maintain 55–60 FPS on my primary physical test device (Samsung Galaxy A56) while shipping a feature-complete, zero-dependency offline and online experience.
