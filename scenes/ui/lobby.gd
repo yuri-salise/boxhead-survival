@@ -82,6 +82,8 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
 		_update_responsive_layout()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_on_back_pressed()
 
 func _update_responsive_layout() -> void:
 	if not is_inside_tree():
@@ -127,10 +129,6 @@ func _setup_nakama_and_leaderboard_controls() -> void:
 	lobby_vbox.add_child(opt_row)
 	if join_button and join_button.get_parent():
 		lobby_vbox.move_child(opt_row, join_button.get_parent().get_index() + 1)
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		_on_back_pressed()
 
 func _get_network_manager() -> Node:
 	return get_node_or_null("/root/NetworkManager")

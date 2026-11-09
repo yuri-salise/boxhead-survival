@@ -85,6 +85,11 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
 		_update_responsive_layout()
+	elif what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		if modal_layer and modal_layer.visible:
+			_hide_all_dialogs()
+		else:
+			get_tree().quit()
 
 func _update_responsive_layout() -> void:
 	if not is_inside_tree():
@@ -146,13 +151,6 @@ func _setup_bonus_settings_controls() -> void:
 	)
 	settings_vbox.add_child(cb_btn)
 	settings_vbox.move_child(cb_btn, settings_vbox.get_child_count() - 2)
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
-		if modal_layer and modal_layer.visible:
-			_hide_all_dialogs()
-		else:
-			get_tree().quit()
 
 func _show_dialog(target: PanelContainer) -> void:
 	modal_layer.visible = true
