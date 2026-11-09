@@ -1,3 +1,8 @@
+# Dead Block: Survival – ITSD 85 Mobile Game Development Lab
+**Team:** Dead Block Development Team  
+**Section:** BSIT 4-A  
+**Platform:** Android (Primary Target), Windows / Linux / macOS (Desktop Testing)
+
 <div align="center">
 
   <img src="assets/art/dead_block_logo.png" alt="Dead Block: Survival Logo" width="620" />
@@ -29,7 +34,7 @@
 
   <p>
     <a href="build/android/DeadBlockSurvival.apk"><strong>📦 Download Android APK (v1.0)</strong></a> •
-    <a href="docs/paper/ieee_paper.md"><strong>📄 IEEE Research Paper</strong></a> •
+    <a href="docs/paper.pdf"><strong>📄 IEEE Research Paper (PDF)</strong></a> •
     <a href="docs/GUIDE_QUESTIONS.md"><strong>📝 Lab Guide Answers</strong></a> •
     <a href="docs/playtest/observation_sheet.md"><strong>📊 Playtest Evaluation</strong></a> •
     <a href="docs/CREDITS.md"><strong>🎖️ Asset Credits</strong></a>
@@ -62,7 +67,7 @@
 
 ---
 
-## ☣️ Overview &amp; Core Concept
+## ☣️ About the Game (Overview & Core Concept)
 
 **Dead Block: Survival** is an original top-down 2D tactical zombie survival shooter developed in **Godot 4.7.2 Standard Edition (GDScript)** tailored for mobile devices and rapid desktop testing. 
 
@@ -113,7 +118,7 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
 
 ---
 
-## 🎮 Gameplay &amp; Controls Guide
+## 🎮 How to Play (Gameplay & Controls Guide)
 
 ```
  ┌────────────────────────────────────────────────────────────────────────┐
@@ -206,7 +211,7 @@ All enemy variants are governed by host-authoritative finite state machines with
 
 ---
 
-## 🌐 Multiplayer &amp; Networking Architecture
+## 🌐 Offline and Online Modes (Multiplayer Architecture)
 
 ```mermaid
 sequenceDiagram
@@ -282,7 +287,7 @@ The repository features an enterprise-grade CI/CD pipeline managed via GitHub Ac
 
 ---
 
-## 📊 Empirical Playtest Results &amp; Evaluation
+## 📊 Playtest Results (Empirical Evaluation)
 
 Structured playtest evaluation was conducted using a 3-device physical Phone Test Matrix and a 15-item Likert questionnaire ($N = 12$ independent testers) grounded in the Technology Acceptance Model (TAM) and GameFlow frameworks:
 
@@ -354,7 +359,15 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tests/run_all
 
 ---
 
-## 📦 Installation, Build &amp; Development Guide
+## 📥 Download (v1.0 Release APK)
+
+- **Direct Repository Build:** [**`build/android/DeadBlockSurvival.apk`**](build/android/DeadBlockSurvival.apk)
+- **GitHub Release Page:** [Release v1.0 Package &amp; Release Notes](https://github.com/your-username/boxhead-survival/releases/tag/v1.0)
+- **Publication Paper:** [**`docs/paper.pdf`**](docs/paper.pdf)
+
+---
+
+## 📦 How to Build (Installation & Development Guide)
 
 ### Prerequisites
 - **Godot Engine:** [Godot 4.7.2-stable Standard Edition (GDScript)](https://godotengine.org/download)
@@ -438,14 +451,15 @@ boxhead-survival/
 
 ---
 
-## 📚 Academic Deliverables &amp; Research Paper
+## 📄 Paper (docs/paper.pdf)
 
-This project fulfills all requirements for **ITSD 85 Special Topics in Information Technology** (Game Development &amp; Automated CI/CD Deployments):
+This project fulfills all academic requirements for **ITSD 85 Special Topics in Information Technology** (Mobile Game Development &amp; Automated CI/CD Deployments):
 
-- **IEEE Research Paper:** Read the complete two-column scientific paper detailing the architecture, mathematical models, and empirical evaluation:
-  - 📖 [**`docs/paper/ieee_paper.md`**](docs/paper/ieee_paper.md) (Markdown)
+- **Publication-Ready IEEE Paper:**
+  - 📄 [**`docs/paper.pdf`**](docs/paper.pdf) (Compiled Two-Column PDF Deliverable)
+  - 📖 [**`docs/paper/ieee_paper.md`**](docs/paper/ieee_paper.md) (Full Markdown Source)
   - 📄 [**`docs/paper/ieee_paper.tex`**](docs/paper/ieee_paper.tex) (LaTeX Source)
-- **Lab Guide Questions &amp; Comprehensive Answers:** Detailed step-by-step engineering breakdown addressing all course prompts:
+- **Lab Guide Questions &amp; Comprehensive Engineering Answers:**
   - 📝 [**`docs/GUIDE_QUESTIONS.md`**](docs/GUIDE_QUESTIONS.md)
 - **Formative Playtest Documentation:**
   - 📱 [**`docs/playtest/phone_test_matrix.md`**](docs/playtest/phone_test_matrix.md) — 9-case multi-phone functional testing matrix
@@ -454,7 +468,7 @@ This project fulfills all requirements for **ITSD 85 Special Topics in Informati
 
 ---
 
-## 🎖️ Credits &amp; License
+## 🎖️ Credits (docs/CREDITS.md)
 
 ### Development Team
 - **Dead Block Development Squad** — *Department of Information Technology, ITSD 85*

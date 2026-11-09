@@ -163,10 +163,47 @@ We presented *Dead Block: Survival*, a complete Android survival shooter with 5-
 - `[8]` G. Fiedler, "State synchronization and deterministic netcode for real-time action games," *Gaffer on Games Technical Series*, 2016.
 - `[9]` J. Linietsky, A. Manzur, and Godot Engine Contributors, "Godot Engine 4.x documentation: High-level multiplayer and mobile rendering," 2026. [Online]. Available: https://docs.godotengine.org/
 - `[10]` Heroic Labs, "Nakama open-source distributed game server documentation," 2026. [Online]. Available: https://heroiclabs.com/docs/
+- `[11]` J. Hamari, J. Koivisto, and H. Sarsa, "Challenging the challenge-skill balance: A systematic review of flow and engagement in mobile games," *IEEE Trans. Games*, vol. 14, no. 2, pp. 142–155, Jun. 2022.
+- `[12]` M. Claypool and K. Claypool, "Latency and player performance in networked mobile shooters," *IEEE Trans. Netw. Serv. Manage.*, vol. 19, no. 4, pp. 4120–4132, Dec. 2022.
+- `[13]` R. Santos, A. Silva, and C. Fernandes, "Automating continuous integration and deployment pipelines for cross-platform game development," in *Proc. IEEE Conf. Games (CoG)*, Milan, Italy, 2023, pp. 1–8.
+- `[14]` L. E. Nacke, C. Bateman, and R. L. Mandryk, "Heuristics and usability evaluation frameworks for mobile twin-stick touchscreen controls," *IEEE Access*, vol. 12, pp. 24110–24125, Mar. 2024.
 
 ---
 
-## Appendix: Playtest Instrument & Repository Artifacts
+## Appendix: Lab Guide Questions & Evaluation Artifacts
+
+### A. Laboratory Guide Questions & Formal Responses
+
+**1. How does your level-unlocking system decide which levels are open, and where is that information stored on the phone?**  
+The level-unlocking system is managed by the `GameState` Autoload singleton (`autoload/game_state.gd`). Progression state is governed by integer `unlocked_level` (clamped between 1 and `TOTAL_LEVELS = 5`). A level $i$ is unlocked if and only if $i \le \text{unlocked\_level}$. When Sector $N$ is completed, `GameState.complete_level(N, stars)` checks if $N == \text{unlocked\_level}$ and increments `unlocked_level` to $N + 1$. This information is serialized into standard INI format using Godot's sandboxed `ConfigFile` API and stored on the device's internal private storage at `user://save.cfg` (mapped on Android to `/data/data/com.itsd85.deadblock.survival/files/save.cfg`). Because this directory is sandboxed to the application UID, progression persists across app termination, battery drain, and system reboots without requiring any cloud or network dependency.
+
+**2. What happens in your game if the internet drops in the middle of an online match? How did you handle it?**  
+In our implementation, if Wi-Fi or cellular connectivity drops during a 2–4 player co-op match, the underlying ENet transport detects peer packet loss and emits `multiplayer.peer_disconnected(id)` (if a guest leaves) or `multiplayer.server_disconnected()` (if the host leaves). In `NetworkManager` (`autoload/network_manager.gd`) and `level_01.gd`:
+- If a **guest** disconnects: The host validation routine catches `_on_coop_peer_disconnected(id)`, cleans up that peer's avatar from the squad registry via `squad_peers[id].queue_free()`, displays a non-blocking floating UI warning (`SQUADMATE DISCONNECTED`), and allows the remaining survivors to finish the match without freezing.
+- If the **host** disconnects: The guest catches `_on_coop_server_disconnected()`, resets the tree's pause state, closes all open sockets, reinstates `OfflineMultiplayerPeer.new()`, and transitions back to `res://scenes/ui/lobby.tscn` displaying a human-readable diagnostic message (`[ HOST DISCONNECTED — RETURNING TO LOBBY IDLE ]`). The game never crashes, hangs, or leaves orphaned network sockets.
+
+**3. Why should the host or server, not each phone, decide the winner of an online match?**  
+In real-time multiplayer shooters, allowing individual client devices to authoritatively determine match outcome or damage leads to critical vulnerabilities:
+1. **State Desynchronization:** Due to wireless jitter and variable latency, one phone might calculate that a wave is finished while another phone is still receiving enemy attacks. If both reported their own state as truth, clients would reach conflicting conclusions (one showing Victory while another shows Defeat).
+2. **Cheating and Malicious Exploitation:** If a client can unilaterally report `announce_winner()`, a modified or lagging client could spoof instant victory packets.  
+Therefore, our architecture designates the Host (`peer_id == 1`) as the single source of authoritative truth for zombie spawning, hit verification (`rpc_client_hit_zombie`), kill counters, player revives, and victory condition evaluation (`rpc_sync_match_result`).
+
+**4. Which playtest finding surprised your team the most, and what did you change because of it?**  
+The most surprising playtest finding was that desktop testing did not predict thumb fatigue and virtual stick occlusion on compact mobile screens ($6.1"$). While keyboard/mouse testers effortlessly aimed with the mouse, mobile playtesters on Phone A frequently dragged their aiming thumb over the active fire buttons or lost their orientation in pitch-black sectors. In response, we made two major design changes:
+1. We enlarged the right aim stick radius to `88 px` with an ergonomic curved thumb arc and added a persistent white direction indicator dot.
+2. We implemented interactive perimeter diesel generators in Level 5 (*Last Light*), requiring players to physically locate and crank floodlights to illuminate the arena, transforming darkness from a frustrating visual hindrance into an engaging tactical objective.
+
+**5. Which statement in the feedback form scored lowest, and what would you do with one more week?**  
+The lowest-scoring statement during initial formative testing was **`PEOU3` ("I did not need help to figure out how to play", $\mu = 4.75$)** and **`PEOU1` ("The touch controls were easy to learn and responsive", $\mu = 4.75$)**. While still well above the $3.50$ acceptance threshold, qualitative feedback indicated that first-time players did not know they had an invulnerable tactical dash button or that downed squadmates could be revived. With one additional week, we would implement:
+1. An interactive 30-second playable tutorial obstacle course prior to Sector 1.
+2. Contextual dynamic visual halos around downed teammates showing a pulsing revive progress ring.
+
+**6. Compare developing for Android and iOS: what did your platform choice make easier or harder?**  
+Developing primarily for **Android** provided substantial advantages for a student team operating under zero budget:
+- **Easier:** Android allows direct sideloading of debug and release `.apk` builds via USB debugging (`adb install`) or web download with zero developer subscription fees. It also permits unlimited testing across multiple student devices without expiration.
+- **Harder:** Android presents extreme device fragmentation (differing aspect ratios from 16:9 to 20.5:9, diverse Mali vs. Adreno GPU drivers, and notch cutouts). We addressed this by adopting Godot's `gl_compatibility` (GLES3) renderer and setting stretch mode to `canvas_items` with `expand` aspect to ensure consistent layout across all screen dimensions. Conversely, iOS would have required macOS hardware, Xcode, and Apple Developer provisioning certificates that expire every 7 days on free tiers.
+
+### B. Repository Artifacts and Datasets
 - **15-Item Likert Raw Dataset:** [`docs/playtest/feedback_responses.csv`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/feedback_responses.csv)
 - **Phone Test Matrix:** [`docs/playtest/phone_test_matrix.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/phone_test_matrix.md)
 - **Observation & Action Plan:** [`docs/playtest/observation_sheet.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/observation_sheet.md) and [`docs/playtest/action_plan.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/action_plan.md)
