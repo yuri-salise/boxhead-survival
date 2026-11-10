@@ -1,6 +1,6 @@
 # Design, Implementation, and Evaluation of Dead Block: Survival — A Cross-Mode Mobile Survival Shooter with Progressive Level Design and Host-Authoritative Multiplayer in Godot 4
 
-**Author:** Solo Developer (`yurizz-crypto` / pacaljoenel08@gmail.com)  
+**Author:** Solo Developer (Yuri Salise — `@yuri-salise` / `@yurizz-crypto`)  
 *Department of Information Technology — ITSD 85 Special Topics in Information Technology, BSIT 4-A*  
 
 ---

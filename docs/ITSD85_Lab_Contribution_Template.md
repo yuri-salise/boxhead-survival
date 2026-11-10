@@ -3,8 +3,7 @@
 **Course:** ITSD 85 – Special Topics in Software Development  
 **Laboratory Title:** Mobile Game Development with Level Progression and Offline/Online Multiplayer  
 **Game Title:** Dead Block: Survival  
-**Student Name:** Joenel Pacal  
-**Student ID / Email:** pacaljoenel08@gmail.com  
+**Student Name:** Yuri Salise  
 **Role:** Solo Developer (100% Architecture, Gameplay, AI, UI, Audio, Networking, Testing & CI/CD)  
 **GitHub Account Username:** [@yurizz-crypto](https://github.com/yurizz-crypto) / [@yuri-salise](https://github.com/yuri-salise)  
 **Repository:** [https://github.com/yuri-salise/boxhead-survival](https://github.com/yuri-salise/boxhead-survival)  

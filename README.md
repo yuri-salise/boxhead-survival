@@ -1,5 +1,5 @@
 # Dead Block: Survival – ITSD 85 Mobile Game Development Lab
-**Author:** Solo Developer (`yurizz-crypto` / pacaljoenel08@gmail.com)  
+**Author:** Solo Developer (Yuri Salise — `@yuri-salise` / `@yurizz-crypto`)  
 **Section:** BSIT 4-A  
 **Primary Test Device:** Samsung Galaxy A56 (Android 15 / One UI 7)  
 **Platform:** Android (Primary Target), Windows / Linux / macOS (Desktop Testing)
