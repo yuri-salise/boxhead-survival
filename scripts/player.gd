@@ -33,6 +33,7 @@ var is_dead: bool = false
 var is_downed: bool = false
 var bleedout_time_left: float = 0.0
 const MAX_BLEEDOUT_TIME: float = 35.0
+var last_drawn_rot: float = -9999.0
 
 # Dash state
 var is_dashing: bool = false
@@ -220,10 +221,21 @@ func _physics_process(delta: float) -> void:
 			move_vec = touch_controls.get("move_vector")
 		
 		# Check if mobile right twin-stick is actively aiming/shooting
+		var using_touch: bool = is_instance_valid(touch_controls) and touch_controls.has_method("is_using_touch_input") and touch_controls.is_using_touch_input()
 		if is_instance_valid(touch_controls) and touch_controls.get("is_firing") == true and not is_downed:
 			var stick_aim: Vector2 = touch_controls.get("aim_vector")
 			aim_pos = global_position + stick_aim * 150.0
 			shooting = true
+		elif using_touch and not is_downed:
+			var stick_aim: Vector2 = touch_controls.get("aim_vector") if is_instance_valid(touch_controls) else Vector2.ZERO
+			if stick_aim != Vector2.ZERO:
+				aim_pos = global_position + stick_aim * 150.0
+			elif move_vec != Vector2.ZERO:
+				aim_pos = global_position + move_vec * 150.0
+			else:
+				var cur_rot: float = visuals.rotation if visuals else 0.0
+				aim_pos = global_position + Vector2.from_angle(cur_rot) * 150.0
+			shooting = false
 		else:
 			var cam_off: Vector2 = player_camera.offset if is_instance_valid(player_camera) else Vector2.ZERO
 			aim_pos = get_global_mouse_position() - cam_off
@@ -283,7 +295,12 @@ func _physics_process(delta: float) -> void:
 	if is_coop_mode and network_sync_enabled and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		sync_state_to_peers.rpc(global_position, visuals.rotation if visuals else 0.0, velocity, current_health, current_armor, weapon_controller.current_weapon_id if weapon_controller else "PISTOL")
 	
-	if velocity.length_squared() > 4.0 or shooting or muzzle_flash_timer > 0.0 or hurt_flash_timer > 0.0 or is_dashing or is_downed or ghost_trail_points.size() > 0:
+	var cur_rot := visuals.rotation if visuals else 0.0
+	var rot_changed := absf(cur_rot - last_drawn_rot) > 0.012
+	if rot_changed:
+		last_drawn_rot = cur_rot
+	
+	if velocity.length_squared() > 4.0 or shooting or muzzle_flash_timer > 0.0 or hurt_flash_timer > 0.0 or is_dashing or is_downed or rot_changed or ghost_trail_points.size() > 0:
 		queue_redraw()
 
 @rpc("any_peer", "call_remote", "unreliable")
@@ -298,6 +315,7 @@ func sync_input_to_host(p_move: Vector2, p_aim: Vector2, p_shooting: bool) -> vo
 	override_move_vec = p_move
 	override_aim_pos = p_aim
 	override_is_shooting = p_shooting
+	queue_redraw()
 
 @rpc("authority", "call_remote", "unreliable")
 func sync_state_to_peers(p_pos: Vector2, p_rot: float, p_vel: Vector2, p_hp: float, p_ap: float, p_wep: String) -> void:
@@ -320,6 +338,7 @@ func sync_state_to_peers(p_pos: Vector2, p_rot: float, p_vel: Vector2, p_hp: flo
 			weapon_controller.unlock_or_add_weapon(p_wep)
 		else:
 			weapon_controller.equip_weapon(p_wep)
+	queue_redraw()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if is_dead or input_override_enabled or not is_local_player():
@@ -476,6 +495,15 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_player_hurt")
+	
+	if is_downed:
+		# Downed squadmates take bleedout penalty on hit without instant elimination
+		bleedout_time_left = maxf(0.0, bleedout_time_left - 3.0)
+		if bleedout_time_left <= 0.0:
+			die()
+		queue_redraw()
+		return
+	
 	var remaining_dmg := amount
 	
 	# Kevlar armor absorbs 70% of damage while active
@@ -503,6 +531,9 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 			die()
 
 func can_interact() -> bool:
+	return not is_dead and not is_downed
+
+func can_be_revived() -> bool:
 	return is_downed and not is_dead
 
 func interact() -> bool:
@@ -604,6 +635,13 @@ func add_armor(amount: float) -> void:
 	current_armor = minf(max_armor, current_armor + amount)
 	armor_changed.emit(current_armor, max_armor)
 
+@rpc("any_peer", "call_local", "reliable")
+func rpc_sync_died() -> void:
+	is_dead = true
+	is_downed = false
+	velocity = Vector2.ZERO
+	queue_redraw()
+
 func die() -> void:
 	if is_dead:
 		return
@@ -611,6 +649,9 @@ func die() -> void:
 	is_downed = false
 	velocity = Vector2.ZERO
 	player_died.emit()
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		rpc_sync_died.rpc()
+	queue_redraw()
 
 func set_input_override(move_vec: Vector2, aim_pos: Vector2, is_shooting: bool) -> void:
 	input_override_enabled = true

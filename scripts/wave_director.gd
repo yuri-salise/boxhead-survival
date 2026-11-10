@@ -84,6 +84,13 @@ func get_current_wave_number() -> int:
 func get_remaining_enemies_in_wave() -> int:
 	return max(0, total_enemies_in_wave - enemies_killed_in_wave)
 
+func register_bonus_enemies(count: int) -> void:
+	if count <= 0:
+		return
+	total_enemies_in_wave += count
+	enemies_alive_in_wave += count
+	wave_enemies_updated.emit(get_remaining_enemies_in_wave(), total_enemies_in_wave)
+
 func start_waves() -> void:
 	if waves_config.is_empty() and not is_endless_survival:
 		waves_config = DEFAULT_WAVES.duplicate(true)
@@ -291,7 +298,7 @@ func notify_enemy_killed() -> void:
 	enemies_killed_in_wave += 1
 	wave_enemies_updated.emit(get_remaining_enemies_in_wave(), total_enemies_in_wave)
 	
-	if enemies_killed_in_wave >= total_enemies_in_wave and is_wave_active:
+	if enemies_killed_in_wave >= total_enemies_in_wave and enemies_alive_in_wave <= 0 and is_wave_active:
 		is_wave_active = false
 		if is_instance_valid(spawn_timer):
 			spawn_timer.stop()

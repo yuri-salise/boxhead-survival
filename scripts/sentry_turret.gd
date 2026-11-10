@@ -49,8 +49,17 @@ func interact() -> bool:
 func get_interaction_prompt() -> String:
 	return "START TURRET"
 
+func _can_local_player_interact() -> bool:
+	var scene := get_tree().current_scene if get_tree() else null
+	if scene and scene.has_method("get_local_player"):
+		var lp: Node = scene.get_local_player()
+		if is_instance_valid(lp):
+			if lp.get("is_dead") == true or lp.get("is_downed") == true:
+				return false
+	return true
+
 func _input(event: InputEvent) -> void:
-	if is_active:
+	if is_active or not _can_local_player_interact():
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
@@ -62,7 +71,7 @@ func _input(event: InputEvent) -> void:
 			activate_turret()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby or is_active:
+	if not is_player_nearby or is_active or not _can_local_player_interact():
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:

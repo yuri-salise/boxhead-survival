@@ -272,8 +272,10 @@ func _sync_ally_lights_to_shader(player_world_pos: Vector2) -> void:
 	for i in range(6):
 		if i < a_count:
 			var a: Dictionary = ally_flashlights[i]
-			var wpos: Vector2 = a["world_pos"]
-			_ally_pos_buf[i] = flashlight_screen_pos + (wpos - player_world_pos)
+			var spos: Vector2 = a.get("screen_pos", Vector2.ZERO)
+			if spos == Vector2.ZERO and a.has("world_pos"):
+				spos = flashlight_screen_pos + (Vector2(a["world_pos"]) - player_world_pos)
+			_ally_pos_buf[i] = spos
 			_ally_ang_buf[i] = float(a.get("angle", 0.0))
 		else:
 			_ally_pos_buf[i] = Vector2(-9999, -9999)

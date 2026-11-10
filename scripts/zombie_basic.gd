@@ -7,6 +7,7 @@ signal limb_severed(world_pos: Vector2, dir: Vector2, limb_kind: int, skin_color
 signal boomer_exploded(world_pos: Vector2, radius: float, damage: float)
 signal witch_startled(witch: Node2D)
 signal drop_requested(world_pos: Vector2, zombie_type_name: String)
+signal summon_requested(center_pos: Vector2, count: int, summoner: Node2D)
 
 enum ZombieType {
 	WALKER,
@@ -232,6 +233,7 @@ var target_search_timer: float = 999.0
 # Necro Boss & 7-Witch Coven escort state
 var passive_heal_rate: float = 0.0
 var heal_pulse_timer: float = 0.0
+var necro_summon_timer: float = 4.5
 var necro_leader: Node2D = null
 var coven_index: int = 0
 var coven_total: int = 7
@@ -322,15 +324,53 @@ func _physics_process(delta: float) -> void:
 			queue_redraw()
 		return
 	
-	# 13. NECRO: Passive necromantic HP regeneration while alive
-	if passive_heal_rate > 0.0 and current_health > 0.0 and current_health < max_health:
+	# 13. NECRO: Passive necromantic HP regeneration and AOE healing aura to nearby zombies
+	if zombie_type == ZombieType.NECRO and not is_dead:
+		if passive_heal_rate > 0.0 and current_health < max_health:
+			current_health = minf(max_health, current_health + passive_heal_rate * delta)
+		heal_pulse_timer += delta
+		if heal_pulse_timer >= 1.35:
+			heal_pulse_timer = 0.0
+			if current_health < max_health:
+				current_health = minf(max_health, current_health + 22.0)
+			# Heal surrounding zombies within 240px
+			var healed_count := 0
+			var p_parent := get_parent()
+			if p_parent:
+				for other_z in p_parent.get_children():
+					if other_z != self and is_instance_valid(other_z) and other_z.get("is_dead") != true and other_z.has_method("heal_zombie"):
+						if global_position.distance_to(other_z.global_position) <= 240.0:
+							if other_z.current_health < other_z.max_health:
+								other_z.heal_zombie(25.0)
+								healed_count += 1
+			var scene := get_tree().current_scene if get_tree() else null
+			if scene and scene.has_method("spawn_floating_text"):
+				var h_text := "+22 REGEN" if healed_count == 0 else "+22 REGEN & HEALED " + str(healed_count) + " HORDE"
+				scene.spawn_floating_text(global_position + Vector2(0, -38), h_text, Color(0.18, 1.0, 0.35))
+			queue_redraw()
+		
+		# Bulk Horde Summoning: Spawns 10 zombies randomly around her
+		necro_summon_timer -= delta
+		if necro_summon_timer <= 0.0:
+			var scene := get_tree().current_scene if get_tree() else null
+			var p_target := target_player if is_instance_valid(target_player) else _find_nearest_living_player()
+			if is_instance_valid(p_target) and global_position.distance_to(p_target.global_position) <= 700.0:
+				necro_summon_timer = 13.5
+				var audio_mgr := get_node_or_null("/root/AudioManager")
+				if audio_mgr and audio_mgr.has_method("play_sfx"):
+					audio_mgr.play_sfx("sfx_screamer", 0.75, 4.0)
+				summon_requested.emit(global_position, 10, self)
+				if scene and scene.has_method("spawn_floating_text"):
+					scene.spawn_floating_text(global_position + Vector2(0, -56), "☠ NECROMANCER SUMMONED HORDE (10)! ☠", Color(0.18, 1.0, 0.40))
+				queue_redraw()
+	elif passive_heal_rate > 0.0 and current_health > 0.0 and current_health < max_health:
 		current_health = minf(max_health, current_health + passive_heal_rate * delta)
 		heal_pulse_timer += delta
 		if heal_pulse_timer >= 1.25:
 			heal_pulse_timer = 0.0
 			var scene := get_tree().current_scene if get_tree() else null
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position + Vector2(0, -34), "+16 NECRO REGEN", Color(0.18, 1.0, 0.28))
+				scene.spawn_floating_text(global_position + Vector2(0, -34), "+16 REGEN", Color(0.18, 1.0, 0.28))
 			queue_redraw()
 	
 	target_search_timer += delta
@@ -694,18 +734,34 @@ func die() -> void:
 	tween.tween_property(self, "modulate:a", 0.0, 0.32)
 	tween.tween_callback(queue_free)
 
+func heal_zombie(amount: float) -> void:
+	if is_dead or amount <= 0.0 or current_health >= max_health:
+		return
+	current_health = minf(max_health, current_health + amount)
+	queue_redraw()
+
 func _find_nearest_living_player() -> Node2D:
 	var players := get_tree().get_nodes_in_group("players")
-	var nearest: Node2D = null
-	var min_dist: float = INF
+	var nearest_standing: Node2D = null
+	var min_dist_standing: float = INF
+	var nearest_downed: Node2D = null
+	var min_dist_downed: float = INF
 	
 	for p in players:
 		if is_instance_valid(p) and p.get("is_dead") != true:
 			var d := global_position.distance_squared_to(p.global_position)
-			if d < min_dist:
-				min_dist = d
-				nearest = p
-	return nearest
+			if p.get("is_downed") == true:
+				if d < min_dist_downed:
+					min_dist_downed = d
+					nearest_downed = p
+			else:
+				if d < min_dist_standing:
+					min_dist_standing = d
+					nearest_standing = p
+	
+	if is_instance_valid(nearest_standing):
+		return nearest_standing
+	return nearest_downed
 
 func _grant_player_edge_bonus() -> void:
 	var p: Node2D = target_player if (is_instance_valid(target_player) and target_player.get("is_dead") != true) else _find_nearest_living_player()

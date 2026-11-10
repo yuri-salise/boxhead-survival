@@ -66,6 +66,7 @@ var cached_ambient_lights: Array = []
 var witch_query_timer: float = 0.0
 var cached_witch_eyes: Array = []
 var has_turret_flash_active: bool = false
+var all_waves_cleared_pending: bool = false
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -298,6 +299,26 @@ func get_local_player() -> CharacterBody2D:
 			return squad_peers[my_id]
 	return player
 
+func get_active_living_squadmate() -> CharacterBody2D:
+	var lp := get_local_player()
+	if is_instance_valid(lp) and not lp.is_dead and lp.get("is_downed") != true:
+		return lp
+	if is_instance_valid(lp) and not lp.is_dead:
+		return lp
+	if is_instance_valid(player2) and not player2.is_dead and player2.get("is_downed") != true:
+		return player2
+	if is_instance_valid(player2) and not player2.is_dead:
+		return player2
+	for p_id in squad_peers:
+		var sp: Node = squad_peers[p_id]
+		if is_instance_valid(sp) and sp is CharacterBody2D and not sp.get("is_dead"):
+			return sp as CharacterBody2D
+	var players := get_tree().get_nodes_in_group("players")
+	for p in players:
+		if is_instance_valid(p) and p is CharacterBody2D and not p.get("is_dead"):
+			return p as CharacterBody2D
+	return lp
+
 func _setup_local_player_ui_and_controls() -> void:
 	var lp := get_local_player()
 	if not is_instance_valid(lp):
@@ -494,31 +515,45 @@ func _process(delta: float) -> void:
 	var lp := get_local_player()
 	if not is_instance_valid(lp):
 		lp = player
-	if is_instance_valid(lp):
+	
+	# If local player is dead, smoothly spectate surviving squadmate
+	var focus_avatar: CharacterBody2D = lp
+	if is_instance_valid(lp) and lp.is_dead:
+		var spectate_target := get_active_living_squadmate()
+		if is_instance_valid(spectate_target) and not spectate_target.is_dead:
+			focus_avatar = spectate_target
+			if spectate_target.player_camera and not spectate_target.player_camera.enabled:
+				if lp.player_camera:
+					lp.player_camera.enabled = false
+				spectate_target.player_camera.enabled = true
+				spectate_target.player_camera.make_current()
+	
+	if is_instance_valid(focus_avatar):
 		if is_instance_valid(arena_env):
 			if arena_env.has_method("set_focus_position"):
-				arena_env.set_focus_position(lp.global_position)
+				arena_env.set_focus_position(focus_avatar.global_position)
 		
 		if is_instance_valid(horror_vignette) and horror_vignette.has_method("update_flashlight_transform"):
-			var screen_pos: Vector2 = lp.get_global_transform_with_canvas().origin
-			var aim_rot: float = float(lp.visuals.rotation) if lp.visuals else 0.0
+			var screen_pos: Vector2 = focus_avatar.get_global_transform_with_canvas().origin
+			var aim_rot: float = float(focus_avatar.visuals.rotation) if focus_avatar.visuals else 0.0
 			var occluders: Array = []
 			if current_night_factor > 0.02 and is_instance_valid(arena_env) and arena_env.has_method("get_nearby_obstacles"):
-				if lp.global_position.distance_squared_to(last_occluder_query_pos) >= 256.0 or cached_occluders.is_empty():
-					last_occluder_query_pos = lp.global_position
-					cached_occluders = arena_env.get_nearby_obstacles(lp.global_position, 550.0)
+				if focus_avatar.global_position.distance_squared_to(last_occluder_query_pos) >= 256.0 or cached_occluders.is_empty():
+					last_occluder_query_pos = focus_avatar.global_position
+					cached_occluders = arena_env.get_nearby_obstacles(focus_avatar.global_position, 550.0)
 				occluders = cached_occluders
-			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, lp.global_position)
+			horror_vignette.update_flashlight_transform(screen_pos, aim_rot, occluders, focus_avatar.global_position)
 			
 			# Real-time AI companion bot, co-op squadmate, & sentry turret flashlight cones (cuts darkness so zombies are visible!)
 			if horror_vignette.has_method("update_ally_flashlights"):
 				var ally_cones: Array = []
 				for p_node in get_tree().get_nodes_in_group("players"):
-					if is_instance_valid(p_node) and p_node != lp and p_node.get("is_dead") != true:
+					if is_instance_valid(p_node) and p_node != focus_avatar and p_node.get("is_dead") != true:
 						var p_vis: Node2D = p_node.get_node_or_null("Visuals")
 						var p_ang: float = float(p_vis.rotation) if p_vis else 0.0
 						ally_cones.append({
 							"world_pos": p_node.global_position,
+							"screen_pos": p_node.get_global_transform_with_canvas().origin,
 							"angle": p_ang
 						})
 				for t_node in get_tree().get_nodes_in_group("turrets"):
@@ -526,9 +561,10 @@ func _process(delta: float) -> void:
 						var raw_ang = t_node.get("aim_angle")
 						ally_cones.append({
 							"world_pos": t_node.global_position,
+							"screen_pos": t_node.get_global_transform_with_canvas().origin,
 							"angle": float(raw_ang) if raw_ang != null else 0.0
 						})
-				horror_vignette.update_ally_flashlights(ally_cones, lp.global_position)
+				horror_vignette.update_ally_flashlights(ally_cones, focus_avatar.global_position)
 			
 			ambient_query_timer += delta
 			if ambient_query_timer >= 0.08 or cached_ambient_lights.is_empty():
@@ -621,11 +657,13 @@ func _process(delta: float) -> void:
 			var net_mgr := get_node_or_null("/root/NetworkManager")
 			var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
 			if is_instance_valid(zombie_container) and (not is_coop or (is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server())):
-				for z in zombie_container.get_children():
-					if is_instance_valid(z) and not z.get("is_dead"):
-						if z.global_position.distance_to(lp.global_position) > 1450.0:
-							var ahead_ang := randf() * TAU
-							z.global_position = lp.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+				var relocate_target := get_active_living_squadmate()
+				if is_instance_valid(relocate_target):
+					for z in zombie_container.get_children():
+						if is_instance_valid(z) and not z.get("is_dead"):
+							if z.global_position.distance_to(relocate_target.global_position) > 1450.0:
+								var ahead_ang := randf() * TAU
+								z.global_position = relocate_target.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
 			
 			# Realtime Host-Authoritative Zombie Network Batch Replication (12.5 Hz)
 			if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
@@ -821,6 +859,7 @@ func _on_player_died() -> void:
 	else:
 		if is_instance_valid(player):
 			spawn_floating_text(player.global_position, "! SURVIVOR 1 ELIMINATED !", Color(1.0, 0.25, 0.20))
+		_handle_partial_squadmate_death()
 
 func _on_player2_died() -> void:
 	if _check_all_players_dead():
@@ -828,6 +867,7 @@ func _on_player2_died() -> void:
 	else:
 		if is_instance_valid(player2):
 			spawn_floating_text(player2.global_position, "! SURVIVOR 2 ELIMINATED !", Color(1.0, 0.25, 0.20))
+		_handle_partial_squadmate_death()
 
 func _on_squad_member_downed(p_node: CharacterBody2D) -> void:
 	if _check_all_players_dead():
@@ -845,6 +885,25 @@ func _on_squad_member_revived(p_node: CharacterBody2D) -> void:
 func _on_squad_member_died() -> void:
 	if _check_all_players_dead():
 		_handle_all_players_dead()
+	else:
+		_handle_partial_squadmate_death()
+
+func _handle_partial_squadmate_death() -> void:
+	var living_squadmate := get_active_living_squadmate()
+	if is_instance_valid(living_squadmate):
+		if is_instance_valid(zombie_container):
+			for z in zombie_container.get_children():
+				if is_instance_valid(z) and not z.get("is_dead") and z.has_method("set_target"):
+					z.set_target(living_squadmate)
+	
+	var lp := get_local_player()
+	if is_instance_valid(lp) and lp.is_dead and is_instance_valid(living_squadmate) and living_squadmate != lp:
+		if lp.player_camera:
+			lp.player_camera.enabled = false
+		if living_squadmate.player_camera:
+			living_squadmate.player_camera.enabled = true
+			living_squadmate.player_camera.make_current()
+		spawn_floating_text(living_squadmate.global_position + Vector2(0, -64), "🎥 SPECTATING SURVIVING SQUADMATE", Color(0.40, 0.85, 1.0))
 
 func _check_all_players_dead() -> bool:
 	if is_instance_valid(player) and not player.is_dead and player.get("is_downed") != true:
@@ -914,19 +973,23 @@ func _on_gasoline_collected(_p: Node2D, pos: Vector2) -> void:
 	spawn_floating_text(pos + Vector2(0, -48), "⛽ GASOLINE CANISTER COLLECTED — DELIVER TO GENERATOR!", Color(1.0, 0.85, 0.28))
 
 func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
-	if not is_instance_valid(player) or player.is_dead:
+	var focus := get_active_living_squadmate()
+	if not is_instance_valid(focus):
 		return
+	
+	if wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(count)
 	
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_groan", 0.70, 4.0)
 	
-	spawn_floating_text(player.global_position + Vector2(0, -68), "⚠ WARNING: ZOMBIE HERD RUSH DETECTED! ⚠", Color(1.0, 0.20, 0.15))
-	if player.has_method("add_camera_shake"):
-		player.add_camera_shake(7.5)
+	spawn_floating_text(focus.global_position + Vector2(0, -68), "⚠ WARNING: ZOMBIE HERD RUSH DETECTED! ⚠", Color(1.0, 0.20, 0.15))
+	if focus.has_method("add_camera_shake"):
+		focus.add_camera_shake(7.5)
 	
 	# Deploy cluster of zombies charging the player together
-	var center_spawn := player.global_position + Vector2.from_angle(direction_angle) * 560.0
+	var center_spawn := focus.global_position + Vector2.from_angle(direction_angle) * 560.0
 	for i in range(count):
 		var jitter := Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
 		var z_pos := center_spawn + jitter
@@ -947,9 +1010,10 @@ func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) 
 	total_waves_count = total_waves
 	wave_remaining_count = wave_total_enemies
 	_update_kills_display()
-	if is_instance_valid(player):
+	var focus := get_active_living_squadmate()
+	if is_instance_valid(focus):
 		var banner := "=== WAVE " + str(wave_num) + " INCOMING ===" if total_waves <= 0 else "=== WAVE " + str(wave_num) + " / " + str(total_waves) + " INCOMING ==="
-		spawn_floating_text(player.global_position + Vector2(0, -56), banner, Color(0.98, 0.78, 0.25))
+		spawn_floating_text(focus.global_position + Vector2(0, -56), banner, Color(0.98, 0.78, 0.25))
 	
 	var net_mgr := get_node_or_null("/root/NetworkManager")
 	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
@@ -965,63 +1029,75 @@ func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> vo
 		rpc_sync_wave_enemies.rpc(remaining_in_wave)
 
 func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
-	if not is_instance_valid(player) or player.is_dead:
+	var focus := get_active_living_squadmate()
+	if not is_instance_valid(focus):
 		return
 	var spawn_ang := randf() * TAU
 	var spawn_dist := randf_range(640.0, 780.0)
-	var pos := player.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
+	var pos := focus.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
 	var z := spawn_test_zombie_at(pos, enemy_type)
 	if is_instance_valid(z):
 		z.set_meta("is_wave_enemy", true)
 		_announce_special_spawn(enemy_type)
 
 func _announce_special_spawn(enemy_type: int) -> void:
-	if not is_instance_valid(player):
+	var focus := get_active_living_squadmate()
+	if not is_instance_valid(focus):
 		return
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	match enemy_type:
 		ZombieScript.ZombieType.TANK:
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! TANKER BREACHED PERIMETER !", Color(1.0, 0.25, 0.20))
 		ZombieScript.ZombieType.WITCH:
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! WITCH WEEPING NEARBY !", Color(0.95, 0.40, 0.40))
 		ZombieScript.ZombieType.SCREAMER:
 			if audio_mgr: audio_mgr.play_sfx("sfx_screamer")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! SCREAMER SHRIEKING IN THE DARK !", Color(1.0, 0.25, 0.90))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! SCREAMER SHRIEKING IN THE DARK !", Color(1.0, 0.25, 0.90))
 		ZombieScript.ZombieType.STALKER:
 			if audio_mgr: audio_mgr.play_sfx("sfx_stalker")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! SHADOW STALKER PROWLING — AIM FLASHLIGHT !", Color(0.25, 0.95, 1.0))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! SHADOW STALKER PROWLING — AIM FLASHLIGHT !", Color(0.25, 0.95, 1.0))
 		ZombieScript.ZombieType.LEAPER:
 			if audio_mgr: audio_mgr.play_sfx("sfx_leaper")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! FERAL LEAPER POUNCING !", Color(1.0, 0.55, 0.15))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! FERAL LEAPER POUNCING !", Color(1.0, 0.55, 0.15))
 		ZombieScript.ZombieType.BRUTE:
 			if audio_mgr: audio_mgr.play_sfx("sfx_brute")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! ARMORED RIOT BRUTE INBOUND !", Color(0.55, 0.80, 1.0))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! ARMORED RIOT BRUTE INBOUND !", Color(0.55, 0.80, 1.0))
 		ZombieScript.ZombieType.PARASITE:
 			if audio_mgr: audio_mgr.play_sfx("sfx_parasite")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! BIO-PARASITE HOST DETECTED !", Color(0.65, 1.0, 0.20))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! BIO-PARASITE HOST DETECTED !", Color(0.65, 1.0, 0.20))
 		ZombieScript.ZombieType.BUTCHER:
 			if audio_mgr: audio_mgr.play_sfx("sfx_butcher")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! THE BUTCHER CLEAVER RUSH !", Color(1.0, 0.20, 0.15))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! THE BUTCHER CLEAVER RUSH !", Color(1.0, 0.20, 0.15))
 		ZombieScript.ZombieType.PHANTOM:
 			if audio_mgr: audio_mgr.play_sfx("sfx_phantom")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "! PHANTOM WRAITH PHASE-SHIFTING !", Color(0.35, 1.0, 0.95))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "! PHANTOM WRAITH PHASE-SHIFTING !", Color(0.35, 1.0, 0.95))
 		ZombieScript.ZombieType.NECRO:
 			if audio_mgr: audio_mgr.play_sfx("sfx_necro")
-			spawn_floating_text(player.global_position + Vector2(0, -48), "☠️ NECRO & 7 WITCHES COVEN BREACHED PERIMETER! ☠️", Color(0.18, 1.0, 0.28))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "☠️ NECRO & 7 WITCHES COVEN BREACHED PERIMETER! ☠️", Color(0.18, 1.0, 0.28))
 
 func _on_wave_completed(wave_num: int, total_waves: int) -> void:
 	var is_endless: bool = (total_waves <= 0)
-	if (is_endless or wave_num < total_waves) and is_instance_valid(player):
-		spawn_floating_text(player.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " CLEARED — SUPPLY DROP! ===", Color(0.35, 0.95, 0.50))
+	var focus := get_active_living_squadmate()
+	if (is_endless or wave_num < total_waves) and is_instance_valid(focus):
+		spawn_floating_text(focus.global_position + Vector2(0, -56), "=== WAVE " + str(wave_num) + " CLEARED — SUPPLY DROP! ===", Color(0.35, 0.95, 0.50))
 		var supply_pool: Array[String] = ["MEDKIT", "ARMOR", "AMMO", "ADRENALINE"]
 		var drop_offset := Vector2.from_angle(randf() * TAU) * 85.0
-		spawn_pickup_at(supply_pool[randi() % supply_pool.size()], player.global_position + drop_offset)
+		spawn_pickup_at(supply_pool[randi() % supply_pool.size()], focus.global_position + drop_offset)
 
 func _on_all_waves_completed() -> void:
+	var alive_count := _get_living_hostiles_count()
+	if alive_count > 0:
+		all_waves_cleared_pending = true
+		return
+	_trigger_all_waves_cleared()
+
+func _trigger_all_waves_cleared() -> void:
 	var hp_ratio := 1.0
-	if is_instance_valid(player):
-		hp_ratio = float(player.current_health) / maxf(1.0, float(player.max_health))
+	var focus := get_active_living_squadmate()
+	if is_instance_valid(focus):
+		hp_ratio = float(focus.current_health) / maxf(1.0, float(focus.max_health))
 	if level_controller and level_controller.has_method("on_all_waves_completed"):
+		level_controller.on_all_waves_completed(hp_ratio)
 		level_controller.on_all_waves_completed(hp_ratio)
 
 func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
@@ -1183,6 +1259,8 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_ne
 		)
 	if zombie.has_signal("drop_requested"):
 		zombie.drop_requested.connect(_on_zombie_drop_requested)
+	if zombie.has_signal("summon_requested"):
+		zombie.summon_requested.connect(_on_necro_summon_requested)
 	
 	var net_mgr := get_node_or_null("/root/NetworkManager")
 	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
@@ -1190,8 +1268,9 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_ne
 		var actual_type: int = forced_type if forced_type >= 0 else int(zombie.get("zombie_type"))
 		rpc_spawn_zombie.rpc(z_id, actual_type, spawn_pos)
 	
-	if is_instance_valid(player):
-		zombie.set_target(player)
+	var target_survivor := get_active_living_squadmate()
+	if is_instance_valid(target_survivor):
+		zombie.set_target(target_survivor)
 	
 	# NECRO Boss Variant: Automatically spawns with a coven of 7 Witches orbiting around her!
 	var spawned_type: int = forced_type if forced_type >= 0 else int(zombie.get("zombie_type"))
@@ -1200,19 +1279,48 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_ne
 	
 	return zombie
 
+func _on_necro_summon_requested(center_pos: Vector2, count: int, _summoner: Node2D) -> void:
+	if not is_inside_tree():
+		return
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	if is_coop and multiplayer and multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		return # Host handles authoritative horde spawning
+	
+	if wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(count)
+	
+	for i in range(count):
+		var ang := (TAU * float(i)) / float(max(1, count)) + randf_range(-0.25, 0.25)
+		var dist := randf_range(50.0, 160.0)
+		var spawn_p := center_pos + Vector2.from_angle(ang) * dist
+		var minion_type := ZombieScript.ZombieType.WALKER if (i % 2 == 0) else ZombieScript.ZombieType.RUNNER
+		if i == 0 and randf() < 0.35:
+			minion_type = ZombieScript.ZombieType.LEAPER
+		var minion := spawn_test_zombie_at(spawn_p, minion_type)
+		if is_instance_valid(minion):
+			minion.set_meta("is_wave_enemy", true)
+			if "speed" in minion:
+				minion.speed *= 1.12
+	_update_kills_display()
+
 func _spawn_necro_witch_coven(necro_zombie: Node2D) -> void:
 	if not is_instance_valid(necro_zombie) or not zombie_container:
 		return
+	if wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(7)
 	var coven_refs: Array[Node2D] = []
 	for i in range(7):
 		var ang := (TAU * float(i)) / 7.0
 		var w_pos: Vector2 = necro_zombie.global_position + Vector2.from_angle(ang) * 76.0
 		var witch := spawn_test_zombie_at(w_pos, ZombieScript.ZombieType.WITCH)
 		if is_instance_valid(witch):
+			witch.set_meta("is_wave_enemy", true)
 			if witch.has_method("set_coven_leader"):
 				witch.set_coven_leader(necro_zombie, i, 7)
 			coven_refs.append(witch)
 	necro_zombie.set_meta("witch_coven", coven_refs)
+	_update_kills_display()
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_spawn_zombie(z_id: int, z_type: int, spawn_pos: Vector2) -> void:
@@ -1367,7 +1475,8 @@ func _pick_zombie_type_for_spawn() -> int:
 		return ZombieScript.ZombieType.NECRO
 
 func _on_spawn_timer_timeout() -> void:
-	if not is_instance_valid(player) or player.is_dead:
+	var focus := get_active_living_squadmate()
+	if not is_instance_valid(focus):
 		return
 	
 	if zombie_container.get_child_count() >= max_alive_zombies:
@@ -1376,7 +1485,7 @@ func _on_spawn_timer_timeout() -> void:
 	# Spawn zombies on a 360-degree perimeter ring around the player's current position in the infinite world
 	var spawn_ang := randf() * TAU
 	var spawn_dist := randf_range(640.0, 780.0)
-	var pos := player.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
+	var pos := focus.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
 	var z_type := _pick_zombie_type_for_spawn()
 	var z := spawn_test_zombie_at(pos, z_type)
 	if is_instance_valid(z):
@@ -1422,17 +1531,34 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 			wave_director.notify_enemy_killed()
 		_update_kills_display()
 		
+		if all_waves_cleared_pending:
+			if _get_living_hostiles_count() <= 0:
+				all_waves_cleared_pending = false
+				_trigger_all_waves_cleared()
+		
 		if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 			var z_id: int = int(zombie.get_meta("net_id")) if zombie.has_meta("net_id") else 0
 			if z_id > 0:
 				rpc_zombie_died.rpc(z_id, kills_count, score_count)
+
+func _get_living_hostiles_count() -> int:
+	var count := 0
+	if is_instance_valid(zombie_container):
+		for z in zombie_container.get_children():
+			if is_instance_valid(z) and not z.get("is_dead"):
+				count += 1
+	return count
 
 func _update_kills_display() -> void:
 	if kills_label:
 		var wave_str := "WAVE " + str(current_wave_num) if total_waves_count <= 0 else "WAVE " + str(current_wave_num) + "/" + str(total_waves_count)
 		var gs := get_node_or_null("/root/GameState")
 		var mode_prefix := "SURVIVAL: " if (gs != null and gs.selected_mode == "survival") else ""
-		kills_label.text = mode_prefix + wave_str + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(wave_remaining_count) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
+		var active_hostiles := _get_living_hostiles_count()
+		if wave_director and wave_director.has_method("get_remaining_enemies_in_wave"):
+			var remaining_to_spawn: int = max(0, wave_director.total_enemies_in_wave - wave_director.enemies_spawned_in_wave)
+			active_hostiles = max(active_hostiles, active_hostiles + remaining_to_spawn)
+		kills_label.text = mode_prefix + wave_str + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(active_hostiles) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
 
 func _on_pause_button_pressed() -> void:
 	if pause_menu and pause_menu.has_method("open_pause_menu"):

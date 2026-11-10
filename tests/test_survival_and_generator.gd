@@ -315,7 +315,9 @@ class SurvivalAndGeneratorTestRunner extends Node:
 		var mode_select = ModeSelectScene.instantiate()
 		add_child(mode_select)
 		
-		var survival_btn: Button = mode_select.get_node_or_null("CenterContainer/ModePanel/ModeMargin/ModeVBox/SurvivalModeButton")
+		var survival_btn: Button = mode_select.find_child("SurvivalModeButton", true, false) as Button
+		if not survival_btn:
+			survival_btn = mode_select.get_node_or_null("CenterContainer/ModePanel/ModeMargin/ModeVBox/SurvivalModeButton")
 		assert(survival_btn != null, "mode_select.tscn must contain SurvivalModeButton")
 		assert("SURVIVAL" in survival_btn.text.to_upper(), "Button text must indicate Survival Mode")
 		

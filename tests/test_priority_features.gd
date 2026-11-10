@@ -141,7 +141,9 @@ class PriorityFeaturesRunner extends Node:
 		var lobby: Control = lobby_scene.instantiate()
 		get_tree().root.add_child(lobby)
 		
-		var mode_btn: Button = lobby.get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow/ModeButton")
+		var mode_btn: Button = lobby.find_child("ModeButton", true, false) as Button
+		if not mode_btn:
+			mode_btn = lobby.get_node_or_null("CenterContainer/LobbyPanel/LobbyMargin/LobbyVBox/ModeRow/ModeButton")
 		assert(mode_btn != null, "Lobby must have ModeButton for toggling between Campaign and Survival")
 		
 		# Toggle mode via button

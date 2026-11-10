@@ -88,7 +88,18 @@ func dispense_gasoline(target_player: Node2D = null) -> bool:
 	queue_redraw()
 	return true
 
+func _can_local_player_interact() -> bool:
+	var scene := get_tree().current_scene if get_tree() else null
+	if scene and scene.has_method("get_local_player"):
+		var lp: Node = scene.get_local_player()
+		if is_instance_valid(lp):
+			if lp.get("is_dead") == true or lp.get("is_downed") == true:
+				return false
+	return true
+
 func _input(event: InputEvent) -> void:
+	if not _can_local_player_interact():
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
 		if global_position.distance_to(mpos) <= 95.0 or (is_player_nearby and global_position.distance_to(mpos) <= 140.0):
@@ -99,7 +110,7 @@ func _input(event: InputEvent) -> void:
 			dispense_gasoline()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby:
+	if not is_player_nearby or not _can_local_player_interact():
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
