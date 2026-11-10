@@ -88,6 +88,7 @@ func register_bonus_enemies(count: int) -> void:
 	if count <= 0:
 		return
 	total_enemies_in_wave += count
+	enemies_spawned_in_wave += count
 	enemies_alive_in_wave += count
 	wave_enemies_updated.emit(get_remaining_enemies_in_wave(), total_enemies_in_wave)
 

@@ -67,6 +67,8 @@ var witch_query_timer: float = 0.0
 var cached_witch_eyes: Array = []
 var has_turret_flash_active: bool = false
 var all_waves_cleared_pending: bool = false
+var sector_straggler_timer: float = 0.0
+var hud_refresh_timer: float = 0.0
 
 func _ready() -> void:
 	get_tree().paused = false
@@ -653,17 +655,39 @@ func _process(delta: float) -> void:
 					if touch_controls and touch_controls.has_method("set_interact_prompt"):
 						touch_controls.set_interact_prompt(true, "REVIVE SQUADMATE", nearby_downed)
 			
-			# Keep zombies pursuing the player across the infinite world by relocating stragglers > 1450px behind
+			# Keep zombies actively engaging survivors across the sector
 			var net_mgr := get_node_or_null("/root/NetworkManager")
 			var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
 			if is_instance_valid(zombie_container) and (not is_coop or (is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server())):
 				var relocate_target := get_active_living_squadmate()
 				if is_instance_valid(relocate_target):
+					var living_hostiles := _get_living_hostiles_count()
+					sector_straggler_timer += delta
+					# Aggressive sweep when <= 3 hostiles remain: every 2.0s bring off-screen stragglers into engagement range
+					var aggressive_sweep := (living_hostiles <= 3 and sector_straggler_timer >= 2.0)
+					if aggressive_sweep:
+						sector_straggler_timer = 0.0
+					
 					for z in zombie_container.get_children():
 						if is_instance_valid(z) and not z.get("is_dead"):
-							if z.global_position.distance_to(relocate_target.global_position) > 1450.0:
-								var ahead_ang := randf() * TAU
-								z.global_position = relocate_target.global_position + Vector2.from_angle(ahead_ang) * randf_range(680.0, 790.0)
+							var dist: float = z.global_position.distance_to(relocate_target.global_position)
+							if aggressive_sweep and dist > 520.0:
+								# Last 1-3 enemies: immediately relocate directly towards player
+								var spawn_p := find_valid_spawn_position(relocate_target.global_position, 380.0, 480.0)
+								z.global_position = spawn_p
+								if z.has_method("set_target"):
+									z.set_target(relocate_target)
+							elif dist > 820.0:
+								# General straggler: keep within active fighting perimeter
+								var spawn_p := find_valid_spawn_position(relocate_target.global_position, 480.0, 620.0)
+								z.global_position = spawn_p
+								if z.has_method("set_target"):
+									z.set_target(relocate_target)
+			
+			hud_refresh_timer += delta
+			if hud_refresh_timer >= 0.45:
+				hud_refresh_timer = 0.0
+				_update_kills_display()
 			
 			# Realtime Host-Authoritative Zombie Network Batch Replication (12.5 Hz)
 			if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
@@ -1028,13 +1052,24 @@ func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> vo
 	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_wave_enemies.rpc(remaining_in_wave)
 
+func find_valid_spawn_position(near_pos: Vector2, min_dist: float = 520.0, max_dist: float = 680.0) -> Vector2:
+	var best_pos := near_pos + Vector2.from_angle(randf() * TAU) * randf_range(min_dist, max_dist)
+	for attempt in range(8):
+		var ang := randf() * TAU
+		var dist := randf_range(min_dist, max_dist)
+		var cand := near_pos + Vector2.from_angle(ang) * dist
+		if is_instance_valid(arena_env) and arena_env.has_method("is_position_blocked"):
+			if not arena_env.is_position_blocked(cand, 26.0):
+				return cand
+		else:
+			return cand
+	return best_pos
+
 func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 	var focus := get_active_living_squadmate()
 	if not is_instance_valid(focus):
 		return
-	var spawn_ang := randf() * TAU
-	var spawn_dist := randf_range(640.0, 780.0)
-	var pos := focus.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
+	var pos := find_valid_spawn_position(focus.global_position, 560.0, 720.0)
 	var z := spawn_test_zombie_at(pos, enemy_type)
 	if is_instance_valid(z):
 		z.set_meta("is_wave_enemy", true)
@@ -1236,9 +1271,18 @@ func spawn_test_zombie_at(spawn_pos: Vector2, forced_type: int = -1, override_ne
 	if zombie_container.has_node(z_name):
 		return zombie_container.get_node(z_name) as Node2D
 	
+	var final_pos := spawn_pos
+	if is_instance_valid(arena_env) and arena_env.has_method("is_position_blocked"):
+		if arena_env.is_position_blocked(final_pos, 22.0):
+			for attempt in range(8):
+				var test_p := spawn_pos + Vector2.from_angle(float(attempt) * (TAU / 8.0)) * 48.0
+				if not arena_env.is_position_blocked(test_p, 20.0):
+					final_pos = test_p
+					break
+	
 	var zombie: Node2D = zombie_scene.instantiate()
 	zombie.name = z_name
-	zombie.position = spawn_pos
+	zombie.position = final_pos
 	zombie.set_meta("net_id", z_id)
 	zombie_container.add_child(zombie)
 	
@@ -1554,11 +1598,58 @@ func _update_kills_display() -> void:
 		var wave_str := "WAVE " + str(current_wave_num) if total_waves_count <= 0 else "WAVE " + str(current_wave_num) + "/" + str(total_waves_count)
 		var gs := get_node_or_null("/root/GameState")
 		var mode_prefix := "SURVIVAL: " if (gs != null and gs.selected_mode == "survival") else ""
-		var active_hostiles := _get_living_hostiles_count()
+		var living_count := _get_living_hostiles_count()
+		var remaining_to_spawn := 0
 		if wave_director and wave_director.has_method("get_remaining_enemies_in_wave"):
-			var remaining_to_spawn: int = max(0, wave_director.total_enemies_in_wave - wave_director.enemies_spawned_in_wave)
-			active_hostiles = max(active_hostiles, active_hostiles + remaining_to_spawn)
-		kills_label.text = mode_prefix + wave_str + "   ·   " + current_time_phase_name + "   ·   HOSTILES: " + str(active_hostiles) + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
+			remaining_to_spawn = max(0, wave_director.total_enemies_in_wave - wave_director.enemies_spawned_in_wave)
+		var total_hostiles := living_count + remaining_to_spawn
+		
+		# Directional radar indicator when 1 to 3 hostiles remain
+		var radar_str := ""
+		if living_count in [1, 2, 3] and total_hostiles <= 3:
+			var focus := get_active_living_squadmate()
+			if is_instance_valid(focus) and is_instance_valid(zombie_container):
+				var nearest_z: Node2D = null
+				var min_d := 99999.0
+				for z in zombie_container.get_children():
+					if is_instance_valid(z) and not z.get("is_dead"):
+						var d: float = focus.global_position.distance_to(z.global_position)
+						if d < min_d:
+							min_d = d
+							nearest_z = z
+				if is_instance_valid(nearest_z):
+					if min_d <= 380.0:
+						radar_str = " [RADAR: CONTACT!]"
+					else:
+						var to_z: Vector2 = nearest_z.global_position - focus.global_position
+						var deg := fposmod(rad_to_deg(to_z.angle()) + 360.0, 360.0)
+						var compass := "E"
+						if deg >= 337.5 or deg < 22.5:
+							compass = "E"
+						elif deg < 67.5:
+							compass = "SE"
+						elif deg < 112.5:
+							compass = "S"
+						elif deg < 157.5:
+							compass = "SW"
+						elif deg < 202.5:
+							compass = "W"
+						elif deg < 247.5:
+							compass = "NW"
+						elif deg < 292.5:
+							compass = "N"
+						else:
+							compass = "NE"
+						var dist_m := int(min_d / 20.0)
+						radar_str = " [RADAR: " + compass + " ~" + str(dist_m) + "m]"
+		
+		var hostiles_str := "HOSTILES: " + str(total_hostiles) + radar_str
+		if total_hostiles == 0:
+			hostiles_str = "HOSTILES: 0 (SECURE)"
+		elif living_count == 0 and remaining_to_spawn > 0:
+			hostiles_str = "HOSTILES: " + str(remaining_to_spawn) + " (INCOMING...)"
+		
+		kills_label.text = mode_prefix + wave_str + "   ·   " + current_time_phase_name + "   ·   " + hostiles_str + "   ·   KILLS: " + str(kills_count) + "   ·   SCORE: " + str(score_count)
 
 func _on_pause_button_pressed() -> void:
 	if pause_menu and pause_menu.has_method("open_pause_menu"):

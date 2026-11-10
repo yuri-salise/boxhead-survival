@@ -156,6 +156,38 @@ func get_nearby_obstacles(center_pos: Vector2, max_dist: float = 550.0) -> Array
 					})
 	return result
 
+func is_position_blocked(pos: Vector2, margin: float = 24.0) -> bool:
+	var center_chunk := get_chunk_coords(pos)
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var chunk := _get_chunk_data(center_chunk.x + dx, center_chunk.y + dy)
+			var s: int = int(chunk.get("sector", 1))
+			for p in chunk.get("props", []):
+				var p_pos: Vector2 = p["pos"]
+				var r: float = 16.0
+				var kind: int = p.get("kind", 0)
+				match s:
+					SectorBiome.THE_STREET:
+						r = 34.0 if kind == 0 else (36.0 if kind == 1 else (50.0 if kind == 2 else 16.0))
+					SectorBiome.NO_EXIT:
+						r = 26.0 if kind == 0 else (16.0 if kind == 1 else 18.0)
+					SectorBiome.THE_DEPOT:
+						r = 20.0 if kind == 0 else (14.0 if kind == 1 else 8.0)
+					SectorBiome.LAST_LIGHT:
+						r = 30.0 if kind == 0 else (24.0 if kind == 1 else (8.0 if kind == 2 else 22.0))
+					_:
+						r = 14.0 if kind == 0 else (24.0 if kind == 1 else 8.0)
+				if pos.distance_to(p_pos) < (r + margin):
+					return true
+			for b in chunk.get("buildings", []):
+				var b_pos: Vector2 = b["pos"]
+				var b_sz: Vector2 = b["size"]
+				var half_sz: Vector2 = b_sz * 0.5 + Vector2(margin, margin)
+				var b_rect := Rect2(b_pos - half_sz, b_sz + Vector2(margin * 2.0, margin * 2.0))
+				if b_rect.has_point(pos):
+					return true
+	return false
+
 func get_ambient_lights(center_pos: Vector2, max_dist: float = 750.0) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var center_chunk := get_chunk_coords(center_pos)
