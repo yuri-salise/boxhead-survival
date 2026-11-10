@@ -7,12 +7,13 @@ signal player_proximity_changed(in_range: bool)
 
 @export var light_radius: float = 380.0
 @export var light_color: Color = Color(1.0, 0.94, 0.72, 1.0)
-@export var fuel_duration: float = 35.0
+@export var fuel_duration: float = 50.0
 @export var restart_delay: float = 3.0
+@export var generator_label: String = "COMMAND CENTER"
 
 var is_running: bool = false
 var has_fuel: bool = true
-var fuel_time_left: float = 35.0
+var fuel_time_left: float = 50.0
 var is_starting: bool = false
 var startup_time_left: float = 0.0
 var is_player_nearby: bool = false

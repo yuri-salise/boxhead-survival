@@ -197,9 +197,11 @@ func _refresh_ui_state() -> void:
 	else:
 		_update_players_display([])
 	
+	var mode_name: String = net_mgr.current_game_mode if (net_mgr and "current_game_mode" in net_mgr) else "campaign"
+	var is_survival: bool = (mode_name == "survival")
+	
 	if mode_button:
-		var mode_name: String = net_mgr.current_game_mode if (net_mgr and "current_game_mode" in net_mgr) else "campaign"
-		if mode_name == "survival":
+		if is_survival:
 			mode_button.text = "🔥 ENDLESS SURVIVAL SWARMS (RECORD DEFENSE) 🔥"
 			mode_button.add_theme_color_override("font_color", Color(1.0, 0.55, 0.20))
 		else:
@@ -208,6 +210,27 @@ func _refresh_ui_state() -> void:
 		
 		# Only host or unjoined player can toggle the match mode
 		mode_button.disabled = (not am_host and in_session)
+	
+	if sector_option:
+		if is_survival:
+			sector_option.disabled = true
+			sector_option.clear()
+			sector_option.add_item("OUTPOST ARENA (ENDLESS SURVIVAL SWARMS)", 1)
+			sector_option.select(0)
+		else:
+			sector_option.disabled = (not am_host and in_session)
+			if sector_option.item_count <= 1:
+				var prev_id: int = net_mgr.selected_level_id if net_mgr else 1
+				sector_option.clear()
+				sector_option.add_item("SECTOR 01: QUARANTINE (3 WAVES)", 1)
+				sector_option.add_item("SECTOR 02: THE STREET (4 WAVES)", 2)
+				sector_option.add_item("SECTOR 03: NO EXIT (5 WAVES)", 3)
+				sector_option.add_item("SECTOR 04: THE DEPOT (5 WAVES)", 4)
+				sector_option.add_item("SECTOR 05: LAST LIGHT — BLACKOUT FINALE (5 WAVES)", 5)
+				for i in range(sector_option.item_count):
+					if sector_option.get_item_id(i) == prev_id:
+						sector_option.select(i)
+						break
 
 func _on_mode_button_pressed() -> void:
 	var net_mgr := _get_network_manager()
@@ -271,10 +294,13 @@ func _on_start_pressed() -> void:
 	if not net_mgr or not net_mgr.is_host:
 		return
 	
+	var is_survival: bool = (net_mgr.current_game_mode == "survival")
 	var lvl_id := 1
-	if sector_option:
+	if not is_survival and sector_option:
 		var idx := sector_option.selected
 		lvl_id = sector_option.get_item_id(idx)
+	else:
+		lvl_id = 1
 	
 	if net_mgr.has_method("rpc_start_coop_mission"):
 		net_mgr.rpc_start_coop_mission.rpc(lvl_id, net_mgr.current_game_mode)

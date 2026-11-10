@@ -280,16 +280,17 @@ func rpc_start_coop_mission(level_id: int, mode_name: String = "campaign") -> vo
 		push_warning("Unauthorized client attempted to call rpc_start_coop_mission")
 		return
 	
-	selected_level_id = level_id
+	var target_lvl := 1 if mode_name == "survival" else level_id
+	selected_level_id = target_lvl
 	current_game_mode = mode_name
 	var gs := get_node_or_null("/root/GameState")
 	if gs:
 		gs.selected_mode = "survival" if mode_name == "survival" else "online"
-		gs.current_level = level_id
+		gs.current_level = target_lvl
 	
-	game_started.emit(level_id)
+	game_started.emit(target_lvl)
 	
-	var scene_path := "res://scenes/levels/level_0" + str(level_id) + ".tscn"
+	var scene_path := "res://scenes/levels/level_0" + str(target_lvl) + ".tscn"
 	if ResourceLoader.exists(scene_path):
 		get_tree().change_scene_to_file(scene_path)
 	else:

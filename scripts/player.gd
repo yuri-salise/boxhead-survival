@@ -419,7 +419,7 @@ func try_interact() -> bool:
 	var players := tree.get_nodes_in_group("players")
 	for p in players:
 		if is_instance_valid(p) and p != self and p.get("is_downed") == true:
-			if global_position.distance_to(p.global_position) <= 100.0:
+			if global_position.distance_to(p.global_position) <= 120.0:
 				p.revive(40.0)
 				return true
 	
@@ -525,7 +525,15 @@ func take_damage_from(amount: float, attacker_pos: Vector2 = Vector2.ZERO) -> vo
 			gs.trigger_haptic(55)
 	
 	if current_health <= 0.0:
-		if (is_coop_mode or is_ai_bot) and not is_downed:
+		var has_squad: bool = is_coop_mode or is_ai_bot
+		if not has_squad and is_inside_tree():
+			var tree_players := get_tree().get_nodes_in_group("players")
+			if tree_players.size() > 1:
+				has_squad = true
+		if not has_squad and multiplayer and multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+			has_squad = true
+		
+		if has_squad and not is_downed:
 			down()
 		else:
 			die()
@@ -610,8 +618,18 @@ func rpc_sync_downed(downed: bool) -> void:
 		return
 	if multiplayer.has_multiplayer_peer():
 		var sender := multiplayer.get_remote_sender_id()
-		if sender != 0 and sender != peer_id and sender != 1:
-			return
+		if downed:
+			# Reporting downed is only permitted from the player themselves or the authoritative host
+			if sender != 0 and sender != peer_id and sender != 1:
+				return
+		else:
+			# Reviving can be performed by self, host, or ANY active squadmate peer!
+			var net_mgr := get_node_or_null("/root/NetworkManager")
+			var valid_reviver: bool = (sender == 0 or sender == peer_id or sender == 1)
+			if not valid_reviver and net_mgr and "connected_peers" in net_mgr:
+				valid_reviver = net_mgr.connected_peers.has(sender)
+			if not valid_reviver:
+				return
 	if downed:
 		if not is_downed:
 			is_downed = true

@@ -98,24 +98,62 @@ func _ready() -> void:
 	spawn_pickup_at("ARMOR", Vector2(820, 470))
 	spawn_pickup_at("MEDKIT", Vector2(640, 210))
 	
-	# Spawn interactive world elements at the outpost
+	# Spawn 5 Strategic Outpost Perimeter Generators across key defense sectors
 	var gen_scene: PackedScene = load("res://scenes/actors/generator.tscn")
 	if gen_scene:
-		var generator := gen_scene.instantiate()
-		generator.name = "Generator"
-		generator.position = Vector2(740, 240)
-		generator.generator_started.connect(_on_generator_started)
-		if generator.has_signal("generator_depleted"):
-			generator.generator_depleted.connect(_on_generator_depleted)
-		if generator.has_signal("generator_refueled"):
-			generator.generator_refueled.connect(_on_generator_refueled)
-		add_child(generator)
+		var gen_configs: Array[Dictionary] = [
+			{
+				"name": "Generator",
+				"pos": Vector2(640, 240),
+				"color": Color(1.0, 0.94, 0.72, 1.0),
+				"label": "COMMAND CENTER"
+			},
+			{
+				"name": "Generator2",
+				"pos": Vector2(640, -220),
+				"color": Color(0.85, 0.92, 1.0, 1.0),
+				"label": "NORTH BARRACKS"
+			},
+			{
+				"name": "Generator3",
+				"pos": Vector2(640, 920),
+				"color": Color(1.0, 0.82, 0.45, 1.0),
+				"label": "SOUTH DEPOT"
+			},
+			{
+				"name": "Generator4",
+				"pos": Vector2(80, 360),
+				"color": Color(0.72, 0.94, 1.0, 1.0),
+				"label": "WEST CHECKPOINT"
+			},
+			{
+				"name": "Generator5",
+				"pos": Vector2(1200, 360),
+				"color": Color(0.98, 0.95, 0.85, 1.0),
+				"label": "EAST COMPOUND"
+			}
+		]
+		for cfg in gen_configs:
+			var gen: StaticBody2D = gen_scene.instantiate()
+			gen.name = cfg["name"]
+			gen.position = cfg["pos"]
+			if "generator_label" in gen:
+				gen.generator_label = cfg["label"]
+			if "light_color" in gen:
+				gen.light_color = cfg["color"]
+			gen.generator_started.connect(_on_generator_started)
+			if gen.has_signal("generator_depleted"):
+				gen.generator_depleted.connect(_on_generator_depleted)
+			if gen.has_signal("generator_refueled"):
+				gen.generator_refueled.connect(_on_generator_refueled)
+			add_child(gen)
 	
+	# Spawn Distant Fuel Truck (Far NE Industrial Railhead ~1000px away)
 	var truck_scene: PackedScene = load("res://scenes/actors/fuel_truck.tscn")
 	if truck_scene:
 		var fuel_truck := truck_scene.instantiate()
 		fuel_truck.name = "FuelTruck"
-		fuel_truck.position = Vector2(890, 240)
+		fuel_truck.position = Vector2(1520, -280)
 		if fuel_truck.has_signal("gasoline_collected"):
 			fuel_truck.gasoline_collected.connect(_on_gasoline_collected)
 		add_child(fuel_truck)
@@ -138,9 +176,20 @@ func _ready() -> void:
 		player.add_to_group("players")
 		squad_peers[1] = player
 	
-	# Initialize Squad Co-op (up to 4 survivors) if connected via NetworkManager
+	# Initialize Squad Co-op (up to 4 survivors) if connected via NetworkManager or online/survival co-op
 	var net_mgr := get_node_or_null("/root/NetworkManager")
-	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	var is_coop: bool = false
+	if net_mgr != null:
+		if net_mgr.is_host or net_mgr.connected_peers.size() > 1:
+			is_coop = true
+		elif multiplayer and multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+			is_coop = true
+	if not is_coop and gs != null:
+		if gs.selected_mode == "online":
+			is_coop = true
+		elif gs.selected_mode == "survival" and net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 0):
+			is_coop = true
+	
 	if is_coop and player:
 		player.is_coop_mode = true
 		player.peer_id = 1
@@ -294,7 +343,16 @@ func _show_level_start_objective_and_tutorial() -> void:
 
 func get_local_player() -> CharacterBody2D:
 	var net_mgr := get_node_or_null("/root/NetworkManager")
-	var is_coop: bool = (net_mgr != null and (net_mgr.is_host or net_mgr.connected_peers.size() > 1))
+	var gs := get_node_or_null("/root/GameState")
+	var is_coop: bool = false
+	if net_mgr != null:
+		if net_mgr.is_host or net_mgr.connected_peers.size() > 1:
+			is_coop = true
+		elif multiplayer and multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+			is_coop = true
+	if not is_coop and gs != null:
+		if gs.selected_mode == "online" or (gs.selected_mode == "survival" and net_mgr != null and net_mgr.connected_peers.size() > 0):
+			is_coop = true
 	if is_coop and multiplayer and multiplayer.has_multiplayer_peer():
 		var my_id := multiplayer.get_unique_id()
 		if squad_peers.has(my_id) and is_instance_valid(squad_peers[my_id]):
@@ -648,12 +706,14 @@ func _process(delta: float) -> void:
 				var nearby_downed: Node = null
 				for p in get_tree().get_nodes_in_group("players"):
 					if is_instance_valid(p) and p != lp and p.get("is_downed") == true:
-						if lp.global_position.distance_to(p.global_position) <= 100.0:
+						if lp.global_position.distance_to(p.global_position) <= 120.0:
 							nearby_downed = p
 							break
 				if is_instance_valid(nearby_downed):
 					if touch_controls and touch_controls.has_method("set_interact_prompt"):
 						touch_controls.set_interact_prompt(true, "REVIVE SQUADMATE", nearby_downed)
+				elif touch_controls and is_instance_valid(touch_controls.current_interactable) and touch_controls.current_interactable.is_in_group("players"):
+					touch_controls.set_interact_prompt(false, "", null)
 			
 			# Keep zombies actively engaging survivors across the sector
 			var net_mgr := get_node_or_null("/root/NetworkManager")
@@ -992,13 +1052,22 @@ func _handle_all_players_dead() -> void:
 	else:
 		_on_level_lost(level_id, score_count, kills_count, "OUTPOST OVERRUN")
 
+func _get_generator_label_near(pos: Vector2) -> String:
+	for g in get_tree().get_nodes_in_group("generators"):
+		if is_instance_valid(g) and g.global_position.distance_to(pos) <= 70.0:
+			if "generator_label" in g and not str(g.generator_label).is_empty():
+				return str(g.generator_label)
+			return str(g.name).to_upper()
+	return "PERIMETER"
+
 func _on_generator_started(pos: Vector2) -> void:
 	ambient_query_timer = 999.0
 	var gs := get_node_or_null("/root/GameState")
 	if gs and gs.has_method("unlock_achievement"):
 		gs.unlock_achievement("GENERATOR_POWER")
+	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⚡ EMERGENCY GENERATOR RUNNING — FLOODLIGHT ACTIVE! ⚡", Color(1.0, 0.90, 0.30))
+		spawn_floating_text(pos + Vector2(0, -48), "⚡ [" + lbl + "] GENERATOR RUNNING — FLOODLIGHT ACTIVE! ⚡", Color(1.0, 0.90, 0.30))
 		player.add_camera_shake(6.0)
 	
 	# Loud engine roars attract an immediate zombie swarm!
@@ -1007,16 +1076,18 @@ func _on_generator_started(pos: Vector2) -> void:
 
 func _on_generator_depleted(pos: Vector2) -> void:
 	ambient_query_timer = 999.0
+	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⚠ GENERATOR OUT OF FUEL — FETCH GASOLINE FROM FUEL TRUCK! ⚠", Color(1.0, 0.28, 0.22))
+		spawn_floating_text(pos + Vector2(0, -48), "⚠ [" + lbl + "] OUT OF FUEL — RUN TO NE FUEL TRUCK! ⚠", Color(1.0, 0.28, 0.22))
 
 func _on_generator_refueled(pos: Vector2) -> void:
 	ambient_query_timer = 999.0
+	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⛽ FUEL ADDED — IGNITING GENERATOR (3.0s)...", Color(1.0, 0.78, 0.25))
+		spawn_floating_text(pos + Vector2(0, -48), "⛽ [" + lbl + "] FUEL ADDED — IGNITING ENGINE (3.0s)...", Color(1.0, 0.78, 0.25))
 
 func _on_gasoline_collected(_p: Node2D, pos: Vector2) -> void:
-	spawn_floating_text(pos + Vector2(0, -48), "⛽ GASOLINE CANISTER COLLECTED — DELIVER TO GENERATOR!", Color(1.0, 0.85, 0.28))
+	spawn_floating_text(pos + Vector2(0, -48), "⛽ GASOLINE CANISTER READY — DELIVER TO ANY UNPOWERED GENERATOR!", Color(1.0, 0.85, 0.28))
 
 func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	var focus := get_active_living_squadmate()
