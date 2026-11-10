@@ -35,8 +35,8 @@ uniform vec2 u_canvas_size = vec2(1280.0, 720.0);
 uniform vec2 u_player_screen_pos = vec2(640.0, 360.0);
 uniform float u_flashlight_angle = 0.0;
 uniform float u_cone_half = 0.44;
-uniform float u_beam_len = 430.0;
-uniform float u_inner_radius = 60.0;
+uniform float u_beam_len = 460.0;
+uniform float u_inner_radius = 70.0;
 
 const int MAX_ALLIES = 6;
 uniform int u_ally_count = 0;
@@ -54,83 +54,104 @@ uniform int u_shadow_count = 0;
 uniform vec2 u_shadow_obs_pos[MAX_SHADOWS];
 uniform float u_shadow_obs_radius[MAX_SHADOWS];
 
+// Soft realistic flashlight evaluator with Hotspot, Corona, Wide Spill, and Soft Penumbra
+float calc_flashlight(vec2 p, vec2 origin, float aim_ang, float beam_len, float cone_half, float inner_rad, bool apply_shadows) {
+	vec2 to_p = p - origin;
+	float dist_sq = dot(to_p, to_p);
+	if (dist_sq > beam_len * beam_len * 1.35) {
+		return 0.0;
+	}
+	float dist = sqrt(max(dist_sq, 0.001));
+	
+	// 1. Proximity Bounce / 360-degree ambient halo around survivor
+	float halo = smoothstep(inner_rad * 1.5, 0.0, dist) * 0.75;
+	
+	// 2. Optical angular attenuation: Hotspot (core), Corona (mid-cone), and Soft Wide Spill
+	float ang = atan(to_p.y, to_p.x);
+	float diff = abs(mod(ang - aim_ang + 3.14159265, 6.2831853) - 3.14159265);
+	
+	// Distance attenuation: smooth inverse falloff
+	float d_norm = dist / beam_len;
+	float d_falloff = clamp(1.0 - d_norm * d_norm, 0.0, 1.0);
+	d_falloff *= d_falloff;
+	
+	// Central Hotspot: focused intense beam
+	float hotspot = exp(-pow(diff / (cone_half * 0.38), 2.0)) * 1.15;
+	// Corona: soft medium beam
+	float corona = smoothstep(cone_half * 1.1, 0.0, diff) * 0.75;
+	// Wide Spill: natural reflector bounce filling the immediate foreground up to 75 degrees
+	float wide_spill = smoothstep(1.30, 0.0, diff) * smoothstep(beam_len * 0.50, 0.0, dist) * 0.32;
+	
+	float beam = (hotspot + corona + wide_spill) * d_falloff;
+	
+	// 3. Soft obstacle penumbra shadows (only shadows the directional beam, halo remains unblocked)
+	if (apply_shadows && beam > 0.01) {
+		for (int i = 0; i < u_shadow_count; i++) {
+			vec2 to_obs = u_shadow_obs_pos[i] - origin;
+			float obs_dist_sq = dot(to_obs, to_obs);
+			if (dist_sq > obs_dist_sq && obs_dist_sq > 64.0) {
+				float obs_dist = sqrt(obs_dist_sq);
+				float obs_ang = atan(to_obs.y, to_obs.x);
+				float obs_diff = abs(mod(ang - obs_ang + 3.14159265, 6.2831853) - 3.14159265);
+				float shadow_w = atan(u_shadow_obs_radius[i] * 0.85, obs_dist);
+				if (obs_diff < shadow_w * 1.4) {
+					// Soft penumbra transition instead of hard cutout
+					float penumbra = smoothstep(shadow_w * 1.4, shadow_w * 0.65, obs_diff);
+					beam *= (1.0 - penumbra * 0.88);
+				}
+			}
+		}
+	}
+	
+	return clamp(halo + beam, 0.0, 1.0);
+}
+
 void fragment() {
 	if (u_night_factor <= 0.005) {
 		COLOR = vec4(0.0);
 	} else {
 		vec2 p = UV * u_canvas_size;
-		vec2 to_pixel = p - u_player_screen_pos;
-		float dist_sq = dot(to_pixel, to_pixel);
 		
-		float player_light = 0.0;
-		if (dist_sq < u_beam_len * u_beam_len) {
-			float dist = sqrt(dist_sq);
-			if (dist < u_inner_radius) {
-				player_light = smoothstep(u_inner_radius, u_inner_radius * 0.45, dist);
-			}
-			float angle = atan(to_pixel.y, to_pixel.x);
-			float diff = abs(mod(angle - u_flashlight_angle + 3.14159265, 6.2831853) - 3.14159265);
-			if (diff < u_cone_half) {
-				float cone_fade = smoothstep(u_cone_half, u_cone_half - 0.09, diff);
-				float beam_fade = smoothstep(u_beam_len, u_beam_len * 0.78, dist);
-				float flash = cone_fade * beam_fade;
-				for (int i = 0; i < u_shadow_count; i++) {
-					vec2 to_obs = u_shadow_obs_pos[i] - u_player_screen_pos;
-					float obs_dist_sq = dot(to_obs, to_obs);
-					if (dist_sq > obs_dist_sq && obs_dist_sq > 64.0) {
-						float obs_dist = sqrt(obs_dist_sq);
-						float obs_angle = atan(to_obs.y, to_obs.x);
-						float obs_diff = abs(mod(angle - obs_angle + 3.14159265, 6.2831853) - 3.14159265);
-						float shadow_w = atan(u_shadow_obs_radius[i], obs_dist);
-						if (obs_diff < shadow_w) {
-							float shadow_edge = smoothstep(shadow_w, shadow_w * 0.82, obs_diff);
-							flash *= (1.0 - shadow_edge);
-						}
-					}
-				}
-				player_light = max(player_light, flash);
-			}
-		}
+		// Photometric Screen Accumulation: multiple lights seamlessly blend without dark troughs
+		// darkness = (1 - l1) * (1 - l2) * ... * (1 - ln)
+		float darkness = 1.0;
+		vec3 accumulated_tint = vec3(0.0);
 		
-		float max_ally_beam = u_beam_len * 0.96;
-		float max_ally_beam_sq = max_ally_beam * max_ally_beam;
-		float ally_inner = u_inner_radius * 1.25;
+		// 1. Local Player Tactical Flashlight
+		float player_flash = calc_flashlight(p, u_player_screen_pos, u_flashlight_angle, u_beam_len, u_cone_half, u_inner_radius, true);
+		darkness *= (1.0 - player_flash);
+		
+		// 2. Co-op Squadmates & AI Companion Flashlights
 		for (int a = 0; a < u_ally_count; a++) {
-			vec2 to_ally = p - u_ally_screen_pos[a];
-			float ally_dist_sq = dot(to_ally, to_ally);
-			if (ally_dist_sq < max_ally_beam_sq) {
-				float ally_dist = sqrt(ally_dist_sq);
-				if (ally_dist < ally_inner) {
-					float a_inner = smoothstep(ally_inner, u_inner_radius * 0.42, ally_dist);
-					player_light = max(player_light, a_inner);
-				}
-				float ally_ang = atan(to_ally.y, to_ally.x);
-				float ally_diff = abs(mod(ally_ang - u_ally_flashlight_angle[a] + 3.14159265, 6.2831853) - 3.14159265);
-				if (ally_diff < u_cone_half * 1.05) {
-					float a_cone = smoothstep(u_cone_half * 1.05, u_cone_half * 0.65, ally_diff);
-					float a_beam = smoothstep(max_ally_beam, u_beam_len * 0.58, ally_dist);
-					player_light = max(player_light, a_cone * a_beam);
-				}
-			}
+			float ally_flash = calc_flashlight(p, u_ally_screen_pos[a], u_ally_flashlight_angle[a], u_beam_len * 0.95, u_cone_half, u_inner_radius, false);
+			darkness *= (1.0 - ally_flash);
 		}
 		
-		float ambient_light = 0.0;
-		vec3 ambient_tint = vec3(0.0);
+		// 3. Multi-source World Ambient Lights (Emergency Generator, Streetlights, Barrels, Turrets)
 		for (int i = 0; i < u_light_count; i++) {
 			vec2 dvec = p - u_light_pos[i];
 			float r = u_light_radius[i];
 			float d_sq = dot(dvec, dvec);
 			if (d_sq < r * r) {
 				float d = sqrt(d_sq);
-				float l = smoothstep(r, r * 0.25, d) * u_light_color[i].a;
-				ambient_light = max(ambient_light, l);
-				ambient_tint += u_light_color[i].rgb * (l * 0.35);
+				float d_rel = d / r;
+				// Physically realistic smooth quadratic falloff with soft penumbra
+				float atten = (1.0 / (1.0 + 3.2 * d_rel * d_rel)) * (1.0 - d_rel * d_rel);
+				atten = clamp(atten, 0.0, 1.0) * u_light_color[i].a;
+				darkness *= (1.0 - atten);
+				accumulated_tint += u_light_color[i].rgb * (atten * 0.30);
 			}
 		}
 		
-		float total_light = clamp(player_light + ambient_light, 0.0, 1.0);
-		float dark_alpha = (1.0 - total_light) * 0.96 * u_night_factor;
-		vec3 dark_col = vec3(0.01, 0.01, 0.02) + ambient_tint;
+		// 4. Cinematic Lens Vignette (Gentle optical falloff at corners, replaces hard border rectangles)
+		vec2 uv_norm = (UV - vec2(0.5)) * 2.0;
+		float corner_dist_sq = dot(uv_norm, uv_norm);
+		float lens_vignette = 1.0 + corner_dist_sq * 0.12;
+		
+		float total_illumination = 1.0 - darkness;
+		float dark_alpha = clamp(darkness * lens_vignette * 0.96 * u_night_factor, 0.0, 0.98);
+		
+		vec3 dark_col = vec3(0.012, 0.012, 0.022) + accumulated_tint;
 		COLOR = vec4(dark_col, dark_alpha);
 	}
 }
@@ -429,12 +450,7 @@ func _draw() -> void:
 			# Right eye glint
 			draw_circle(eye_r, 2.2 if is_enr else 1.8, pupil_col)
 	
-	# 3. Dark atmospheric horror border framing & corner shadows
-	var border_col := Color(0.01, 0.01, 0.02, 0.58)
-	draw_rect(Rect2(Vector2.ZERO, Vector2(vp.x, 34)), border_col, true)
-	draw_rect(Rect2(0, vp.y - 34, vp.x, 34), border_col, true)
-	draw_rect(Rect2(Vector2.ZERO, Vector2(38, vp.y)), border_col, true)
-	draw_rect(Rect2(vp.x - 38, 0, 38, vp.y), border_col, true)
+	# 3. Cinematic Lens Framing (handled smoothly by GPU lens_vignette in darkness shader)
 	
 	# 4. Immediate crimson bite shockwave border flash
 	if bite_flash_alpha > 0.01:

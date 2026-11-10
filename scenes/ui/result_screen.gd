@@ -16,6 +16,22 @@ signal main_menu_requested()
 
 var current_level_id: int = 1
 var is_victory: bool = false
+var auto_advance_timer: float = -1.0
+
+func _process(delta: float) -> void:
+	if auto_advance_timer > 0.0:
+		auto_advance_timer -= delta
+		var sec := int(ceil(auto_advance_timer))
+		if next_level_button and current_level_id < 5:
+			next_level_button.text = "NEXT SECTOR (" + str(sec) + "s)"
+		elif main_menu_button:
+			main_menu_button.text = "MAIN MENU (" + str(sec) + "s)"
+		if auto_advance_timer <= 0.0:
+			auto_advance_timer = -1.0
+			if current_level_id < 5:
+				_on_next_level_pressed()
+			else:
+				_on_main_menu_pressed()
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -32,8 +48,11 @@ func _ready() -> void:
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
 	var gs := get_node_or_null("/root/GameState")
-	if gs and gs.has_method("bind_button_tweens"):
-		gs.bind_button_tweens(self)
+	if gs:
+		if gs.has_method("bind_button_tweens"):
+			gs.bind_button_tweens(self)
+		if gs.has_method("setup_touch_scroll") and result_scroll:
+			gs.setup_touch_scroll(result_scroll)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
@@ -44,10 +63,10 @@ func _update_responsive_layout() -> void:
 		return
 	var vp_size := get_viewport_rect().size
 	if result_panel:
-		result_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 540.0)
-		result_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 440.0)
+		result_panel.custom_minimum_size.x = clampf(vp_size.x - 48.0, 340.0, 680.0)
+		result_panel.custom_minimum_size.y = clampf(vp_size.y - 36.0, 260.0, 390.0)
 	if result_scroll:
-		result_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 400.0)
+		result_scroll.custom_minimum_size.y = clampf(vp_size.y - 140.0, 100.0, 220.0)
 
 func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_achs: Array = []) -> void:
 	current_level_id = level_id
@@ -80,6 +99,9 @@ func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_ac
 	
 	if next_level_button:
 		next_level_button.visible = (level_id < 5)
+		if level_id < 5:
+			next_level_button.text = "NEXT SECTOR (5s)"
+	auto_advance_timer = 5.0
 	_spawn_unlock_particle_burst()
 
 func _spawn_unlock_particle_burst() -> void:
@@ -102,6 +124,7 @@ func _spawn_unlock_particle_burst() -> void:
 	burst.finished.connect(burst.queue_free)
 
 func show_defeat(level_id: int, score: int, kills: int, reason: String = "OUTPOST OVERRUN") -> void:
+	auto_advance_timer = -1.0
 	current_level_id = level_id
 	is_victory = false
 	visible = true
@@ -126,6 +149,7 @@ func show_defeat(level_id: int, score: int, kills: int, reason: String = "OUTPOS
 		next_level_button.visible = false
 
 func show_survival_defeat(wave: int, score: int, kills: int, is_new_best: bool = false) -> void:
+	auto_advance_timer = -1.0
 	is_victory = false
 	visible = true
 	
@@ -155,16 +179,19 @@ func show_survival_defeat(wave: int, score: int, kills: int, is_new_best: bool =
 		retry_button.text = "RETRY SURVIVAL"
 
 func _on_next_level_pressed() -> void:
+	auto_advance_timer = -1.0
 	visible = false
 	get_tree().paused = false
 	next_level_requested.emit(current_level_id + 1)
 
 func _on_retry_pressed() -> void:
+	auto_advance_timer = -1.0
 	visible = false
 	get_tree().paused = false
 	retry_requested.emit()
 
 func _on_main_menu_pressed() -> void:
+	auto_advance_timer = -1.0
 	visible = false
 	get_tree().paused = false
 	main_menu_requested.emit()

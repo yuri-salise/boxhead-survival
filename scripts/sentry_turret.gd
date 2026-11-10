@@ -79,6 +79,17 @@ func _unhandled_input(event: InputEvent) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_activate_turret() -> void:
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		var sender := multiplayer.get_remote_sender_id()
+		if sender != 0 and sender != 1:
+			var caller_valid := false
+			for p in get_tree().get_nodes_in_group("players"):
+				if is_instance_valid(p) and p.get("peer_id") == sender and not p.get("is_dead") and not p.get("is_downed"):
+					if global_position.distance_to(p.global_position) <= 220.0:
+						caller_valid = true
+						break
+			if not caller_valid:
+				return
 	_execute_activate_turret()
 
 @rpc("authority", "call_local", "reliable")

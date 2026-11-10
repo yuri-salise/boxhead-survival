@@ -688,6 +688,28 @@ func _process(delta: float) -> void:
 			if hud_refresh_timer >= 0.45:
 				hud_refresh_timer = 0.0
 				_update_kills_display()
+				
+				# Watchdog auto-resolution: If all hostiles are dead and waves completed or all spawned, ensure wave/sector resolves
+				var gs_check := get_node_or_null("/root/GameState")
+				var is_surv_mode: bool = (gs_check != null and gs_check.selected_mode == "survival")
+				if not is_surv_mode and is_instance_valid(wave_director):
+					var living_hostiles := _get_living_hostiles_count()
+					if living_hostiles == 0:
+						var is_final_wave: bool = (wave_director.all_completed or all_waves_cleared_pending or current_wave_num >= total_waves_count or (wave_director.current_wave_index + 1 >= wave_director.get_total_waves()))
+						var all_spawned: bool = (wave_director.enemies_spawned_in_wave >= wave_director.total_enemies_in_wave)
+						
+						if is_final_wave and (all_spawned or wave_director.all_completed or all_waves_cleared_pending):
+							if level_controller and not level_controller.is_resolved:
+								all_waves_cleared_pending = false
+								wave_director.all_completed = true
+								_trigger_all_waves_cleared()
+						elif wave_director.is_wave_active and all_spawned:
+							wave_director.enemies_alive_in_wave = 0
+							wave_director.enemies_killed_in_wave = wave_director.total_enemies_in_wave
+							wave_director.notify_enemy_killed()
+						elif wave_director.is_intermission and is_instance_valid(wave_director.intermission_timer):
+							if wave_director.intermission_timer.is_stopped() or wave_director.intermission_timer.time_left <= 0.05:
+								wave_director.start_next_wave()
 			
 			# Realtime Host-Authoritative Zombie Network Batch Replication (12.5 Hz)
 			if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
@@ -1001,9 +1023,6 @@ func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	if not is_instance_valid(focus):
 		return
 	
-	if wave_director and wave_director.has_method("register_bonus_enemies"):
-		wave_director.register_bonus_enemies(count)
-	
 	var audio_mgr := get_node_or_null("/root/AudioManager")
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_groan", 0.70, 4.0)
@@ -1014,6 +1033,7 @@ func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	
 	# Deploy cluster of zombies charging the player together
 	var center_spawn := focus.global_position + Vector2.from_angle(direction_angle) * 560.0
+	var actual_spawned := 0
 	for i in range(count):
 		var jitter := Vector2(randf_range(-60.0, 60.0), randf_range(-60.0, 60.0))
 		var z_pos := center_spawn + jitter
@@ -1025,6 +1045,9 @@ func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 			z.set_meta("is_wave_enemy", true)
 			if "speed" in z:
 				z.speed *= 1.15
+			actual_spawned += 1
+	if actual_spawned > 0 and wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(actual_spawned)
 
 func _on_wave_started(wave_num: int, total_waves: int, wave_total_enemies: int) -> void:
 	var audio_mgr := get_node_or_null("/root/AudioManager")
@@ -1074,6 +1097,10 @@ func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 	if is_instance_valid(z):
 		z.set_meta("is_wave_enemy", true)
 		_announce_special_spawn(enemy_type)
+	elif wave_director and "enemies_spawned_in_wave" in wave_director:
+		# Rollback counters if spawn failed so wave director does not track phantom unkillable zombies
+		wave_director.enemies_spawned_in_wave = max(0, wave_director.enemies_spawned_in_wave - 1)
+		wave_director.enemies_alive_in_wave = max(0, wave_director.enemies_alive_in_wave - 1)
 
 func _announce_special_spawn(enemy_type: int) -> void:
 	var focus := get_active_living_squadmate()
@@ -1132,7 +1159,6 @@ func _trigger_all_waves_cleared() -> void:
 	if is_instance_valid(focus):
 		hp_ratio = float(focus.current_health) / maxf(1.0, float(focus.max_health))
 	if level_controller and level_controller.has_method("on_all_waves_completed"):
-		level_controller.on_all_waves_completed(hp_ratio)
 		level_controller.on_all_waves_completed(hp_ratio)
 
 func _on_level_won(lvl: int, score: int, kills: int, stars: int) -> void:
@@ -1331,9 +1357,7 @@ func _on_necro_summon_requested(center_pos: Vector2, count: int, _summoner: Node
 	if is_coop and multiplayer and multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
 		return # Host handles authoritative horde spawning
 	
-	if wave_director and wave_director.has_method("register_bonus_enemies"):
-		wave_director.register_bonus_enemies(count)
-	
+	var actual_spawned := 0
 	for i in range(count):
 		var ang := (TAU * float(i)) / float(max(1, count)) + randf_range(-0.25, 0.25)
 		var dist := randf_range(50.0, 160.0)
@@ -1346,14 +1370,16 @@ func _on_necro_summon_requested(center_pos: Vector2, count: int, _summoner: Node
 			minion.set_meta("is_wave_enemy", true)
 			if "speed" in minion:
 				minion.speed *= 1.12
+			actual_spawned += 1
+	if actual_spawned > 0 and wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(actual_spawned)
 	_update_kills_display()
 
 func _spawn_necro_witch_coven(necro_zombie: Node2D) -> void:
 	if not is_instance_valid(necro_zombie) or not zombie_container:
 		return
-	if wave_director and wave_director.has_method("register_bonus_enemies"):
-		wave_director.register_bonus_enemies(7)
 	var coven_refs: Array[Node2D] = []
+	var actual_witches := 0
 	for i in range(7):
 		var ang := (TAU * float(i)) / 7.0
 		var w_pos: Vector2 = necro_zombie.global_position + Vector2.from_angle(ang) * 76.0
@@ -1363,7 +1389,10 @@ func _spawn_necro_witch_coven(necro_zombie: Node2D) -> void:
 			if witch.has_method("set_coven_leader"):
 				witch.set_coven_leader(necro_zombie, i, 7)
 			coven_refs.append(witch)
+			actual_witches += 1
 	necro_zombie.set_meta("witch_coven", coven_refs)
+	if actual_witches > 0 and wave_director and wave_director.has_method("register_bonus_enemies"):
+		wave_director.register_bonus_enemies(actual_witches)
 	_update_kills_display()
 
 @rpc("authority", "call_remote", "reliable")
@@ -1465,11 +1494,35 @@ func rpc_client_hit_zombie(z_id: int, amount: float, hit_dir: Vector2) -> void:
 		return
 	if not is_instance_valid(zombie_container):
 		return
+	
+	# Anti-exploit security: validate sender identity & state
+	var sender_id := multiplayer.get_remote_sender_id()
+	var net_mgr := get_node_or_null("/root/NetworkManager")
+	if net_mgr and "connected_peers" in net_mgr and sender_id != 0:
+		if not (sender_id in net_mgr.connected_peers):
+			return # Unauthorized peer
+	
+	# Find sender player avatar and verify alive
+	var sender_avatar: Node2D = null
+	for p in get_tree().get_nodes_in_group("players"):
+		if is_instance_valid(p) and p.get("peer_id") == sender_id:
+			sender_avatar = p
+			break
+	if is_instance_valid(sender_avatar) and (sender_avatar.get("is_dead") == true or sender_avatar.get("is_downed") == true):
+		return # Downed/dead clients cannot inflict damage
+	
 	var z_name := "Z_" + str(z_id)
 	var z := zombie_container.get_node_or_null(z_name)
 	if is_instance_valid(z) and not z.get("is_dead"):
-		z.apply_hit_impulse(hit_dir * 80.0)
-		z.take_damage(amount)
+		# Max bullet range check (prevents cross-map kill exploits)
+		if is_instance_valid(sender_avatar) and sender_avatar.global_position.distance_to(z.global_position) > 1250.0:
+			return
+		
+		# Clamp single-hit damage to valid weapon bounds (prevents 99999 dmg exploits)
+		var safe_dmg := clampf(amount, 0.0, 150.0)
+		var safe_impulse := hit_dir.normalized() * minf(hit_dir.length(), 100.0)
+		z.apply_hit_impulse(safe_impulse)
+		z.take_damage(safe_dmg)
 
 @rpc("authority", "call_remote", "reliable")
 func rpc_zombie_died(z_id: int, p_kills: int, p_score: int) -> void:
@@ -1571,7 +1624,7 @@ func _on_zombie_killed(zombie: Node2D) -> void:
 				gs.record_special_kill(z_name)
 		if level_controller and level_controller.has_method("record_kill"):
 			level_controller.record_kill(pts)
-		if wave_director and is_instance_valid(zombie) and zombie.has_meta("is_wave_enemy"):
+		if wave_director and is_instance_valid(zombie):
 			wave_director.notify_enemy_killed()
 		_update_kills_display()
 		
@@ -1645,7 +1698,13 @@ func _update_kills_display() -> void:
 		
 		var hostiles_str := "HOSTILES: " + str(total_hostiles) + radar_str
 		if total_hostiles == 0:
-			hostiles_str = "HOSTILES: 0 (SECURE)"
+			if wave_director and wave_director.is_intermission:
+				var next_w := current_wave_num + 1
+				hostiles_str = "WAVE " + str(current_wave_num) + " CLEARED (WAVE " + str(next_w) + " INCOMING...)"
+			elif wave_director and (wave_director.all_completed or current_wave_num >= total_waves_count):
+				hostiles_str = "HOSTILES: 0 (SECTOR CLEARED!)"
+			else:
+				hostiles_str = "HOSTILES: 0 (WAVE CLEARED)"
 		elif living_count == 0 and remaining_to_spawn > 0:
 			hostiles_str = "HOSTILES: " + str(remaining_to_spawn) + " (INCOMING...)"
 		

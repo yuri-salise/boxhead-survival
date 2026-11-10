@@ -43,6 +43,8 @@ func _ready() -> void:
 			solo_button.get_parent().move_child(ai_btn, solo_button.get_index() + 1)
 			if gs.has_method("bind_button_tweens"):
 				gs.bind_button_tweens(ai_btn)
+		if gs.has_method("setup_touch_scroll") and mode_scroll:
+			gs.setup_touch_scroll(mode_scroll)
 	if gs and status_label and "survival_best_wave" in gs and gs.survival_best_wave > 0:
 		status_label.text = "[ SURVIVAL RECORD: WAVE " + str(gs.survival_best_wave) + "  ·  SCORE " + str(gs.survival_best_score) + " ]"
 
@@ -57,10 +59,10 @@ func _update_responsive_layout() -> void:
 		return
 	var vp_size := get_viewport_rect().size
 	if mode_panel:
-		mode_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 560.0)
-		mode_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 240.0, 460.0)
+		mode_panel.custom_minimum_size.x = clampf(vp_size.x - 48.0, 340.0, 680.0)
+		mode_panel.custom_minimum_size.y = clampf(vp_size.y - 36.0, 260.0, 420.0)
 	if mode_scroll:
-		mode_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 200.0, 420.0)
+		mode_scroll.custom_minimum_size.y = clampf(vp_size.y - 140.0, 140.0, 250.0)
 
 func _get_game_state() -> Node:
 	return get_node_or_null("/root/GameState")

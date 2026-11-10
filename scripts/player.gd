@@ -591,6 +591,10 @@ func revive(restore_hp: float = 40.0) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_gasoline(p_has_gas: bool) -> void:
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		var sender := multiplayer.get_remote_sender_id()
+		if sender != 0 and sender != peer_id and sender != 1:
+			return
 	has_gasoline = p_has_gas
 	queue_redraw()
 
@@ -604,6 +608,10 @@ func sync_gasoline_state(p_has_gas: bool) -> void:
 func rpc_sync_downed(downed: bool) -> void:
 	if not is_inside_tree() or multiplayer == null:
 		return
+	if multiplayer.has_multiplayer_peer():
+		var sender := multiplayer.get_remote_sender_id()
+		if sender != 0 and sender != peer_id and sender != 1:
+			return
 	if downed:
 		if not is_downed:
 			is_downed = true
@@ -637,6 +645,10 @@ func add_armor(amount: float) -> void:
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_died() -> void:
+	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
+		var sender := multiplayer.get_remote_sender_id()
+		if sender != 0 and sender != peer_id and sender != 1:
+			return
 	is_dead = true
 	is_downed = false
 	velocity = Vector2.ZERO

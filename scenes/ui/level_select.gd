@@ -33,8 +33,11 @@ func _ready() -> void:
 		back_button.pressed.connect(_on_back_pressed)
 	
 	var gs := _get_game_state()
-	if gs and gs.has_method("bind_button_tweens"):
-		gs.bind_button_tweens(self)
+	if gs:
+		if gs.has_method("bind_button_tweens"):
+			gs.bind_button_tweens(self)
+		if gs.has_method("setup_touch_scroll") and level_scroll:
+			gs.setup_touch_scroll(level_scroll)
 	
 	refresh_ui()
 
@@ -49,10 +52,10 @@ func _update_responsive_layout() -> void:
 		return
 	var vp_size := get_viewport_rect().size
 	if level_panel:
-		level_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 840.0)
-		level_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 260.0, 560.0)
+		level_panel.custom_minimum_size.x = clampf(vp_size.x - 48.0, 340.0, 840.0)
+		level_panel.custom_minimum_size.y = clampf(vp_size.y - 36.0, 260.0, 440.0)
 	if level_scroll:
-		level_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 220.0, 500.0)
+		level_scroll.custom_minimum_size.y = clampf(vp_size.y - 150.0, 140.0, 260.0)
 
 func _get_game_state() -> Node:
 	if is_instance_valid(custom_game_state):

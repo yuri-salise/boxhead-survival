@@ -76,8 +76,11 @@ func _ready() -> void:
 	_setup_nakama_and_leaderboard_controls()
 	_refresh_ui_state()
 	var gs := get_node_or_null("/root/GameState")
-	if gs and gs.has_method("bind_button_tweens"):
-		gs.bind_button_tweens(self)
+	if gs:
+		if gs.has_method("bind_button_tweens"):
+			gs.bind_button_tweens(self)
+		if gs.has_method("setup_touch_scroll") and lobby_scroll:
+			gs.setup_touch_scroll(lobby_scroll)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:
@@ -90,10 +93,10 @@ func _update_responsive_layout() -> void:
 		return
 	var vp_size := get_viewport_rect().size
 	if lobby_panel:
-		lobby_panel.custom_minimum_size.x = clampf(vp_size.x - 36.0, 320.0, 840.0)
-		lobby_panel.custom_minimum_size.y = clampf(vp_size.y - 32.0, 260.0, 560.0)
+		lobby_panel.custom_minimum_size.x = clampf(vp_size.x - 48.0, 340.0, 840.0)
+		lobby_panel.custom_minimum_size.y = clampf(vp_size.y - 36.0, 260.0, 480.0)
 	if lobby_scroll:
-		lobby_scroll.custom_minimum_size.y = clampf(vp_size.y - 64.0, 220.0, 500.0)
+		lobby_scroll.custom_minimum_size.y = clampf(vp_size.y - 120.0, 160.0, 360.0)
 
 func _setup_nakama_and_leaderboard_controls() -> void:
 	var lobby_vbox := find_child("LobbyVBox", true, false) as VBoxContainer

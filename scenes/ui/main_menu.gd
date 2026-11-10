@@ -79,8 +79,13 @@ func _ready() -> void:
 	_setup_bonus_settings_controls()
 	_update_settings_ui()
 	var gs := get_node_or_null("/root/GameState")
-	if gs and gs.has_method("bind_button_tweens"):
-		gs.bind_button_tweens(self)
+	if gs:
+		if gs.has_method("bind_button_tweens"):
+			gs.bind_button_tweens(self)
+		if gs.has_method("setup_touch_scroll"):
+			if play_scroll: gs.setup_touch_scroll(play_scroll)
+			if settings_scroll: gs.setup_touch_scroll(settings_scroll)
+			if credits_scroll: gs.setup_touch_scroll(credits_scroll)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_RESIZED or what == NOTIFICATION_WM_SIZE_CHANGED:

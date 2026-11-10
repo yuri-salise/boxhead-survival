@@ -355,6 +355,8 @@ func trigger_haptic(duration_ms: int = 40) -> void:
 func bind_button_tweens(root: Node) -> void:
 	if not is_instance_valid(root):
 		return
+	if root is ScrollContainer:
+		setup_touch_scroll(root as ScrollContainer)
 	if root is BaseButton and not root.has_meta("tween_bound"):
 		root.set_meta("tween_bound", true)
 		var btn := root as BaseButton
@@ -372,3 +374,70 @@ func bind_button_tweens(root: Node) -> void:
 		)
 	for child in root.get_children():
 		bind_button_tweens(child)
+
+func setup_touch_scroll(scroll_container: ScrollContainer) -> void:
+	if not is_instance_valid(scroll_container) or scroll_container.has_meta("touch_scroll_bound"):
+		return
+	scroll_container.set_meta("touch_scroll_bound", true)
+	
+	var buttons := scroll_container.find_children("*", "BaseButton", true, false)
+	for b in buttons:
+		_bind_touch_scroll_button(b as BaseButton, scroll_container)
+
+func _bind_touch_scroll_button(btn: BaseButton, scroll: ScrollContainer) -> void:
+	if not is_instance_valid(btn) or btn.has_meta("touch_scroll_btn"):
+		return
+	btn.set_meta("touch_scroll_btn", true)
+	
+	var state = {
+		"touching": false,
+		"dragging": false,
+		"start_pos": Vector2.ZERO,
+		"start_scroll_y": 0,
+		"start_scroll_x": 0
+	}
+	
+	btn.gui_input.connect(func(event: InputEvent):
+		if not is_instance_valid(btn) or not is_instance_valid(scroll):
+			return
+		
+		if event is InputEventScreenTouch or (event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT):
+			var is_press: bool = event.pressed
+			var pos: Vector2 = event.position if event is InputEventScreenTouch else (event as InputEventMouseButton).global_position
+			
+			if is_press:
+				state.touching = true
+				state.dragging = false
+				state.start_pos = pos
+				state.start_scroll_y = scroll.scroll_vertical
+				state.start_scroll_x = scroll.scroll_horizontal
+			else:
+				state.touching = false
+				if state.dragging:
+					state.dragging = false
+					var was_disabled := btn.disabled
+					btn.disabled = true
+					btn.accept_event()
+					var tree := btn.get_tree()
+					if tree:
+						tree.create_timer(0.06).timeout.connect(func():
+							if is_instance_valid(btn):
+								btn.disabled = was_disabled
+						)
+		
+		elif event is InputEventScreenDrag or (event is InputEventMouseMotion and state.touching):
+			if not state.touching:
+				return
+			var curr_pos: Vector2 = event.position if event is InputEventScreenDrag else (event as InputEventMouseMotion).global_position
+			var delta: Vector2 = curr_pos - state.start_pos
+			
+			if not state.dragging and (absf(delta.y) > 8.0 or absf(delta.x) > 8.0):
+				state.dragging = true
+			
+			if state.dragging:
+				if scroll.vertical_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+					scroll.scroll_vertical = clampi(int(state.start_scroll_y - delta.y), 0, 999999)
+				if scroll.horizontal_scroll_mode != ScrollContainer.SCROLL_MODE_DISABLED:
+					scroll.scroll_horizontal = clampi(int(state.start_scroll_x - delta.x), 0, 999999)
+				btn.accept_event()
+	)
