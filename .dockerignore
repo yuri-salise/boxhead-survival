@@ -6,3 +6,11 @@ build
 *.md
 test
 tests
+assets
+scenes
+scripts
+autoload
+export
+Claude outputs
+scratch
+docs
