@@ -124,3 +124,18 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 18
 text = "RESOLUTION: 100%"
+
+[node name="SoundButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseMainVBox/PauseScroll/ButtonsGrid" unique_id=1317012935]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "SOUND FX: ON"
+
+[node name="MusicButton" type="Button" parent="CenterContainer/PausePanel/PauseMargin/PauseMainVBox/PauseScroll/ButtonsGrid" unique_id=1317012936]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 18
+text = "MUSIC: ON"
+

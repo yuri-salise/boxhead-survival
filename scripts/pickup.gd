@@ -1,5 +1,7 @@
 extends Area2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 signal picked_up(pickup_type: String, picker: Node2D)
 
 const PICKUP_TYPES: Dictionary = {
@@ -90,7 +92,7 @@ func _draw() -> void:
 	
 	# Ground drop shadow + beacon glow ring
 	draw_circle(Vector2(5.0, 8.0), 12.5, Color(0.0, 0.0, 0.0, 0.48))
-	draw_circle(Vector2.ZERO, 20.0 * pulse, Color(col.r, col.g, col.b, 0.18))
+	LightFX.draw_glow(self, Vector2.ZERO, 36.0 * pulse, Color(col.r, col.g, col.b, 0.45))
 	draw_arc(Vector2.ZERO, 17.0, 0.0, TAU, 24, Color(col.r, col.g, col.b, 0.65), 1.8)
 	
 	match pickup_type:

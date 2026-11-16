@@ -12,7 +12,11 @@ func _init() -> void:
 		printerr("  [ERROR] Failed to load dead_block_logo.svg via Image")
 
 	# 2. Rasterize icon SVG to PNG
-	var icon_img = Image.load_from_file("res://icon.svg")
+	# Rendered at 2x (1024x1024) from the 512-unit SVG: the lab asks for a 1024 px app icon.
+	var icon_img = Image.new()
+	var icon_svg := FileAccess.get_file_as_bytes("res://icon.svg")
+	if icon_svg.is_empty() or icon_img.load_svg_from_buffer(icon_svg, 2.0) != OK:
+		icon_img = null
 	if icon_img != null:
 		var icon_err = icon_img.save_png("res://assets/art/icon.png")
 		print("  [OK] Saved icon.png, err code: ", icon_err)

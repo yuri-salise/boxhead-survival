@@ -1,5 +1,7 @@
 extends Node2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 enum SectorBiome {
 	QUARANTINE = 1,
 	THE_STREET = 2,
@@ -805,8 +807,7 @@ func _draw_quarantine_chunk(chunk: Dictionary, flicker: float) -> void:
 			draw_line(pos - Vector2(20, 0), pos + Vector2(20, 0), Color(0.65, 0.20, 0.16, 0.75), 3.0)
 		else:
 			draw_line(pos, pos + dyn_shadow * 1.9, Color(0.0, 0.0, 0.0, 0.52), 5.0)
-			draw_circle(pos, 52.0 + night_factor * 24.0, Color(0.78, 0.18, 0.12, 0.08 * flicker * lamp_boost))
-			draw_circle(pos, 20.0 + night_factor * 10.0, Color(0.92, 0.25, 0.15, 0.16 * flicker * lamp_boost))
+			LightFX.draw_glow(self, pos, 105.0 + night_factor * 40.0, Color(0.92, 0.26, 0.14, clampf(0.26 * flicker * lamp_boost, 0.0, 0.8)))
 			draw_circle(pos, 6.0, Color(0.18, 0.20, 0.22, 1.0))
 			draw_circle(pos, 3.8, Color(1.0, 0.38, 0.20, clampf(0.90 * flicker * lamp_boost, 0.0, 1.0)))
 
@@ -893,8 +894,7 @@ func _draw_street_chunk(chunk: Dictionary, flicker: float) -> void:
 		else:
 			# High-mast Streetlight
 			draw_line(pos, pos + dyn_shadow * 2.2, Color(0.0, 0.0, 0.0, 0.55), 5.0)
-			draw_circle(pos, 60.0 + night_factor * 30.0, Color(1.0, 0.82, 0.48, 0.08 * flicker))
-			draw_circle(pos, 20.0, Color(1.0, 0.90, 0.60, 0.16 * flicker))
+			LightFX.draw_glow(self, pos, 125.0 + night_factor * 55.0, Color(1.0, 0.80, 0.46, (0.24 + night_factor * 0.22) * flicker))
 			draw_circle(pos, 6.0, Color(0.25, 0.26, 0.28))
 			draw_circle(pos, 3.5, Color(1.0, 0.85, 0.50, 0.95))
 
@@ -1035,8 +1035,7 @@ func _draw_depot_chunk(chunk: Dictionary, flicker: float) -> void:
 		else:
 			# High-mast Sodium Floodlight
 			draw_line(pos, pos + dyn_shadow * 2.4, Color(0.0, 0.0, 0.0, 0.55), 5.0)
-			draw_circle(pos, 85.0 + night_factor * 35.0, Color(0.95, 0.90, 0.65, 0.09 * flicker))
-			draw_circle(pos, 28.0, Color(1.0, 0.95, 0.75, 0.18 * flicker))
+			LightFX.draw_glow(self, pos, 160.0 + night_factor * 60.0, Color(1.0, 0.90, 0.62, (0.26 + night_factor * 0.22) * flicker))
 			draw_circle(pos, 8.0, Color(0.22, 0.24, 0.26))
 			draw_circle(pos, 4.5, Color(1.0, 0.95, 0.70, 0.95))
 
@@ -1097,8 +1096,7 @@ func _draw_plaza_chunk(chunk: Dictionary, flicker: float) -> void:
 		elif kind == 2:
 			# High-intensity Floodlight
 			draw_line(pos, pos + dyn_shadow * 2.2, Color(0.0, 0.0, 0.0, 0.55), 5.0)
-			draw_circle(pos, 90.0 + night_factor * 40.0, Color(0.75, 0.90, 1.0, 0.12 * flicker))
-			draw_circle(pos, 30.0, Color(0.85, 0.95, 1.0, 0.24 * flicker))
+			LightFX.draw_glow(self, pos, 170.0 + night_factor * 70.0, Color(0.78, 0.91, 1.0, (0.30 + night_factor * 0.22) * flicker))
 			draw_circle(pos, 7.0, Color(0.24, 0.26, 0.28))
 			draw_circle(pos, 4.0, Color(0.85, 0.95, 1.0, 0.95))
 		else:

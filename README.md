@@ -26,49 +26,48 @@
   </p>
 
   <p>
-    <img src="https://img.shields.io/badge/Test_Suite-24%2F24_Suites_Passing_(100%25)-brightgreen?style=flat-square" alt="Tests" />
+    <img src="https://img.shields.io/badge/Godot_Test_Suites-28_configured-brightgreen?style=flat-square" alt="Tests" />
     <img src="https://img.shields.io/badge/Renderer-GL_Compatibility_(GLES3)-blue?style=flat-square" alt="Renderer" />
     <img src="https://img.shields.io/badge/Networking-Host--Authoritative_ENet_%2B_Nakama-orange?style=flat-square" alt="Networking" />
-    <img src="https://img.shields.io/badge/Playtest_Rating-4.58_%2F_5.00_(N%3D12)-yellow?style=flat-square" alt="Playtest" />
+    <img src="https://img.shields.io/badge/Playtest_Rating-4.86_%2F_5.00_(N%3D12)-yellow?style=flat-square" alt="Playtest" />
     <img src="https://img.shields.io/badge/License-MIT-red?style=flat-square" alt="License" />
   </p>
 
   <p>
-    <a href="build/android/DeadBlockSurvival.apk"><strong>📦 Download Android APK (v1.0)</strong></a> •
-    <a href="docs/paper.pdf"><strong>📄 IEEE Research Paper (PDF)</strong></a> •
-    <a href="docs/GUIDE_QUESTIONS.md"><strong>📝 Lab Guide Answers</strong></a> •
-    <a href="docs/playtest/observation_sheet.md"><strong>📊 Playtest Evaluation</strong></a> •
-    <a href="docs/CREDITS.md"><strong>🎖️ Asset Credits</strong></a>
+    <a href="https://github.com/yuri-salise/boxhead-survival/releases/tag/v1.0"><strong>Download Android APK (v1.0 Release)</strong></a> •
+    <a href="docs/paper.pdf"><strong>IEEE Research Paper (PDF)</strong></a> •
+    <a href="docs/GUIDE_QUESTIONS.md"><strong>Lab Guide Answers</strong></a> •
+    <a href="docs/playtest/observation_sheet.md"><strong>Playtest Evaluation</strong></a> •
+    <a href="docs/CREDITS.md"><strong>Asset Credits</strong></a>
   </p>
 
 </div>
 
 ---
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [Overview &amp; Core Concept](#-overview--core-concept)
-- [Visual Showcase](#-visual-showcase)
-- [Key Engineering Features](#-key-engineering-features)
-- [Gameplay &amp; Controls Guide](#-gameplay--controls-guide)
-- [Campaign Progression: 5 Quarantine Sectors](#-campaign-progression-5-quarantine-sectors)
-- [Infected Threat Matrix (6 Zombie Archetypes)](#-infected-threat-matrix-6-zombie-archetypes)
-- [Tactical Arsenal &amp; Equipment](#-tactical-arsenal--equipment)
-- [Multiplayer &amp; Networking Architecture](#-multiplayer--networking-architecture)
-  - [Option A: ENet LAN / Hotspot Co-op](#option-a-enet-lan--mobile-hotspot-co-op-24-players)
-  - [Option B: Containerized Nakama Matchmaking Server](#option-b-self-hosted-nakama-server--global-leaderboard)
-  - [Graceful Disconnect Recovery](#graceful-disconnect--error-recovery)
-- [Automated CI/CD Pipeline &amp; Docker Microservice](#-automated-cicd-pipeline--docker-microservice)
-- [Empirical Playtest Results &amp; Evaluation](#-empirical-playtest-results--evaluation)
-- [Automated Test Suite (24 Headless Suites)](#-automated-test-suite-24-headless-suites)
-- [Installation, Build &amp; Development Guide](#-installation-build--development-guide)
-- [Repository Anatomy](#-repository-anatomy)
-- [Academic Deliverables &amp; Research Paper](#-academic-deliverables--research-paper)
-- [Credits &amp; License](#-credits--license)
+- [About the Game (Overview & Core Concept)](#about-the-game-overview--core-concept)
+- [Visual Showcase](#visual-showcase)
+- [Key Engineering Features](#key-engineering-features)
+- [How to Play (Gameplay & Controls Guide)](#how-to-play-gameplay--controls-guide)
+- [Campaign Progression: 5 Quarantine Sectors](#campaign-progression-5-quarantine-sectors)
+- [Infected Threat Matrix (6 Zombie Archetypes)](#infected-threat-matrix-6-zombie-archetypes)
+- [Tactical Arsenal and Equipment](#tactical-arsenal-and-equipment)
+- [Offline and Online Modes (Multiplayer Architecture)](#offline-and-online-modes-multiplayer-architecture)
+- [Automated CI/CD Pipeline and Docker Microservice](#automated-cicd-pipeline-and-docker-microservice)
+- [Playtest Results (Empirical Evaluation)](#playtest-results-empirical-evaluation)
+- [Automated Test Suite (28 Headless Suites)](#automated-test-suite-28-headless-suites)
+- [Download (v1.0 Release APK)](#download-v10-release-apk)
+- [How to Build (Installation & Development Guide)](#how-to-build-installation--development-guide)
+- [Secrets and Nakama Configuration](#secrets-and-nakama-configuration)
+- [Repository Anatomy](#repository-anatomy)
+- [Paper (docs/paper.pdf)](#paper-docspaperpdf)
+- [Credits (docs/CREDITS.md)](#credits-docscreditsmd)
 
 ---
 
-## ☣️ About the Game (Overview & Core Concept)
+## About the Game (Overview & Core Concept)
 
 **Dead Block: Survival** is an original top-down 2D tactical zombie survival shooter developed in **Godot 4.7.2 Standard Edition (GDScript)** tailored for mobile devices and rapid desktop testing. 
 
@@ -84,7 +83,7 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
 
 ---
 
-## 📸 Visual Showcase
+## Visual Showcase
 
 <div align="center">
 
@@ -98,28 +97,28 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
 | Engine Boot Splash &amp; Studio Branding | Mobile Launcher App Icon |
 | :---: | :---: |
 | <img src="assets/art/boot_splash.png" alt="Boot Splash" width="480" /> | <img src="assets/art/icon.png" alt="Dead Block Survival Icon" width="180" /> |
-| *Native 1280×720 engine-level boot splash screen* | *512×512 high-contrast vector squircle launcher icon* |
+| *Native 1280×720 engine-level boot splash screen* | *1024×1024 high-contrast vector squircle launcher icon* |
 
 </div>
 
 ---
 
-## ⚡ Key Engineering Features
+## Key Engineering Features
 
-- 🎯 **Offline-First Resilience:** Playable anywhere, anytime, including complete airplane mode. Saves progression, star ratings, and high scores securely in local storage.
-- 🤖 **Tactical AI Companion (`BRAVO BOT`):** Deploys alongside solo survivors. Features autonomous navigation, situational target prioritization, burst-fire suppression, and emergency **field-medic healing (`+30 HP`)**.
-- 🧟 **Dynamic Threat Hierarchy (6 Archetypes):** Fight specialized infected variants including fast-moving **Runners**, suicide **Boomers**, long-range acid **Spitters**, screaming **Witches**, and armored boss **Tankers**.
-- 🌐 **Dual-Mode Co-op Multiplayer:**
+- **Offline-First Resilience:** Playable anywhere, anytime, including complete airplane mode. Saves progression, star ratings, and high scores securely in local storage.
+- **Tactical AI Companion (`BRAVO BOT`):** Deploys alongside solo survivors. Features autonomous navigation, situational target prioritization, burst-fire suppression, and emergency **field-medic healing (`+30 HP`)**.
+- **Dynamic Threat Hierarchy (6 Archetypes):** Fight specialized infected variants including fast-moving **Runners**, suicide **Boomers**, long-range acid **Spitters**, screaming **Witches**, and armored boss **Tankers**.
+- **Dual-Mode Co-op Multiplayer:**
   - **Option A (ENet LAN / Mobile Hotspot):** Connect 2–4 devices locally with smart network adapter ranking (`get_smart_ip_list()`) and one-tap IP copying.
   - **Option B (Nakama Microservices):** Self-hosted Docker container stack providing RPC authentication, matchmaking, and global high-score leaderboards.
-- 🛠️ **Host-Authoritative State Synchronization:** Host resolves wave spawning, zombie health, damage resolution, and match results. 12.5 Hz quantized state broadcasts prevent desync.
-- 🩸 **Visceral Post-Apocalyptic Feedback:** Procedural blood splatters, zombie limb dismemberment, screen-edge POV bite blood, dynamic screen shake, and custom synthesized 16-bit 22 kHz audio cues.
-- 🔦 **Dynamic Lighting &amp; Occlusion:** Day-to-night lighting transitions, survivor flashlight cones, and perimeter diesel generators that illuminate dark sectors when powered.
-- 🚀 **Full CI/CD Pipeline:** Fully automated GitHub Actions workflow executing Node.js 24 linting, unit tests, Docker Compose orchestration, and automated `/health` endpoint verification.
+- **Host-Authoritative State Synchronization:** Host resolves wave spawning, zombie health, damage resolution, and match results. 12.5 Hz quantized state broadcasts prevent desync.
+- **Visceral Post-Apocalyptic Feedback:** Procedural blood splatters, zombie limb dismemberment, screen-edge POV bite blood, dynamic screen shake, and custom synthesized 16-bit 22 kHz audio cues.
+- **Dynamic Lighting &amp; Occlusion:** Day-to-night lighting transitions, survivor flashlight cones, and perimeter diesel generators that illuminate dark sectors when powered.
+- **Full CI/CD Pipeline:** Fully automated GitHub Actions workflow executing Node.js 24 linting, unit tests, Docker Compose orchestration, and automated `/health` endpoint verification.
 
 ---
 
-## 🎮 How to Play (Gameplay & Controls Guide)
+## How to Play (Gameplay & Controls Guide)
 
 ```
  ┌────────────────────────────────────────────────────────────────────────┐
@@ -130,13 +129,13 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
  │   ARM: [████████████████] 50/50                                        │
  │                                                                        │
  │                                                                        │
- │             (Survivor) ──🔦 Flashlight Cone                            │
+ │             (Survivor) ──Flashlight Cone                            │
  │                ▲                                                       │
  │                │                                     [FRAG (2)]        │
  │         ┌──────────────┐                       [DASH]                  │
  │         │  LEFT STICK  │                               ┌─────────────┐ │
  │         │ 360° Movement│                               │ RIGHT STICK │ │
- │         └──────────────┘             [⚡ USE / REVIVE] │ Aim & Auto- │ │
+ │         └──────────────┘             [USE / REVIVE] │ Aim & Auto- │ │
  │                                                        │ Fire Weapon │ │
  │                            [ WEAPON: MP5 SMG ]         └─────────────┘ │
  └────────────────────────────────────────────────────────────────────────┘
@@ -150,11 +149,11 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
 | **Right Virtual Joystick** | Touch &amp; Drag | Aims directional flashlight cone and triggers weapon auto-fire. |
 | **DASH Button** | Tap | Evasive burst (`760 px/s`) granting brief invulnerability frames (`1.4s` cooldown). |
 | **FRAG Button** | Tap | Throws an explosive frag grenade (`135 px` blast radius, 120 damage). |
-| **WEAPON Button** | Tap | Cycles unlocked firearms (`Pistol` ➔ `SMG` ➔ `Shotgun` ➔ `Rifle` ➔ `Magnum`). |
+| **WEAPON Button** | Tap | Cycles unlocked firearms (`Pistol` `SMG` `Shotgun` `Rifle` `Magnum`). |
 | **USE / REVIVE Button** | Tap (Contextual) | Restarts perimeter diesel generators, opens supply crates, or revives downed squadmates. |
 | **Back Button / Gesture** | System Back | Toggles the in-game Pause Menu or returns to previous screen. |
 
-### Desktop Controls (Testing &amp; PC Builds)
+### Desktop Controls (Testing and PC Builds)
 
 - **Movement:** `W`, `A`, `S`, `D` or Arrow Keys
 - **Aiming:** Mouse Cursor (360° directional tracking)
@@ -167,11 +166,11 @@ The game was engineered to solve fundamental mobile networking and gameplay chal
 
 ---
 
-## 🗺️ Campaign Progression: 5 Quarantine Sectors
+## Campaign Progression: 5 Quarantine Sectors
 
 The campaign challenges survivors across five progressively brutal quarantine sectors. Clearing Sector $N$ persists progress to `user://save.cfg` and unlocks Sector $N + 1$. Earning **$\ge 6$ total stars** across all sectors unlocks the **Veteran Star Perk** (`+50 Kevlar Armor` &amp; `MP5 SMG` equipped on deployment).
 
-| Sector | Codename | Waves | Environmental Hazard &amp; Layout | Threat Level | 2★ / 3★ Score |
+| Sector | Codename | Waves | Environmental Hazard &amp; Layout | Threat Level | 2/ 3Score |
 | :---: | :--- | :---: | :--- | :--- | :---: |
 | **01** | **Quarantine** | 3 | Open helipad yard, concrete barriers, daylight to dusk transition. | Moderate (Walkers, Runners) | `220` / `420` |
 | **02** | **The Street** | 4 | North-South highway with abandoned vehicle barricades and narrow flanks. | High (Witch screechers introduced) | `440` / `840` |
@@ -181,7 +180,7 @@ The campaign challenges survivors across five progressively brutal quarantine se
 
 ---
 
-## 🧟 Infected Threat Matrix (6 Zombie Archetypes)
+## Infected Threat Matrix (6 Zombie Archetypes)
 
 All enemy variants are governed by host-authoritative finite state machines with distinct visual silhouettes, movement speeds, and attack behaviors:
 
@@ -196,7 +195,7 @@ All enemy variants are governed by host-authoritative finite state machines with
 
 ---
 
-## 🔫 Tactical Arsenal &amp; Equipment
+## Tactical Arsenal and Equipment
 
 | Weapon / Gear | Ammo Capacity | Fire Rate | Base Damage | Tactical Strengths |
 | :--- | :---: | :---: | :---: | :--- |
@@ -212,7 +211,7 @@ All enemy variants are governed by host-authoritative finite state machines with
 
 ---
 
-## 🌐 Offline and Online Modes (Multiplayer Architecture)
+## Offline and Online Modes (Multiplayer Architecture)
 
 ```mermaid
 sequenceDiagram
@@ -246,49 +245,63 @@ sequenceDiagram
 2. **Smart IP Ranking:** `get_smart_ip_list()` in [`autoload/network_manager.gd`](autoload/network_manager.gd) automatically filters and ranks physical Wi-Fi/Hotspot IP addresses (`+100` score) over virtual WSL/Docker interfaces (`-50` score).
 3. **One-Tap Clipboard Copy:** Host UI displays an interactive IP banner with instant 1-tap clipboard copying for fast joining.
 
-### Option B: Self-Hosted Nakama Server &amp; Global Leaderboard
+### Option B: Self-Hosted Nakama Server and Global Leaderboard
 1. **Containerized Microservices:** Stacked via `docker-compose.nakama.yml` with CockroachDB and Nakama 3.22.0.
 2. **Restful Node CI/CD Bridge:** Containerized Express microservice exposes device authentication (`/v2/account/authenticate/device`), health checks (`/health`), and live high-score leaderboards (`/api/leaderboard`).
 
-### Graceful Disconnect &amp; Error Recovery
+### Graceful Disconnect and Error Recovery
 - **Host Leaves:** Guest displays `[ HOST DISCONNECTED — RETURNING TO LOBBY ]`, closes ENet peers, restores `OfflineMultiplayerPeer`, and cleanly returns to the lobby.
 - **Guest Leaves:** Host removes only that peer's avatar, preserves active zombies and wave counters, and continues the match without interruption.
 
 ---
 
-## 🚀 Automated CI/CD Pipeline &amp; Docker Microservice
+## Automated CI/CD Pipeline and Docker Microservice
 
-The repository features an enterprise-grade CI/CD pipeline managed via GitHub Actions ([`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml)):
+This repository also carries the ITSD 85 CI/CD lab: every push to `main` is linted and tested on GitHub, and only a green run is deployed to a self-hosted Linux server. Workflow: [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml).
 
+### What this project does
+
+A small Node.js 24 / Express service ([`src/app.js`](src/app.js)) runs beside the game. It serves a status page, `/health` (reports the deployed commit), `/api/add`, and a demo leaderboard endpoint. The pipeline packages it with Docker and redeploys it automatically.
+
+### Pipeline diagram
+
+![CI/CD pipeline: laptop to GitHub Actions to self-hosted runner](docs/pipeline.png)
+
+### How to run locally
+
+```bash
+npm ci          # exact versions from package-lock.json
+npm run lint    # no output = no problems
+npm test        # expect: pass 5, fail 0
+npm start       # http://localhost:3000 and http://localhost:3000/health
 ```
-┌─────────────────┐       ┌─────────────────┐       ┌────────────────────────┐
-│  git push main  │  ──►  │ Lint & Unit Test│  ──►  │  Self-Hosted Runner    │
-│  (Trigger Gate) │       │   (Node.js 24)  │       │ Docker Compose Deploy  │
-└─────────────────┘       └─────────────────┘       └────────────────────────┘
-                                                                 │
-                                                                 ▼
-                                                    ┌────────────────────────┐
-                                                    │ Verify Healthcheck:    │
-                                                    │ curl /health (15 tries)│
-                                                    └────────────────────────┘
-```
 
-### Pipeline Workflow Stages
+### How the deployment works
 
-1. **Lint and Unit Tests (`ubuntu-latest`):**
-   - Node.js 24 environment setup.
-   - Strict ESLint validation on `src/` and `test/`.
-   - Node test runner executing integration and unit suites (`test/app.test.js`).
-2. **Production Deploy (`self-hosted, linux, deploy`):**
-   - Protected quality gate: only triggers on direct push/merge to `main` (`needs: test`).
-   - Builds container image tagged with short git SHA: `itsd85-app:${APP_VERSION}`.
-   - Deploys container with Docker Compose on port `8080`.
-   - Automated health check verification polling `http://localhost:8080/health` up to 15 times.
-   - Prunes dangling Docker images automatically.
+1. **`test` job (`ubuntu-latest`)** runs on every push and pull request to `main`: `npm ci`, ESLint, then the Node test runner (`test/app.test.js`).
+2. **`deploy` job (`self-hosted, linux, deploy`)** has `needs: test` and only runs for a push to `main`, so pull requests and red builds never deploy. The runner on the server polls GitHub outbound, so the server needs no public IP.
+3. The image is built and tagged with the short commit SHA (`itsd85-app:<sha>`) and started with `docker compose -p itsd85 up -d --build` on port `8080`.
+4. A health check polls `http://localhost:8080/health` up to 15 times and fails the job unless the new commit SHA answers.
+5. Older commit-tagged images stay on the server for rollback; only dangling layers are pruned.
+
+### Results
+
+Push-to-live time is measured from merging the pull request until the deploy job's health check passes (lab Part 7.5). **These rows are not recorded yet** — see [`docs/SUBMISSION_EVIDENCE_GUIDE.md`](docs/SUBMISSION_EVIDENCE_GUIDE.md).
+
+| Test | Expected result | Actual result | Push-to-live (min:sec) |
+| :--- | :--- | :--- | :---: |
+| A — good change | test passes, deploy passes, new commit ID live | TO RECORD | TO RECORD |
+| B — broken change | test fails, merge blocked, server unchanged | TO RECORD | n/a |
+| C — rollback (revert through pipeline) | old content with a new commit ID live | TO RECORD | TO RECORD |
+| C — rollback (previous image on server) | previous commit ID live within seconds | TO RECORD | TO RECORD |
+
+### Screenshots
+
+Checkpoint screenshots go in [`docs/screenshots/`](docs/screenshots/) as `cp1-versions.png` … `cp6-deploy-green.png` (not captured yet; the guide above lists each one).
 
 ---
 
-## 📊 Playtest Results (Empirical Evaluation)
+## Playtest Results (Empirical Evaluation)
 
 Structured playtest evaluation was conducted using a 3-device physical Phone Test Matrix and a 15-item Likert questionnaire ($N = 12$ independent testers) grounded in the Technology Acceptance Model (TAM) and GameFlow frameworks:
 
@@ -296,16 +309,16 @@ Structured playtest evaluation was conducted using a 3-device physical Phone Tes
 
 | Evaluation Dimension | Mean ($\mu$) | Std Dev ($\sigma$) | User Acceptance Benchmark |
 | :--- | :---: | :---: | :---: |
-| **Perceived Usefulness (PU)** | **4.86** / 5.00 | 0.35 | ✅ High Satisfaction |
-| **Perceived Ease of Use (PEOU)** | **4.78** / 5.00 | 0.42 | ✅ Intuitive Controls |
-| **Level Progression &amp; Difficulty** | **4.89** / 5.00 | 0.32 | ✅ Balanced Escalation |
-| **Offline &amp; Online Multiplayer** | **4.89** / 5.00 | 0.32 | ✅ Robust Connectivity |
-| **Overall Player Satisfaction** | **4.92** / 5.00 | 0.28 | ✅ Outstanding Quality |
-| **Reliability Metric (Cronbach's $\alpha$)** | **0.84** | — | ✅ Strong Internal Consistency |
+| **Perceived Usefulness (PU)** | **4.86** / 5.00 | 0.35 | High Satisfaction |
+| **Perceived Ease of Use (PEOU)** | **4.75** / 5.00 | 0.44 | Intuitive Controls |
+| **Level Progression &amp; Difficulty** | **4.89** / 5.00 | 0.32 | Balanced Escalation |
+| **Offline &amp; Online Multiplayer** | **4.89** / 5.00 | 0.32 | Robust Connectivity |
+| **Overall Player Satisfaction** | **4.89** / 5.00 | 0.32 | Outstanding Quality |
+| **Reliability Metric (Cronbach's $\alpha$)** | **0.50** | — | Low: ceiling effect (86% of answers were 5, 100% were 4–5) |
 
 </div>
 
-### Key Playtest Findings &amp; Engineering Iterations
+### Key Playtest Findings and Engineering Iterations
 
 1. **Touch Joystick Overlap on Compact Screens:**
    - *Feedback:* Right virtual joystick initially overlapped with action buttons on 6.1" phones.
@@ -319,9 +332,9 @@ Structured playtest evaluation was conducted using a 3-device physical Phone Tes
 
 ---
 
-## 🧪 Automated Test Suite (24 Headless Suites)
+## Automated Test Suite (28 Headless Suites)
 
-The codebase includes **23 Godot headless test suites** plus **1 Node.js CI test suite**, verifying 100% of functional requirements:
+The codebase includes **28 Godot headless test suites** plus **1 Node.js CI test suite**, verifying 100% of functional requirements:
 
 ```powershell
 # Execute the Master Godot Test Runner headlessly
@@ -329,7 +342,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tests/run_all
 ```
 
 <details>
-<summary><strong>🔍 Click to expand the full list of 24 Automated Test Suites</strong></summary>
+<summary><strong>Click to expand the full list of 24 Automated Test Suites</strong></summary>
 
 1. `test_projectile.gd`: Projectile velocity, damage delivery, wall collisions, and self-damage prevention.
 2. `test_player.gd`: 8-directional movement, health, armor mitigation, and dash invulnerability frames.
@@ -360,15 +373,15 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . -s res://tests/run_all
 
 ---
 
-## 📥 Download (v1.0 Release APK)
+## Download (v1.0 Release APK)
 
-- **Direct Repository Build:** [**`build/android/DeadBlockSurvival.apk`**](build/android/DeadBlockSurvival.apk)
-- **GitHub Release Page:** [Release v1.0 Package &amp; Release Notes](https://github.com/your-username/boxhead-survival/releases/tag/v1.0)
+- **APK:** attached to the GitHub Release below (`*.apk` is gitignored, so it is not stored in the repository).
+- **GitHub Release Page:** [Release v1.0 Package &amp; Release Notes](https://github.com/yuri-salise/boxhead-survival/releases/tag/v1.0)
 - **Publication Paper:** [**`docs/paper.pdf`**](docs/paper.pdf)
 
 ---
 
-## 📦 How to Build (Installation & Development Guide)
+## How to Build (Installation & Development Guide)
 
 ### Prerequisites
 - **Godot Engine:** [Godot 4.7.2-stable Standard Edition (GDScript)](https://godotengine.org/download)
@@ -397,7 +410,7 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path . --export-debug "Androi
 adb install -r build/android/DeadBlockSurvival.apk
 ```
 
-### 4. Running the CI/CD &amp; Matchmaking Server Stack
+### 4. Running the CI/CD and Matchmaking Server Stack
 ```bash
 # Install Node dependencies and run linter & tests
 npm install
@@ -413,7 +426,17 @@ curl http://localhost:8080/health
 
 ---
 
-## 📂 Repository Anatomy
+## Secrets and Nakama Configuration
+
+No keystores, tokens or server keys are committed. For Option B (Nakama):
+
+1. Copy `.env.example` to `.env` and set `NAKAMA_SERVER_KEY`, `NAKAMA_CONSOLE_USER`, `NAKAMA_CONSOLE_PASSWORD` before `docker compose -f docker-compose.nakama.yml up -d`.
+2. Copy `nakama_local.cfg.example` to `nakama_local.cfg` with the same server key. Both files are gitignored; the export preset bundles `nakama_local.cfg` into the APK.
+3. Without `nakama_local.cfg` the client falls back to Nakama's stock development key, which is only acceptable on a local machine.
+
+---
+
+## Repository Anatomy
 
 ```text
 boxhead-survival/
@@ -441,7 +464,7 @@ boxhead-survival/
 ├── scripts/                   # Core GDScript gameplay controllers and AI logic
 ├── src/                       # Node.js 24 Express CI/CD server and matchmaking API
 ├── test/                      # Node.js automated test suites
-├── tests/                     # 23 headless Godot verification suites
+├── tests/                     # 28 headless Godot verification suites
 ├── .github/workflows/         # Production GitHub Actions CI/CD pipeline
 ├── compose.yaml               # Docker Compose service definition
 ├── Dockerfile                 # Production multi-stage container build
@@ -452,30 +475,30 @@ boxhead-survival/
 
 ---
 
-## 📄 Paper (docs/paper.pdf)
+## Paper (docs/paper.pdf)
 
 This project fulfills all academic requirements for **ITSD 85 Special Topics in Information Technology** (Mobile Game Development &amp; Automated CI/CD Deployments):
 
 - **Publication-Ready IEEE Paper:**
-  - 📄 [**`docs/paper.pdf`**](docs/paper.pdf) (Compiled Two-Column PDF Deliverable)
-  - 📖 [**`docs/paper/ieee_paper.md`**](docs/paper/ieee_paper.md) (Full Markdown Source)
-  - 📄 [**`docs/paper/ieee_paper.tex`**](docs/paper/ieee_paper.tex) (LaTeX Source)
+  - [**`docs/paper.pdf`**](docs/paper.pdf) (Compiled Two-Column PDF Deliverable)
+  - [**`docs/paper/ieee_paper.md`**](docs/paper/ieee_paper.md) (Full Markdown Source)
+  - [**`docs/paper/ieee_paper.tex`**](docs/paper/ieee_paper.tex) (LaTeX Source)
 - **Lab Guide Questions &amp; Comprehensive Engineering Answers:**
-  - 📝 [**`docs/GUIDE_QUESTIONS.md`**](docs/GUIDE_QUESTIONS.md)
+  - [**`docs/GUIDE_QUESTIONS.md`**](docs/GUIDE_QUESTIONS.md)
 - **Formative Playtest Documentation:**
-  - 📱 [**`docs/playtest/phone_test_matrix.md`**](docs/playtest/phone_test_matrix.md) — 9-case multi-phone functional testing matrix
-  - 📋 [**`docs/playtest/observation_sheet.md`**](docs/playtest/observation_sheet.md) — 15-item Likert usability evaluation
-  - 📈 [**`docs/playtest/feedback_responses.csv`**](docs/playtest/feedback_responses.csv) — Raw tester response data
+  - [**`docs/playtest/phone_test_matrix.md`**](docs/playtest/phone_test_matrix.md) — 9-case multi-phone functional testing matrix
+  - [**`docs/playtest/observation_sheet.md`**](docs/playtest/observation_sheet.md) — per-tester observations (Phase 8.2)
+  - [**`docs/playtest/feedback_responses.csv`**](docs/playtest/feedback_responses.csv) — Raw tester response data
 
 ---
 
-## 🎖️ Credits (docs/CREDITS.md)
+## Credits (docs/CREDITS.md)
 
 ### Development Team
 - **Dead Block Development Squad** — *Department of Information Technology, ITSD 85*
 - Lead Architecture, Gameplay Engineering, Networking, and CI/CD Automation.
 
-### Technology &amp; Asset Attribution
+### Technology and Asset Attribution
 - **Engine:** [Godot Engine](https://godotengine.org/) (MIT License) — Juan Linietsky, Ariel Manzur, and contributors.
 - **Backend Microservices:** [Node.js](https://nodejs.org/) &amp; [Express](https://expressjs.com/) (MIT License).
 - **Matchmaking Engine:** [Nakama](https://heroiclabs.com/) by Heroic Labs (Apache 2.0 License).
@@ -491,5 +514,5 @@ You are free to use, modify, and distribute this software in accordance with the
 ---
 
 <div align="center">
-  <sub>Built with ❤️ for ITSD 85 — Dead Block: Survival &copy; 2026. All rights reserved.</sub>
+  <sub>Built with for ITSD 85 — Dead Block: Survival &copy; 2026. All rights reserved.</sub>
 </div>

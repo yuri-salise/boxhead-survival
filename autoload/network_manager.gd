@@ -22,8 +22,17 @@ var CONNECT_TIMEOUT_SEC: float = 8.0
 var NAKAMA_TIMEOUT_SEC: float = 15.0
 var nakama_host: String = "127.0.0.1"
 var nakama_port: int = 7350
-var nakama_server_key: String = "defaultkey"
+var nakama_server_key: String = _load_nakama_server_key()
 var nakama_session_token: String = ""
+
+# Server key comes from a gitignored file so it is never committed (ITSD 85 rule).
+# Falls back to Nakama's stock development key for local-only testing.
+func _load_nakama_server_key() -> String:
+	var cfg := ConfigFile.new()
+	if cfg.load("res://nakama_local.cfg") == OK:
+		return str(cfg.get_value("nakama", "server_key", "defaultkey"))
+	return "defaultkey"
+
 var nakama_user_id: String = ""
 var nakama_match_id: String = ""
 var is_nakama_matching: bool = false

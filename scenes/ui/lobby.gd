@@ -1,5 +1,7 @@
 extends Control
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 @onready var lobby_panel: PanelContainer = find_child("LobbyPanel", true, false) as PanelContainer
 @onready var lobby_scroll: ScrollContainer = find_child("LobbyScroll", true, false) as ScrollContainer
 @onready var local_ip_label: Label = find_child("LocalIpLabel", true, false) as Label
@@ -36,14 +38,17 @@ func _ready() -> void:
 	_update_responsive_layout()
 	
 	if copy_ip_button:
+		UiIcons.apply(copy_ip_button, "copy", 20)
 		copy_ip_button.pressed.connect(func():
 			var net_mgr := _get_network_manager()
 			var host_ip: String = net_mgr.get_primary_host_ip() if net_mgr and net_mgr.has_method("get_primary_host_ip") else "127.0.0.1"
 			DisplayServer.clipboard_set(host_ip)
-			copy_ip_button.text = "✓ COPIED"
+			copy_ip_button.text = "COPIED"
+			UiIcons.apply(copy_ip_button, "check", 20)
 			get_tree().create_timer(2.0).timeout.connect(func():
 				if is_instance_valid(copy_ip_button):
-					copy_ip_button.text = "📋 COPY"
+					copy_ip_button.text = "COPY"
+					UiIcons.apply(copy_ip_button, "copy", 20)
 			)
 		)
 	
@@ -108,7 +113,8 @@ func _setup_nakama_and_leaderboard_controls() -> void:
 	var nakama_btn := Button.new()
 	nakama_btn.name = "NakamaMatchmakeButton"
 	nakama_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	nakama_btn.text = "🌐 OPTION B: NAKAMA SERVER MATCHMAKE (PORT 7350)"
+	nakama_btn.text = "OPTION B: NAKAMA SERVER MATCHMAKE (PORT 7350)"
+	UiIcons.apply(nakama_btn, "globe", 22)
 	nakama_btn.pressed.connect(func():
 		var net_mgr := _get_network_manager()
 		var srv_ip := ip_input.text.strip_edges() if (ip_input and not ip_input.text.strip_edges().is_empty()) else "127.0.0.1"
@@ -117,7 +123,8 @@ func _setup_nakama_and_leaderboard_controls() -> void:
 	)
 	var lb_btn := Button.new()
 	lb_btn.name = "LeaderboardButton"
-	lb_btn.text = "🏆 LEADERBOARD"
+	lb_btn.text = "LEADERBOARD"
+	UiIcons.apply(lb_btn, "trophy", 22)
 	lb_btn.pressed.connect(func():
 		var net_mgr := _get_network_manager()
 		if net_mgr and "cached_leaderboard" in net_mgr and status_label:
@@ -144,7 +151,7 @@ func _refresh_ui_state() -> void:
 	if host_button:
 		host_button.disabled = in_session
 		if am_host:
-			host_button.text = "★ HOSTING ACTIVE (YOU ARE HOST) ★"
+			host_button.text = "HOSTING ACTIVE (YOU ARE HOST)"
 		else:
 			host_button.text = "HOST CO-OP MATCH (BECOME HOST)"
 	
@@ -163,7 +170,7 @@ func _refresh_ui_state() -> void:
 			if port_input and port_input.text.is_valid_int():
 				port = port_input.text.to_int()
 			if host_ip_display:
-				host_ip_display.text = "👉  " + primary_ip + "  (PORT: " + str(port) + ")  👈"
+				host_ip_display.text = primary_ip + "  (PORT: " + str(port) + ")"
 			if host_alt_ips_label:
 				var all_ips: Array[String] = net_mgr.get_local_ip_addresses()
 				if all_ips.size() > 1:
@@ -202,10 +209,12 @@ func _refresh_ui_state() -> void:
 	
 	if mode_button:
 		if is_survival:
-			mode_button.text = "🔥 ENDLESS SURVIVAL SWARMS (RECORD DEFENSE) 🔥"
+			mode_button.text = "ENDLESS SURVIVAL SWARMS (RECORD DEFENSE)"
+			UiIcons.apply(mode_button, "flame", 22)
 			mode_button.add_theme_color_override("font_color", Color(1.0, 0.55, 0.20))
 		else:
 			mode_button.text = "CAMPAIGN MISSION (CLEAR SECTOR WAVES)"
+			UiIcons.apply(mode_button, "", 22)
 			mode_button.add_theme_color_override("font_color", Color(0.95, 0.90, 0.85))
 		
 		# Only host or unjoined player can toggle the match mode
@@ -278,7 +287,7 @@ func _on_join_pressed() -> void:
 		var my_ips: Array[String] = net_mgr.get_local_ip_addresses()
 		if my_ips.has(address) and address != "127.0.0.1":
 			if status_label:
-				status_label.text = "[ ⚠️ THAT'S THIS DEVICE'S IP! ENTER THE OTHER DEVICE'S (HOST'S) IP ]"
+				status_label.text = "[ THAT'S THIS DEVICE'S IP! ENTER THE OTHER DEVICE'S (HOST'S) IP ]"
 				status_label.add_theme_color_override("font_color", Color(1.0, 0.75, 0.20))
 			return
 		

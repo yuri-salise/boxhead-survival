@@ -1,5 +1,7 @@
 extends Node2D
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 const BloodDecalScript = preload("res://scripts/blood_decal.gd")
 const ZombieScript = preload("res://scripts/zombie_basic.gd")
 
@@ -246,7 +248,7 @@ func _ready() -> void:
 				player.add_armor(50.0)
 				if player.weapon_controller and player.weapon_controller.has_method("unlock_or_add_weapon"):
 					player.weapon_controller.unlock_or_add_weapon("SMG")
-				spawn_floating_text(player.global_position + Vector2(0, -82), "★ VETERAN STAR PERK: +50 ARMOR & MP5 SMG ★", Color(1.0, 0.85, 0.25))
+				spawn_floating_text(player.global_position + Vector2(0, -82), "VETERAN STAR PERK: +50 ARMOR & MP5 SMG", Color(1.0, 0.85, 0.25))
 			if gs and gs.get("ai_companion_enabled") == true:
 				var bot_scene: PackedScene = load("res://scenes/actors/player.tscn")
 				if bot_scene:
@@ -266,6 +268,7 @@ func _ready() -> void:
 	_setup_local_player_ui_and_controls()
 	
 	if pause_button:
+		UiIcons.apply(pause_button, "pause", 18)
 		pause_button.pressed.connect(_on_pause_button_pressed)
 	
 	if pause_menu:
@@ -334,7 +337,7 @@ func _show_level_start_objective_and_tutorial() -> void:
 	var is_surv: bool = (gs != null and gs.selected_mode == "survival")
 	var goal_txt := "GOAL: SURVIVE ENDLESS WAVES OF INFECTED" if is_surv else ("GOAL: SURVIVE " + str(total_waves_count) + " WAVES IN SECTOR 0" + str(level_id))
 	if is_instance_valid(player):
-		spawn_floating_text(player.global_position + Vector2(0, -96), "★ " + goal_txt + " ★", Color(0.98, 0.86, 0.30))
+		spawn_floating_text(player.global_position + Vector2(0, -96), goal_txt, Color(0.98, 0.86, 0.30))
 	if level_id == 1 and gs and gs.get("tutorial_seen") != true:
 		gs.tutorial_seen = true
 		gs.save_progress()
@@ -568,7 +571,7 @@ func set_night_mode_enabled(enabled: bool) -> void:
 
 func _on_achievement_unlocked(_ach_id: String, title: String, _desc: String) -> void:
 	if is_instance_valid(player):
-		spawn_floating_text(player.global_position + Vector2(0, -78), "★ ACHIEVEMENT: " + title + " ★", Color(1.0, 0.85, 0.22))
+		spawn_floating_text(player.global_position + Vector2(0, -78), "ACHIEVEMENT: " + title, Color(1.0, 0.85, 0.22))
 
 func _process(delta: float) -> void:
 	advance_day_night_cycle(delta)
@@ -986,7 +989,7 @@ func _on_squad_member_downed(p_node: CharacterBody2D) -> void:
 func _on_squad_member_revived(p_node: CharacterBody2D) -> void:
 	if is_instance_valid(p_node):
 		var idx: int = int(p_node.get("player_index")) if p_node.get("player_index") != null else 1
-		spawn_floating_text(p_node.global_position, "★ SURVIVOR " + str(idx) + " REVIVED! ★", Color(0.35, 1.0, 0.50))
+		spawn_floating_text(p_node.global_position, "SURVIVOR " + str(idx) + " REVIVED!", Color(0.35, 1.0, 0.50))
 
 func _on_squad_member_died() -> void:
 	if _check_all_players_dead():
@@ -1009,7 +1012,7 @@ func _handle_partial_squadmate_death() -> void:
 		if living_squadmate.player_camera:
 			living_squadmate.player_camera.enabled = true
 			living_squadmate.player_camera.make_current()
-		spawn_floating_text(living_squadmate.global_position + Vector2(0, -64), "🎥 SPECTATING SURVIVING SQUADMATE", Color(0.40, 0.85, 1.0))
+		spawn_floating_text(living_squadmate.global_position + Vector2(0, -64), "SPECTATING SURVIVING SQUADMATE", Color(0.40, 0.85, 1.0))
 
 func _check_all_players_dead() -> bool:
 	if is_instance_valid(player) and not player.is_dead and player.get("is_downed") != true:
@@ -1067,7 +1070,7 @@ func _on_generator_started(pos: Vector2) -> void:
 		gs.unlock_achievement("GENERATOR_POWER")
 	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⚡ [" + lbl + "] GENERATOR RUNNING — FLOODLIGHT ACTIVE! ⚡", Color(1.0, 0.90, 0.30))
+		spawn_floating_text(pos + Vector2(0, -48), "[" + lbl + "] GENERATOR RUNNING — FLOODLIGHT ACTIVE!", Color(1.0, 0.90, 0.30))
 		player.add_camera_shake(6.0)
 	
 	# Loud engine roars attract an immediate zombie swarm!
@@ -1078,16 +1081,16 @@ func _on_generator_depleted(pos: Vector2) -> void:
 	ambient_query_timer = 999.0
 	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⚠ [" + lbl + "] OUT OF FUEL — RUN TO NE FUEL TRUCK! ⚠", Color(1.0, 0.28, 0.22))
+		spawn_floating_text(pos + Vector2(0, -48), "[" + lbl + "] OUT OF FUEL — RUN TO NE FUEL TRUCK!", Color(1.0, 0.28, 0.22))
 
 func _on_generator_refueled(pos: Vector2) -> void:
 	ambient_query_timer = 999.0
 	var lbl := _get_generator_label_near(pos)
 	if is_instance_valid(player):
-		spawn_floating_text(pos + Vector2(0, -48), "⛽ [" + lbl + "] FUEL ADDED — IGNITING ENGINE (3.0s)...", Color(1.0, 0.78, 0.25))
+		spawn_floating_text(pos + Vector2(0, -48), "[" + lbl + "] FUEL ADDED — IGNITING ENGINE (3.0s)...", Color(1.0, 0.78, 0.25))
 
 func _on_gasoline_collected(_p: Node2D, pos: Vector2) -> void:
-	spawn_floating_text(pos + Vector2(0, -48), "⛽ GASOLINE CANISTER READY — DELIVER TO ANY UNPOWERED GENERATOR!", Color(1.0, 0.85, 0.28))
+	spawn_floating_text(pos + Vector2(0, -48), "GASOLINE CANISTER READY — DELIVER TO ANY UNPOWERED GENERATOR!", Color(1.0, 0.85, 0.28))
 
 func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	var focus := get_active_living_squadmate()
@@ -1098,7 +1101,7 @@ func _on_herd_swarm_triggered(count: int, direction_angle: float) -> void:
 	if audio_mgr:
 		audio_mgr.play_sfx("sfx_groan", 0.70, 4.0)
 	
-	spawn_floating_text(focus.global_position + Vector2(0, -68), "⚠ WARNING: ZOMBIE HERD RUSH DETECTED! ⚠", Color(1.0, 0.20, 0.15))
+	spawn_floating_text(focus.global_position + Vector2(0, -68), "WARNING: ZOMBIE HERD RUSH DETECTED!", Color(1.0, 0.20, 0.15))
 	if focus.has_method("add_camera_shake"):
 		focus.add_camera_shake(7.5)
 	
@@ -1206,7 +1209,7 @@ func _announce_special_spawn(enemy_type: int) -> void:
 			spawn_floating_text(focus.global_position + Vector2(0, -48), "! PHANTOM WRAITH PHASE-SHIFTING !", Color(0.35, 1.0, 0.95))
 		ZombieScript.ZombieType.NECRO:
 			if audio_mgr: audio_mgr.play_sfx("sfx_necro")
-			spawn_floating_text(focus.global_position + Vector2(0, -48), "☠️ NECRO & 7 WITCHES COVEN BREACHED PERIMETER! ☠️", Color(0.18, 1.0, 0.28))
+			spawn_floating_text(focus.global_position + Vector2(0, -48), "NECRO & 7 WITCHES COVEN BREACHED PERIMETER!", Color(0.18, 1.0, 0.28))
 
 func _on_wave_completed(wave_num: int, total_waves: int) -> void:
 	var is_endless: bool = (total_waves <= 0)

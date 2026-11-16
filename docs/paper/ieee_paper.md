@@ -6,7 +6,7 @@
 ---
 
 ## Abstract
-Mobile cooperative action games frequently suffer from rigid connectivity assumptions, either failing completely when cellular or Wi-Fi coverage drops or exhibiting severe state desynchronization over high-jitter wireless local area networks (WLANs). This paper presents the design, implementation, and empirical evaluation of *Dead Block: Survival*, an original top-down 2D tactical zombie survival shooter developed in Godot 4.7.2 Standard Edition (GDScript) for Android devices. The system integrates a five-sector progressive campaign with distinct environmental geometry, dynamic day-to-night flashlight occlusion, persistent local progression (`ConfigFile` in `user://save.cfg`), an autonomous offline AI squadmate (`BRAVO BOT`), and a dual-path multiplayer architecture supporting both host-authoritative ENet LAN/Hotspot co-op (Option A) and self-hosted Nakama server matchmaking with a containerized Node.js 24 CI/CD microservice (Option B). We evaluated the compiled Android package (`com.itsd85.deadblock.survival`) across three heterogeneous Android devices using a 9-case Phone Test Matrix and a 15-item, 5-point Likert usability and player experience survey ($N = 12$) grounded in the Technology Acceptance Model (TAM) and GameFlow frameworks. Empirical results demonstrate 100% pass rates across all functional and network fault-injection tests, sustained 55–60 FPS rendering performance using the `gl_compatibility` pipeline, and high player ratings across Perceived Usefulness ($\mu = 4.86, \text{SD} = 0.35$), Perceived Ease of Use ($\mu = 4.78, \text{SD} = 0.42$), Level Progression ($\mu = 4.89, \text{SD} = 0.32$), Offline/Online Multiplayer ($\mu = 4.89, \text{SD} = 0.32$), and Overall Satisfaction ($\mu = 4.92, \text{SD} = 0.28$), with strong internal consistency ($\alpha = 0.84$).
+Mobile cooperative action games frequently suffer from rigid connectivity assumptions, either failing completely when cellular or Wi-Fi coverage drops or exhibiting severe state desynchronization over high-jitter wireless local area networks (WLANs). This paper presents the design, implementation, and empirical evaluation of *Dead Block: Survival*, an original top-down 2D tactical zombie survival shooter developed in Godot 4.7.2 Standard Edition (GDScript) for Android devices. The system integrates a five-sector progressive campaign with distinct environmental geometry, dynamic day-to-night flashlight occlusion, persistent local progression (`ConfigFile` in `user://save.cfg`), an autonomous offline AI squadmate (`BRAVO BOT`), and a dual-path multiplayer architecture supporting both host-authoritative ENet LAN/Hotspot co-op (Option A) and self-hosted Nakama server matchmaking with a containerized Node.js 24 CI/CD microservice (Option B). We evaluated the compiled Android package (`com.itsd85.deadblock.survival`) across three heterogeneous Android devices using a 9-case Phone Test Matrix and a 15-item, 5-point Likert usability and player experience survey ($N = 12$) grounded in the Technology Acceptance Model (TAM) and GameFlow frameworks. Empirical results demonstrate 100% pass rates across all functional and network fault-injection tests, sustained 55–60 FPS rendering performance using the `gl_compatibility` pipeline, and high player ratings across Perceived Usefulness ($\mu = 4.86, \text{SD} = 0.35$), Perceived Ease of Use ($\mu = 4.75, \text{SD} = 0.44$), Level Progression ($\mu = 4.89, \text{SD} = 0.32$), Offline/Online Multiplayer ($\mu = 4.89, \text{SD} = 0.32$), and Overall Satisfaction ($\mu = 4.89, \text{SD} = 0.32$), with a pronounced ceiling effect (86% of answers were 5; $\alpha = 0.50$).
 
 **Index Terms—** Mobile game development, Godot Engine, level progression, offline-first architecture, host-authoritative multiplayer, ENet, Nakama, playtesting, usability evaluation.
 
@@ -42,7 +42,7 @@ Prior work in game design and networked interactive systems establishes the theo
 Players deploy into an infested urban quarantine zone using a mobile twin-stick HUD: the left virtual joystick controls 8-directional/360° survivor movement (`280 px/s`), while the right virtual joystick aims the survivor's directional flashlight cone and fires the active weapon (`9mm Pistol`, `MP5 SMG`, `12G Shotgun`, `M4A1 Assault Rifle`, or `.44 Magnum`). Four ergonomic thumb buttons trigger **Tactical Dash** (`760 px/s` with invulnerability frames), **Frag Grenade**, **Weapon Switch**, and **Context Interact / Squad Revive**.
 
 ### B. Five-Level Campaign Progression & Star-Gated Unlocks
-Table I summarizes the five campaign sectors implemented in [`scripts/arena_environment.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scripts/arena_environment.gd) and [`scenes/levels/level_01.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scenes/levels/level_01.gd).
+Table I summarizes the five campaign sectors implemented in [`scripts/arena_environment.gd`](../../scripts/arena_environment.gd) and [`scenes/levels/level_01.gd`](../../scenes/levels/level_01.gd).
 
 **TABLE I: Five-Level Campaign Progression Design**
 
@@ -76,7 +76,7 @@ flowchart TD
 ```
 
 ### B. Offline Mode & Autonomous AI Squadmate
-In Offline Mode, `multiplayer.multiplayer_peer` remains bound to `OfflineMultiplayerPeer.new()`, guaranteeing zero network calls in Airplane Mode. When `GameState.ai_companion_enabled` is active, the level spawns an autonomous AI companion (`AllyBot`, `is_ai_bot = true` in [`scripts/player.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scripts/player.gd)) that maintains a `70–155 px` formation offset from the human player, kites approaching zombies (`< 95 px`), auto-targets hostiles within `460 px`, and administers a `+30 HP` field-medic heal (`25s` cooldown) when the human player drops below `38 HP`.
+In Offline Mode, `multiplayer.multiplayer_peer` remains bound to `OfflineMultiplayerPeer.new()`, guaranteeing zero network calls in Airplane Mode. When `GameState.ai_companion_enabled` is active, the level spawns an autonomous AI companion (`AllyBot`, `is_ai_bot = true` in [`scripts/player.gd`](../../scripts/player.gd)) that maintains a `70–155 px` formation offset from the human player, kites approaching zombies (`< 95 px`), auto-targets hostiles within `460 px`, and administers a `+30 HP` field-medic heal (`25s` cooldown) when the human player drops below `38 HP`.
 
 ### C. Host-Authoritative Online Co-op & CI/CD Pipeline
 In Online Co-op (Option A: ENet UDP `7777` and Option B: Nakama/Docker `7350`/`8080`), the Host (`peer_id = 1`) is strictly authoritative:
@@ -97,15 +97,21 @@ Twelve participants ($N = 12$, undergraduate IT students familiar with mobile ga
 ### B. Procedure and Instrument
 Each participant completed a 5–8 minute unassisted playtest session covering: (1) Offline Campaign with the AI Companion on Sectors 1–3 in Airplane Mode, (2) Persistence verification by closing and reopening the app, and (3) a 2-player Online Co-op Campaign and Survival session, including an intentional Wi-Fi disconnect test. Participants then completed the standardized 15-item, 5-point Likert questionnaire ($1 = \text{Strongly Disagree}$ to $5 = \text{Strongly Agree}$) spanning five constructs: **Perceived Usefulness (`PU`)**, **Perceived Ease of Use (`PEOU`)**, **Level Progression (`PROG`)**, **Offline & Online Modes (`MULTI`)**, and **Overall Satisfaction (`SAT`)**.
 
+### C. Ethics, Consent, and Data Privacy
+\[CONFIRM BEFORE SUBMITTING — edit to match what actually happened:\] All participants gave informed consent before playing, and participants under 18 would have required guardian consent. No names, faces, or phone numbers were recorded; testers appear only as codes (P01–P12) in the paper, repository, and datasets, consistent with the Philippine Data Privacy Act of 2012 (RA 10173). All responses are reported as collected, and no tester was excluded.
+
+### D. Interpretation of Likert Means
+Item means were interpreted as: 4.20–5.00 strongly agree, 3.40–4.19 agree, 2.60–3.39 neutral, 1.80–2.59 disagree, and 1.00–1.79 strongly disagree. Any item below 3.50 was to be treated as a problem area.
+
 ---
 
 ## VI. Results
 
 ### A. Phone Test Matrix & Performance Results
-All 9 functional and fault-tolerance test cases in the Phone Test Matrix ([`docs/playtest/phone_test_matrix.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/phone_test_matrix.md)) passed across all three devices (`100%` pass rate). In addition, all 23 automated headless Godot verification suites (`tests/run_all_tests.gd`) and all 5 Node.js CI/CD integration tests (`npm test`) passed with zero errors. Frame-time profiling confirmed stable `55–60 FPS` execution during peak Wave 5 hordes due to spatial occluder caching (`256 px²` threshold) and decal ring-buffer capping (`48–75` decals).
+All 9 functional and fault-tolerance test cases in the Phone Test Matrix ([`docs/playtest/phone_test_matrix.md`](../playtest/phone_test_matrix.md)) passed across all three devices (`100%` pass rate). In addition, the 28 headless Godot verification suites configured in `tests/run_all_tests.gd` and all 5 Node.js CI/CD integration tests (`npm test`) were executed \[CONFIRM BEFORE SUBMITTING: state the date each suite was run and that all passed\]. Frame-time profiling confirmed stable `55–60 FPS` execution during peak Wave 5 hordes due to spatial occluder caching (`256 px²` threshold) and decal ring-buffer capping (`48–75` decals).
 
 ### B. Quantitative Likert Survey Analysis ($N = 12$)
-Table II presents the item-level and construct-level descriptive statistics ($\text{Mean } \mu$, $\text{Standard Deviation SD}$, $\text{Min}$, and $\text{Max}$) calculated from [`docs/playtest/feedback_responses.csv`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/feedback_responses.csv). Internal consistency across the 15 items was high (**Cronbach's $\alpha = 0.84$**).
+Table II presents the item-level and construct-level descriptive statistics ($\text{Mean } \mu$, $\text{Standard Deviation SD}$, $\text{Min}$, and $\text{Max}$) calculated from [`docs/playtest/feedback_responses.csv`](../playtest/feedback_responses.csv). Internal consistency across the 15 items was low (**Cronbach's $\alpha = 0.50$**), which is expected here because responses were concentrated at the top of the scale (86% of all answers were 5 and none was below 4), leaving little between-tester variance.
 
 **TABLE II: Playtest Survey Results Across 5 Constructs ($N = 12$, 5-Point Likert Scale)**
 
@@ -117,8 +123,8 @@ Table II presents the item-level and construct-level descriptive statistics ($\t
 | **Construct 1: PU** | **Perceived Usefulness / Enjoyment Composite** | **4.86** | **0.35** | **4** | **5** |
 | **PEOU1** | The touch controls were easy to learn and responsive. | 4.75 | 0.45 | 4 | 5 |
 | **PEOU2** | The menus and buttons were easy to read and tap on my phone. | 4.83 | 0.39 | 4 | 5 |
-| **PEOU3** | I did not need help to figure out how to play. | 4.75 | 0.45 | 4 | 5 |
-| **Construct 2: PEOU** | **Perceived Ease of Use / Controls & UI Composite** | **4.78** | **0.42** | **4** | **5** |
+| **PEOU3** | I did not need help to figure out how to play. | 4.67 | 0.49 | 4 | 5 |
+| **Construct 2: PEOU** | **Perceived Ease of Use / Controls & UI Composite** | **4.75** | **0.44** | **4** | **5** |
 | **PROG1** | Each level felt noticeably harder than the previous one, in a fair way. | 4.83 | 0.39 | 4 | 5 |
 | **PROG2** | Unlocking a new level felt rewarding. | 4.83 | 0.39 | 4 | 5 |
 | **PROG3** | My unlocked levels and scores were still saved when I reopened the app. | 5.00 | 0.00 | 5 | 5 |
@@ -133,7 +139,7 @@ Table II presents the item-level and construct-level descriptive statistics ($\t
 | **Construct 5: SAT** | **Overall Satisfaction Composite** | **4.89** | **0.32** | **4** | **5** |
 
 ### C. Qualitative Findings & Iterative Improvements
-From open-ended responses and observation logs ([`docs/playtest/observation_sheet.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/observation_sheet.md)), testers highlighted the dynamic flashlight shadows, special infected variety (`Witch`, `Boomer`, `Tanker`), and squad revive mechanics as standout features. Early friction points — right joystick sizing on 6.1" displays (`P01`), virtual network adapter IP ordering (`P02`), and Android back-gesture pausing (`P05`) — were systematically resolved in our 6-point engineering iteration plan ([`docs/playtest/action_plan.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/action_plan.md)).
+From open-ended responses and observation logs ([`docs/playtest/observation_sheet.md`](../playtest/observation_sheet.md)), testers highlighted the dynamic flashlight shadows, special infected variety (`Witch`, `Boomer`, `Tanker`), and squad revive mechanics as standout features. Early friction points — right joystick sizing on 6.1" displays (`P01`), virtual network adapter IP ordering (`P02`), and Android back-gesture pausing (`P05`) — were systematically resolved in our 6-point engineering iteration plan ([`docs/playtest/action_plan.md`](../playtest/action_plan.md)).
 
 ---
 
@@ -141,8 +147,8 @@ From open-ended responses and observation logs ([`docs/playtest/observation_shee
 
 1. **Answering RQ1 (Progression):** Parameterizing `WaveDirector` and `ArenaEnvironment` by `level_id` enabled five distinct tactical experiences within a single unified codebase, reflected in the `4.89 / 5.00` Progression score (`PROG3 = 5.00` for save reliability).
 2. **Answering RQ2 (Networking):** Decoupling `OfflineMultiplayerPeer` from `ENetMultiplayerPeer` and Option B Nakama authentication yielded `5.00 / 5.00` on `MULTI1` (Airplane Mode) and `4.83 / 5.00` on `MULTI2`–`MULTI3`.
-3. **Answering RQ3 (Usability):** While `PEOU` achieved `4.78 / 5.00`, it represented the lowest relative construct prior to adding the Level 1 onboarding hint and `NOTIFICATION_WM_GO_BACK_REQUEST` handler.
-4. **Limitations:** Our evaluation sample ($N = 12$) focused on LAN/Hotspot and local Docker server deployments; wide-area cellular NAT traversal without a TURN relay remains a boundary condition for raw UDP ENet connections.
+3. **Answering RQ3 (Usability):** While `PEOU` achieved `4.75 / 5.00`, it represented the lowest relative construct prior to adding the Level 1 onboarding hint and `NOTIFICATION_WM_GO_BACK_REQUEST` handler.
+4. **Limitations:** Every item scored at least 4.67, 86% of all responses were the maximum rating, and the raw data show a ceiling effect (Cronbach's $\\alpha = 0.50$); the instrument therefore could not discriminate between good and excellent, and testers were classmates, which may inflate ratings. Our evaluation sample ($N = 12$) focused on LAN/Hotspot and local Docker server deployments; wide-area cellular NAT traversal without a TURN relay remains a boundary condition for raw UDP ENet connections.
 
 ---
 
@@ -194,7 +200,7 @@ The most surprising playtest finding was that desktop testing did not predict th
 2. We implemented interactive perimeter diesel generators in Level 5 (*Last Light*), requiring players to physically locate and crank floodlights to illuminate the arena, transforming darkness from a frustrating visual hindrance into an engaging tactical objective.
 
 **5. Which statement in the feedback form scored lowest, and what would you do with one more week?**  
-The lowest-scoring statement during initial formative testing was **`PEOU3` ("I did not need help to figure out how to play", $\mu = 4.75$)** and **`PEOU1` ("The touch controls were easy to learn and responsive", $\mu = 4.75$)**. While still well above the $3.50$ acceptance threshold, qualitative feedback indicated that first-time players did not know they had an invulnerable tactical dash button or that downed squadmates could be revived. With one additional week, we would implement:
+The lowest-scoring statement during initial formative testing was **`PEOU3` ("I did not need help to figure out how to play", $\mu = 4.67$)** and **`PEOU1` ("The touch controls were easy to learn and responsive", $\mu = 4.75$)**. While still well above the $3.50$ acceptance threshold, qualitative feedback indicated that first-time players did not know they had an invulnerable tactical dash button or that downed squadmates could be revived. With one additional week, we would implement:
 1. An interactive 30-second playable tutorial obstacle course prior to Sector 1.
 2. Contextual dynamic visual halos around downed teammates showing a pulsing revive progress ring.
 
@@ -204,6 +210,6 @@ Developing primarily for **Android** provided substantial advantages for a stude
 - **Harder:** Android presents extreme device fragmentation (differing aspect ratios from 16:9 to 20.5:9, diverse Mali vs. Adreno GPU drivers, and notch cutouts). We addressed this by adopting Godot's `gl_compatibility` (GLES3) renderer and setting stretch mode to `canvas_items` with `expand` aspect to ensure consistent layout across all screen dimensions. Conversely, iOS would have required macOS hardware, Xcode, and Apple Developer provisioning certificates that expire every 7 days on free tiers.
 
 ### B. Repository Artifacts and Datasets
-- **15-Item Likert Raw Dataset:** [`docs/playtest/feedback_responses.csv`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/feedback_responses.csv)
-- **Phone Test Matrix:** [`docs/playtest/phone_test_matrix.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/phone_test_matrix.md)
-- **Observation & Action Plan:** [`docs/playtest/observation_sheet.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/observation_sheet.md) and [`docs/playtest/action_plan.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/playtest/action_plan.md)
+- **15-Item Likert Raw Dataset:** [`docs/playtest/feedback_responses.csv`](../playtest/feedback_responses.csv)
+- **Phone Test Matrix:** [`docs/playtest/phone_test_matrix.md`](../playtest/phone_test_matrix.md)
+- **Observation & Action Plan:** [`docs/playtest/observation_sheet.md`](../playtest/observation_sheet.md) and [`docs/playtest/action_plan.md`](../playtest/action_plan.md)

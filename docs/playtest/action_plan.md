@@ -10,3 +10,21 @@ Following the structured playtest across $N = 12$ testers and 3 Android devices,
 | **4** | **Levels 2–5 needed distinct obstacle tactics & looping combat/menu ambience** | Tester P06, P07, P08 feedback on arena variety & atmosphere | Built 5 unique procedural sector layouts (`Quarantine`, `The Street` vehicles, `No Exit` brick alleys, `The Depot` container maze, `Last Light` generator plaza), seamless `LOOP_FORWARD` ambient WAVs, and Co-op Survival Mode. | `scripts/arena_environment.gd`, `autoload/audio_manager.gd`, `scenes/ui/lobby.gd` | Verified (`test_priority_features.gd` PASS) |
 | **5** | **Solo offline players wanted an AI squadmate & Android Back gesture to pause** | Tester P05 & P06 suggestions (`PEOU3`, `MULTI1`) | Added toggleable **Offline AI Squadmate (`BRAVO BOT`)** with autonomous combat & field-medic healing (`+30 HP`), plus `NOTIFICATION_WM_GO_BACK_REQUEST` handling across all scenes. | `scripts/player.gd`, `scenes/levels/level_01.gd`, `scenes/ui/mode_select.gd` | Verified (`test_priority_features.gd` PASS) |
 | **6** | **Clear level-start goal callout, button press juice, and star-gated reward** | Tester P04 & P11 feedback (`PU2`, `PROG2`) | Added level-start objective banner + Level 1 tutorial hint, `bind_button_tweens()` scale feedback, `CPUParticles2D` unlock burst, and 6-Star Veteran Loadout Perk. | `autoload/game_state.gd`, `scenes/ui/result_screen.gd`, `scenes/ui/level_select.gd` | Verified (`run_all_tests.gd` PASS) |
+
+
+---
+
+## Severity, Reach, and Retest Log (ITSD 85 Phase 8.5)
+
+Severity uses the lab's guide (Critical = crash, lost progress, cannot finish a level; Major = confusing goal, unfair difficulty, online fails often; Minor = cosmetic). Severities below are **proposed** and should be confirmed by the team. "Testers reporting" counts the testers named in the evidence column above (of N = 12). **The retest column must be filled with at least 2 NEW testers who did not take part in the first round; no retest results are recorded yet.**
+
+| # | Issue | Testers reporting | Proposed severity | Fixed? | Result after retest (2+ new testers) |
+| :-: | :--- | :---: | :---: | :---: | :--- |
+| 1 | Aim stick too small / overlapping buttons on 6.1" phones | 1 (P01) | Major | Yes | PENDING |
+| 2 | Wrong host IP shown when virtual adapters exist | 1 (P02) | Major | Yes | PENDING |
+| 3 | Co-op zombies desynced; revived teammate could not move | 1 (P03) | Critical | Yes | PENDING |
+| 4 | Levels 2–5 lacked distinct tactics; no looping ambience | 3 (P06, P07, P08) | Minor | Yes | PENDING |
+| 5 | No offline AI squadmate; Back gesture did not pause | 2 (P05, P06) | Major | Yes | PENDING |
+| 6 | Unclear level goal at start; no unlock feedback | 2 (P04, P11) | Major | Yes | PENDING |
+
+Per-level completion rate and attempts (lab Step 8.4) were not recorded in the observation sheet; add them in the retest round.

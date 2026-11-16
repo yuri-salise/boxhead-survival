@@ -1,5 +1,7 @@
 extends StaticBody2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 signal turret_activated()
 signal player_proximity_changed(in_range: bool)
 
@@ -319,24 +321,12 @@ func _draw() -> void:
 	# Targeting Laser Sight, Tactical Spotlight Cone & Status LED
 	if is_active:
 		# Steady 360-degree perimeter tactical floodlight glow on ground
-		draw_circle(Vector2.ZERO, 95.0, Color(0.88, 0.94, 1.0, 0.12))
-		draw_circle(Vector2.ZERO, 44.0, Color(0.95, 0.98, 1.0, 0.18))
+		LightFX.draw_glow(self, Vector2.ZERO, 120.0, Color(0.90, 0.95, 1.0, 0.30))
 		
-		# Directional tactical spotlight beam along aim_dir
-		var cone_outer := PackedVector2Array([
-			aim_dir * 12.0,
-			aim_dir * 310.0 + perp * 105.0,
-			aim_dir * 340.0,
-			aim_dir * 310.0 - perp * 105.0
-		])
-		draw_colored_polygon(cone_outer, Color(0.92, 0.96, 1.0, 0.11))
-		var cone_inner := PackedVector2Array([
-			aim_dir * 12.0,
-			aim_dir * 225.0 + perp * 52.0,
-			aim_dir * 255.0,
-			aim_dir * 225.0 - perp * 52.0
-		])
-		draw_colored_polygon(cone_inner, Color(0.98, 0.98, 1.0, 0.15))
+		# Directional tactical spotlight beam along aim_dir (soft gradient, no polygon edge)
+		draw_set_transform(Vector2.ZERO, aim_angle, Vector2.ONE)
+		LightFX.draw_beam(self, 12.0, 350.0, 145.0, Color(0.93, 0.97, 1.0, 0.30))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		
 		# Green targeting laser beam
 		var laser_end := aim_dir * range_radius
@@ -347,20 +337,19 @@ func _draw() -> void:
 		if muzzle_flash_timer > 0.0:
 			var flash_ratio: float = muzzle_flash_timer / 0.09
 			# Radial ambient ground & turret body illumination
-			draw_circle(Vector2.ZERO, 58.0, Color(1.0, 0.85, 0.30, 0.34 * flash_ratio))
-			draw_circle(aim_dir * 18.0, 42.0, Color(1.0, 0.90, 0.40, 0.45 * flash_ratio))
+			LightFX.draw_glow(self, aim_dir * 14.0, 110.0, Color(1.0, 0.86, 0.36, 0.70 * flash_ratio))
 			
 			# Twin muzzle flash flares
 			var tip1 := perp * 4.0 + aim_dir * (barrel_len + 4.0)
 			var tip2 := -perp * 4.0 + aim_dir * (barrel_len + 4.0)
 			
 			# Outer bloom circles
-			draw_circle(tip1, 20.0, Color(1.0, 0.80, 0.20, 0.52 * flash_ratio))
-			draw_circle(tip2, 20.0, Color(1.0, 0.80, 0.20, 0.52 * flash_ratio))
+			LightFX.draw_glow(self, tip1, 30.0, Color(1.0, 0.82, 0.28, 0.95 * flash_ratio))
+			LightFX.draw_glow(self, tip2, 30.0, Color(1.0, 0.82, 0.28, 0.95 * flash_ratio))
 			
 			# White-hot inner core
-			draw_circle(tip1, 8.5, Color(1.0, 0.98, 0.88, 0.98 * flash_ratio))
-			draw_circle(tip2, 8.5, Color(1.0, 0.98, 0.88, 0.98 * flash_ratio))
+			LightFX.draw_glow(self, tip1, 13.0, Color(1.0, 0.98, 0.90, flash_ratio))
+			LightFX.draw_glow(self, tip2, 13.0, Color(1.0, 0.98, 0.90, flash_ratio))
 			
 			# Burst spike rays
 			for spike_ang in [-0.28, 0.0, 0.28]:

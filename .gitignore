@@ -161,3 +161,11 @@ $RECYCLE.BIN/
 # Linux
 .directory
 .Trash-*
+
+
+# ------------------------------------------------------------------------------
+# ITSD 85 lab hygiene: build output and server secrets
+# ------------------------------------------------------------------------------
+export/
+*.idsig
+nakama_local.cfg

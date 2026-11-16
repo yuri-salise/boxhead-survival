@@ -43,6 +43,6 @@ theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 15
-text = "⛽ FUEL TRUCK [GET GASOLINE]"
+text = "FUEL TRUCK [GET GASOLINE]"
 horizontal_alignment = 1
 vertical_alignment = 1

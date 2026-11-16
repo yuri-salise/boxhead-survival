@@ -1,0 +1,4 @@
+; Copy to nakama_local.cfg (gitignored; included in the APK by the export preset).
+; The value must match NAKAMA_SERVER_KEY used by docker-compose.nakama.yml.
+[nakama]
+server_key="change-me-server-key"

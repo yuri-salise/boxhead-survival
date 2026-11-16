@@ -5,7 +5,7 @@
 ## Part 1: Mobile Game with Level Progression and Offline/Online Multiplayer (Lab PDF 1, Page 28)
 
 ### Question 1: How does `GameState` keep offline play working even when the phone has no internet?
-`GameState` ([`autoload/game_state.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/autoload/game_state.gd)) is a purely local Godot Autoload singleton that persists all campaign progression (`unlocked_level`, `best_score_by_level`, `best_stars_by_level`, `survival_best_wave`, achievements, and user settings) to the device's internal sandboxed filesystem at `user://save.cfg` using Godot's built-in `ConfigFile` API. When the player selects **Offline Campaign** or **Endless Survival**, `GameState.selected_mode` is set to `"offline"` or `"survival"`, and `NetworkManager` keeps `multiplayer.multiplayer_peer` bound to `OfflineMultiplayerPeer.new()`. No UDP sockets, DNS lookups, or HTTP requests are ever initialized during offline play, guaranteeing 100% functionality in Airplane Mode.
+`GameState` ([`autoload/game_state.gd`](../autoload/game_state.gd)) is a purely local Godot Autoload singleton that persists all campaign progression (`unlocked_level`, `best_score_by_level`, `best_stars_by_level`, `survival_best_wave`, achievements, and user settings) to the device's internal sandboxed filesystem at `user://save.cfg` using Godot's built-in `ConfigFile` API. When the player selects **Offline Campaign** or **Endless Survival**, `GameState.selected_mode` is set to `"offline"` or `"survival"`, and `NetworkManager` keeps `multiplayer.multiplayer_peer` bound to `OfflineMultiplayerPeer.new()`. No UDP sockets, DNS lookups, or HTTP requests are ever initialized during offline play, guaranteeing 100% functionality in Airplane Mode.
 
 ### Question 2: Where is the save file stored on Android, and what happens if the file is missing on first launch?
 On Android, Godot maps `user://save.cfg` to the application's private internal storage directory:
@@ -19,15 +19,15 @@ All five campaign levels (`level_01.tscn` through `level_05.tscn`) reuse the sam
 
 ### Question 4: In your online mode, who decides the winner or score — each client or the host/server — and why?
 The **Host (Server, `peer_id == 1`)** is strictly authoritative for all wave spawning, zombie health/damage resolution, kill/score counters, and win/loss determination:
-- In [`scripts/level_controller.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scripts/level_controller.gd), `on_all_waves_completed()` and `on_all_players_dead()` guard execution with `if multiplayer.has_multiplayer_peer() and not is_multiplayer_authority(): return`.
+- In [`scripts/level_controller.gd`](../scripts/level_controller.gd), `on_all_waves_completed()` and `on_all_players_dead()` guard execution with `if multiplayer.has_multiplayer_peer() and not is_multiplayer_authority(): return`.
 - Clients send their movement/aim inputs (`sync_input_to_host`) and hit reports (`rpc_client_hit_zombie`) to the Host, which validates sender identity via `multiplayer.get_remote_sender_id()`, applies damage on the authoritative zombie instance, and broadcasts deaths (`rpc_zombie_died`) and the final match outcome (`rpc_sync_match_result`).
 - **Why:** If clients decided their own kills or victory state, network latency or packet loss would cause diverging wave counts (one phone showing Victory while another is still fighting), and malicious clients could spoof instant wins.
 
 ### Question 5: What happens in your game when the other player disconnects mid-match? Trace the signal to the UI.
 1. **Transport Detection:** When a guest phone loses Wi-Fi or closes the app, ENet detects the dropped peer and emits `multiplayer.peer_disconnected(id)` (or `multiplayer.server_disconnected()` on a guest if the Host leaves).
-2. **Autoload Handling (`NetworkManager`):** [`autoload/network_manager.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/autoload/network_manager.gd) catches `_on_peer_disconnected(id)`, removes `id` from `connected_peers`, emits `status_changed("Survivor (Peer X) disconnected.")`, and re-emits `peer_disconnected(id)`. If the host disconnected (`_on_server_disconnected`), `NetworkManager.leave_game()` closes the socket and restores `multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()`.
+2. **Autoload Handling (`NetworkManager`):** [`autoload/network_manager.gd`](../autoload/network_manager.gd) catches `_on_peer_disconnected(id)`, removes `id` from `connected_peers`, emits `status_changed("Survivor (Peer X) disconnected.")`, and re-emits `peer_disconnected(id)`. If the host disconnected (`_on_server_disconnected`), `NetworkManager.leave_game()` closes the socket and restores `multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()`.
 3. **Scene & UI Response (`level_01.gd` & `lobby.gd`):**
-   - If a **guest** disconnects mid-match, `_on_coop_peer_disconnected(id)` in [`scenes/levels/level_01.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scenes/levels/level_01.gd) spawns a floating alert (`"SQUADMATE (PEER X) DISCONNECTED"`), frees that peer's character avatar (`squad_peers[id].queue_free()`), and allows the remaining survivors to continue without freezing.
+   - If a **guest** disconnects mid-match, `_on_coop_peer_disconnected(id)` in [`scenes/levels/level_01.gd`](../scenes/levels/level_01.gd) spawns a floating alert (`"SQUADMATE (PEER X) DISCONNECTED"`), frees that peer's character avatar (`squad_peers[id].queue_free()`), and allows the remaining survivors to continue without freezing.
    - If the **host** disconnects mid-match, `_on_coop_server_disconnected()` unpauses the tree, calls `leave_game()`, and transitions the guest cleanly back to `res://scenes/ui/lobby.tscn` with `[ HOST DISCONNECTED — RETURNING TO LOBBY IDLE ]`.
 
 ### Question 6: Pick the lowest-scoring construct from your playtest survey. What did the numbers tell you, and what concrete change did you make (or would you make next)?
@@ -35,8 +35,8 @@ During our initial formative playtest ($N = 12$), **Perceived Ease of Use (`PEOU
 1. First-time players on Level 1 did not immediately realize they could dash through zombie encirclements or how many waves remained at the start of the sector.
 2. Players hosting on laptops with WSL/Docker installed saw virtual adapter IPs (`172.x.x.x`) instead of their physical Wi-Fi IP (`192.168.x.x`).
 **Concrete Changes Made:**
-- Added `_show_level_start_objective_and_tutorial()` in [`scenes/levels/level_01.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scenes/levels/level_01.gd) to display a bold objective banner (`"★ GOAL: SURVIVE 3 WAVES IN SECTOR 01 ★"`) and a first-time touch-control hint overlay on Level 1.
-- Added `get_smart_ip_list()` in [`autoload/network_manager.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/autoload/network_manager.gd) to rank physical Wi-Fi/Hotspot interfaces (`+100`) above virtual adapters (`-50`) and added a 1-tap `COPY IP` banner in [`scenes/ui/lobby.gd`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/scenes/ui/lobby.gd).
+- Added `_show_level_start_objective_and_tutorial()` in [`scenes/levels/level_01.gd`](../scenes/levels/level_01.gd) to display a bold objective banner (`"★ GOAL: SURVIVE 3 WAVES IN SECTOR 01 ★"`) and a first-time touch-control hint overlay on Level 1.
+- Added `get_smart_ip_list()` in [`autoload/network_manager.gd`](../autoload/network_manager.gd) to rank physical Wi-Fi/Hotspot interfaces (`+100`) above virtual adapters (`-50`) and added a 1-tap `COPY IP` banner in [`scenes/ui/lobby.gd`](../scenes/ui/lobby.gd).
 
 ---
 
@@ -72,3 +72,40 @@ With a single container bound directly to host port `8080:3000`, `docker compose
 1. Remove the fixed `container_name: itsd85-web` and fixed host port binding in `compose.yaml`.
 2. Place a reverse proxy (**Nginx**, **Caddy**, or **Traefik**) on port `80`/`8080` in front of the `web` service.
 3. Scale up the new version alongside the old one (`docker compose up -d --build --scale web=2 --no-recreate`), wait until the new container passes `/health`, and then terminate the old container so the reverse proxy never drops an in-flight request.
+
+---
+
+## Part 3: Remaining Lab-Sheet Guide Questions (exact wording from the two lab PDFs)
+
+Parts 1 and 2 above answer most of the lab sheets' questions. The questions below are the ones the lab sheets ask that were not yet answered in this file.
+
+### Game lab, Question 4: Which playtest finding surprised your team the most, and what did you change because of it?
+Desktop testing did not predict thumb fatigue or the aim thumb covering the action buttons on compact 6.1" phones. Keyboard-and-mouse testers aimed effortlessly, while phone testers dragged their aiming thumb across the fire buttons and lost their bearings in the dark sectors. Two changes followed: the right aim stick was enlarged (88 px base) and the action buttons were arranged in a non-overlapping arc (`scripts/touch_controls.gd`), and Sector 5 gained interactive generators so that darkness became an objective to solve rather than only a visual obstacle.
+
+### Game lab, Question 6: Compare developing for Android and iOS: what did your platform choice make easier or harder?
+- **Easier on Android:** a debug `.apk` can be sideloaded over USB (`adb install`) or copied to the phone at no cost, on any number of test phones, from a Windows PC, and the build never expires.
+- **Harder on Android:** device fragmentation. Aspect ratios run from 16:9 to beyond 20:9, GPUs and drivers differ, and notches cut into the screen. The project answers this with the Compatibility renderer and `canvas_items` + `expand` stretching, and it is why the lab's phone test matrix needs two different phones.
+- **iOS, for comparison:** it would have required a Mac with Xcode, and builds signed with a free Apple ID stop opening after 7 days and are limited to a few devices.
+
+### CI/CD lab, Question 1: What is the difference between Continuous Integration, Continuous Delivery and Continuous Deployment? Which one did you build?
+- **Continuous Integration (CI):** every push and pull request is automatically built, linted and tested, so a broken change is caught minutes after it is written. This is the `test` job.
+- **Continuous Delivery:** every change that passes CI is automatically packaged and kept ready to release, but a person still presses the button to put it in production.
+- **Continuous Deployment:** every change that passes CI goes to production automatically, with no manual step.
+
+This project implements CI plus **Continuous Deployment**: a push to `main` that passes the `test` job is built and started on the server by the `deploy` job without anyone touching the server.
+
+### CI/CD lab, Question 4: Why does the workflow use `npm ci` instead of `npm install`?
+`npm ci` installs exactly the versions recorded in `package-lock.json` and fails if the lock file and `package.json` disagree; it never rewrites the lock file. CI therefore tests the same dependency versions the developer tested locally, and two runs of the same commit get the same dependencies. `npm install` may resolve newer versions inside the allowed ranges and update the lock file, so a build could pass or fail depending on the day it ran. `npm ci` also starts from a clean `node_modules`, which suits a fresh CI machine. The `Dockerfile` uses `npm ci --omit=dev` for the same reason.
+
+### CI/CD lab, Question 5: Why is the commit ID used as the application version? Give two benefits.
+1. **Traceability:** `/health` returns the commit that is actually running, so the deployment can be matched to an exact commit on GitHub. The pipeline's health check uses this to prove the new code is live rather than an old container still answering.
+2. **Rollback:** every image is tagged `itsd85-app:<commit>`, so earlier versions stay on the server under their own tags and can be restarted without rebuilding.
+
+It also needs no manual version bump, so two different builds can never share one version number.
+
+### CI/CD lab, Question 6: Compare rollback Method 1 and Method 2. When would you choose each?
+- **Method 1 — revert through the pipeline:** `git revert` the bad commit on a branch, open a pull request, let the tests pass, merge, and the pipeline redeploys the old code under a new commit ID. It is slower (a full test and build cycle) but the repository and the server stay in agreement and the fix is reviewed and recorded. This is the normal choice.
+- **Method 2 — restart a previous image on the server:** `APP_VERSION=<previous-commit> docker compose -p itsd85 up -d --no-build` brings the previous image back in seconds without a rebuild. It is the emergency choice when production is broken now. The repository still contains the bad commit, so the next deployment would bring the problem back; Method 1 must still follow.
+
+### CI/CD lab, Question 8: Name one paid CI/CD or hosting product and explain which free tool in this lab replaced it.
+**CircleCI / Travis CI paid plans** are replaced by **GitHub Actions**, whose GitHub-hosted runners are free for public repositories; it runs the lint and test job. Likewise a paid cloud VPS or a platform such as **Heroku** is replaced by a **self-hosted runner** on a VirtualBox Ubuntu Server VM with Docker Engine: the laptop VM is the deployment server, and because the runner connects outward to GitHub it needs no public IP or paid hosting.

@@ -23,7 +23,7 @@ As a solo developer, I designed, implemented, and empirically verified all compo
 | **Progressive Level Design** | Designed Sectors 1–5 procedural chunk generation, vehicle roadblocks, toxic puddles, and blackout plaza generator defense stations. | `scripts/arena_environment.gd`, `scenes/levels/level_01.tscn`..`05.tscn` |
 | **Multiplayer Networking** | Built host-authoritative ENet LAN synchronization at 12.5 Hz, client hit verification, squadmate revive, and graceful disconnect recovery. | `autoload/network_manager.gd`, `scenes/ui/lobby.gd` |
 | **UI & Audio** | Created high-contrast survival UI, virtual joysticks, 21 synthesized 16-bit sound effects, and looping ambient music. | `autoload/audio_manager.gd`, `scenes/ui/` |
-| **Testing & CI/CD** | Authored headless test suites (23 Godot suites + Node.js suite) and configured GitHub Actions automated deployment. | `tests/`, `.github/workflows/ci-cd.yml` |
+| **Testing & CI/CD** | Authored headless test suites (28 Godot suites + Node.js suite) and configured GitHub Actions automated deployment. | `tests/`, `.github/workflows/ci-cd.yml` |
 | **Academic Paper** | Wrote all 8 sections and the Appendix of the IEEE conference paper, analyzing the Samsung Galaxy A56 hardware metrics and Likert evaluation. | `docs/paper/ieee_paper.md`, `docs/paper.pdf` |
 
 ---

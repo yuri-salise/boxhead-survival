@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 signal health_changed(current_health: float, max_health: float)
 signal armor_changed(current_armor: float, max_armor: float)
 signal dash_changed(cooldown_left: float, cooldown_max: float)
@@ -590,7 +592,7 @@ func revive(restore_hp: float = 40.0) -> void:
 	
 	var tree := get_tree()
 	if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -60), "★ SQUADMATE REVIVED! ★", Color(0.35, 1.0, 0.50))
+		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -60), "SQUADMATE REVIVED!", Color(0.35, 1.0, 0.50))
 	
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		rpc_sync_downed.rpc(false)
@@ -713,7 +715,7 @@ func _update_ai_bot_behavior(delta: float) -> void:
 			ai_heal_cooldown = 25.0
 			leader.heal(30.0)
 			if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-				tree.current_scene.spawn_floating_text(leader.global_position + Vector2(0, -52), "★ ALLY BOT MEDIC: +30 HP ★", Color(0.30, 0.95, 0.55))
+				tree.current_scene.spawn_floating_text(leader.global_position + Vector2(0, -52), "ALLY BOT MEDIC: +30 HP", Color(0.30, 0.95, 0.55))
 	if weapon_controller and weapon_controller.has_method("refill_all_unlocked_ammo"):
 		var cur_ammo: int = int(weapon_controller.ammo_counts.get(weapon_controller.current_weapon_id, 10)) if "ammo_counts" in weapon_controller else 10
 		if cur_ammo <= 2:
@@ -770,20 +772,15 @@ func _draw() -> void:
 	
 	# 1. Tactical Flashlight Cone extending into the darkness
 	if not is_dead:
-		var cone_outer := PackedVector2Array([
-			Vector2(14, 0),
-			Vector2(315, -108),
-			Vector2(350, 0),
-			Vector2(315, 108)
-		])
-		draw_colored_polygon(cone_outer, Color(0.96, 0.92, 0.76, 0.11 if is_ai_bot else 0.075))
-		var cone_inner := PackedVector2Array([
-			Vector2(14, 0),
-			Vector2(230, -56),
-			Vector2(260, 0),
-			Vector2(230, 56)
-		])
-		draw_colored_polygon(cone_inner, Color(0.98, 0.95, 0.82, 0.14 if is_ai_bot else 0.095))
+		# Soft gradient beam (no polygon outline). A torch is barely visible in
+		# daylight, so the beam strengthens as the level's night factor rises.
+		var beam_night := 0.0
+		var beam_scene := get_tree().current_scene if is_inside_tree() else null
+		if beam_scene and beam_scene.get("current_night_factor") != null:
+			beam_night = clampf(float(beam_scene.get("current_night_factor")), 0.0, 1.0)
+		var beam_alpha := lerpf(0.10, 0.34, beam_night) * (1.15 if is_ai_bot else 1.0)
+		LightFX.draw_beam(self, 14.0, 372.0, 150.0, Color(1.0, 0.94, 0.78, beam_alpha))
+		LightFX.draw_glow(self, Vector2(16.0, 0.0), 34.0, Color(1.0, 0.95, 0.82, beam_alpha * 0.9))
 	
 	# 2. Animated Stepping Boots
 	var leg_stride := sin(walk_cycle) * 6.0 if velocity.length() > 15.0 else 0.0
@@ -917,4 +914,4 @@ func _draw() -> void:
 			draw_arc(Vector2.ZERO, 24.0, 0.0, TAU, 24, Color(0.20, 0.95, 1.0, 0.85) if not is_ai_bot else Color(1.0, 0.90, 0.20, 0.85), 2.4)
 		draw_string(ThemeDB.fallback_font, Vector2(-70, -26), tag_txt, HORIZONTAL_ALIGNMENT_CENTER, 140, 11, tag_col)
 	if has_gasoline and not is_downed:
-		draw_string(ThemeDB.fallback_font, Vector2(-75, -39), "⛽ GASOLINE CAN READY", HORIZONTAL_ALIGNMENT_CENTER, 150, 11, Color(1.0, 0.86, 0.22))
+		draw_string(ThemeDB.fallback_font, Vector2(-75, -39), "GASOLINE CAN READY", HORIZONTAL_ALIGNMENT_CENTER, 150, 11, Color(1.0, 0.86, 0.22))

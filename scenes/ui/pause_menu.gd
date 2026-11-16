@@ -1,5 +1,7 @@
 extends Control
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 signal resume_requested()
 signal save_requested()
 signal retry_requested()
@@ -15,6 +17,8 @@ signal main_menu_requested()
 @onready var save_button: Button = find_child("SaveButton", true, false) as Button
 @onready var retry_button: Button = find_child("RetryButton", true, false) as Button
 @onready var main_menu_button: Button = find_child("MainMenuButton", true, false) as Button
+@onready var sound_button: Button = find_child("SoundButton", true, false) as Button
+@onready var music_button: Button = find_child("MusicButton", true, false) as Button
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -36,6 +40,10 @@ func _ready() -> void:
 		retry_button.pressed.connect(_on_retry_pressed)
 	if main_menu_button:
 		main_menu_button.pressed.connect(_on_main_menu_pressed)
+	if sound_button:
+		sound_button.pressed.connect(_on_sound_pressed)
+	if music_button:
+		music_button.pressed.connect(_on_music_pressed)
 	
 	var gs := get_node_or_null("/root/GameState")
 	if gs:
@@ -83,6 +91,29 @@ func _refresh_settings_buttons() -> void:
 		var scale_pct := int(roundf(float(gs.resolution_scale) * 100.0))
 		if resolution_button:
 			resolution_button.text = "RESOLUTION: " + str(scale_pct) + "%"
+
+	# Sound on/off lives in the pause menu too (lab Phase 6), not only in Settings.
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	var sfx_on: bool = audio_mgr == null or audio_mgr.sfx_enabled == true
+	var music_on: bool = audio_mgr == null or audio_mgr.music_enabled == true
+	if sound_button:
+		sound_button.text = "SOUND FX: " + ("ON" if sfx_on else "MUTED")
+		UiIcons.apply(sound_button, "sound_on" if sfx_on else "sound_off", 22)
+	if music_button:
+		music_button.text = "MUSIC: " + ("ON" if music_on else "MUTED")
+		UiIcons.apply(music_button, "music" if music_on else "sound_off", 22)
+
+func _on_sound_pressed() -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("set_sfx_enabled"):
+		audio_mgr.set_sfx_enabled(not (audio_mgr.sfx_enabled == true))
+	_refresh_settings_buttons()
+
+func _on_music_pressed() -> void:
+	var audio_mgr := get_node_or_null("/root/AudioManager")
+	if audio_mgr and audio_mgr.has_method("set_music_enabled"):
+		audio_mgr.set_music_enabled(not (audio_mgr.music_enabled == true))
+	_refresh_settings_buttons()
 
 func _on_graphics_pressed() -> void:
 	var gs = get_node_or_null("/root/GameState")

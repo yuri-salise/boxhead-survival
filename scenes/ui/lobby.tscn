@@ -92,7 +92,7 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("3_elite")
 theme_override_font_sizes/font_size = 12
 theme_override_colors/font_color = Color(0.82, 0.74, 0.45, 1)
-text = "💡 Each device on your Wi-Fi has a DIFFERENT IP. One player clicks HOST; other players type the HOST's IP into JOIN."
+text = "TIP: Each device on your Wi-Fi has a DIFFERENT IP. One player clicks HOST; other players type the HOST's IP into JOIN."
 horizontal_alignment = 1
 autowrap_mode = 2
 
@@ -126,7 +126,7 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(1, 0.85, 0.25, 1)
-text = "★ YOU ARE HOSTING — SHARE THIS IP WITH JOINERS: ★"
+text = "YOU ARE HOSTING — SHARE THIS IP WITH JOINERS:"
 horizontal_alignment = 1
 
 [node name="HostBannerInstruction" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123442]
@@ -147,13 +147,13 @@ layout_mode = 2
 theme_override_fonts/font = ExtResource("2_bebas")
 theme_override_font_sizes/font_size = 30
 theme_override_colors/font_color = Color(0.35, 1, 0.55, 1)
-text = "👉  127.0.0.1  (PORT: 7777)  👈"
+text = "127.0.0.1  (PORT: 7777)"
 horizontal_alignment = 1
 
 [node name="CopyIpButton" type="Button" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox/HostIpBox" unique_id=187123439]
 custom_minimum_size = Vector2(90, 36)
 layout_mode = 2
-text = "📋 COPY"
+text = "COPY"
 
 [node name="HostAltIpsLabel" type="Label" parent="CenterContainer/LobbyPanel/LobbyMargin/LobbyScroll/LobbyVBox/HostBannerPanel/HostBannerMargin/HostBannerVBox" unique_id=187123438]
 visible = false

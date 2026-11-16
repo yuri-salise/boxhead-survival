@@ -1,5 +1,7 @@
 extends Control
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 const LEVEL_NAMES: Dictionary = {
 	1: "SECTOR 01: OUTPOST QUARANTINE (3 WAVES · DAY -> DUSK)",
 	2: "SECTOR 02: THE DEAD HIGHWAY (4 WAVES · AFTERNOON -> NIGHT)",
@@ -82,12 +84,13 @@ func refresh_ui() -> void:
 			if gs:
 				best_sc = int(gs.best_score_by_level.get(lvl_id, 0))
 				best_st = int(gs.best_stars_by_level.get(lvl_id, 0))
-			var stars_txt := ""
-			for s in range(1, 4):
-				stars_txt += "★" if s <= best_st else "☆"
-			btn.text = base_title + "   —   " + stars_txt + "   [ BEST: " + str(best_sc) + " ]"
+			# Star rating is a drawn icon strip, not font glyphs (see ui_icons.gd)
+			btn.text = base_title + "   —   " + str(best_st) + "/3   [ BEST: " + str(best_sc) + " ]"
+			btn.icon = UiIcons.star_strip(best_st, 3)
+			btn.add_theme_constant_override("icon_max_width", 84)
 		else:
 			btn.text = "[ LOCKED ]   " + base_title
+			UiIcons.apply(btn, "lock", 22)
 	
 	if achievements_label:
 		if gs and gs.get("ACHIEVEMENT_DEFS") != null:
@@ -96,12 +99,12 @@ func refresh_ui() -> void:
 			for ach_id in defs.keys():
 				var title_str: String = str(defs[ach_id]["title"])
 				var has_it: bool = gs.has_achievement(ach_id)
-				badges.append(("★ " if has_it else "☆ ") + title_str)
+				badges.append(title_str + (" [EARNED]" if has_it else " [LOCKED]"))
 			var total_st: int = gs.get_total_stars() if gs.has_method("get_total_stars") else 0
-			var perk_str := " [★ VETERAN PERK ACTIVE]" if total_st >= 6 else (" [★ " + str(total_st) + "/6 FOR VETERAN PERK]")
+			var perk_str := " [VETERAN PERK ACTIVE]" if total_st >= 6 else (" [" + str(total_st) + "/6 FOR VETERAN PERK]")
 			achievements_label.text = "STARS: " + str(total_st) + "/15" + perk_str + "  |  MEDALS:  " + "   ·   ".join(PackedStringArray(badges))
 		else:
-			achievements_label.text = "MEDALS:  ☆ UNTOUCHABLE   ·   ☆ NIGHT STALKER   ·   ☆ ANATOMY LESSON   ·   ☆ APEX PREDATOR"
+			achievements_label.text = "MEDALS:  UNTOUCHABLE [LOCKED]   ·   NIGHT STALKER [LOCKED]   ·   ANATOMY LESSON [LOCKED]   ·   APEX PREDATOR [LOCKED]"
 
 func _on_level_selected(level_id: int) -> void:
 	var gs := _get_game_state()

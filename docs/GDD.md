@@ -64,7 +64,7 @@
 ## 10. Art and Sound Style + Asset Licenses
 - **Visual Style:** Procedural 2D vector canvas rendering (`_draw()`) with a bleak post-apocalyptic palette (`#181a1b` asphalt, `#4a2e2b` rust, `#8b2626` blood-red accents), dynamic flashlight shadow occlusion (`horror_vignette.gd`), and permanent ground blood/limb decals.
 - **Audio:** 19 procedural 16-bit PCM WAV sound effects + 2 seamless `LOOP_FORWARD` ambient horror tracks (`ambient_menu.wav`, `ambient_combat.wav`) synthesized via `scripts/audio_generator.gd` (100% original CC0).
-- **Fonts:** `BebasNeue-Regular.ttf` and `SpecialElite-Regular.ttf` (OFL-1.1 / Apache-2.0, documented in [`docs/CREDITS.md`](file:///c:/Users/Yuri/Desktop/Game Dev/boxhead-survival/docs/CREDITS.md)).
+- **Fonts:** `BebasNeue-Regular.ttf` and `SpecialElite-Regular.ttf` (OFL-1.1 / Apache-2.0, documented in [`docs/CREDITS.md`](../docs/CREDITS.md)).
 
 ## 11. Risks & Fallback Plan
 - **Risk 1 — Public School Wi-Fi AP Client Isolation:** Campus routers often block peer-to-peer UDP packets between phones.

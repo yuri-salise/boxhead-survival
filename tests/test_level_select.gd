@@ -38,8 +38,8 @@ class LevelSelectTestRunner extends Node:
 		gs.complete_level(1, 480, 3, true, false)
 		lvl_ui.refresh_ui()
 		assert(lvl_ui.level_buttons[1].disabled == false, "Level 2 button must be enabled after completing Level 1")
-		assert("★ UNTOUCHABLE" in lvl_ui.achievements_label.text, "Achievements label must show unlocked ★ UNTOUCHABLE medal")
-		print("LevelSelect locks, ★ UNTOUCHABLE medal display & dynamic sector time-of-day labels: PASS")
+		assert("UNTOUCHABLE [EARNED]" in lvl_ui.achievements_label.text, "Achievements label must show the unlocked UNTOUCHABLE medal")
+		print("LevelSelect locks, UNTOUCHABLE medal display & dynamic sector time-of-day labels: PASS")
 		
 		gs.reset_progress()
 		gs.save_progress()

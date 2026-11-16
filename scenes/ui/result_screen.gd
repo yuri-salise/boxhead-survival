@@ -1,5 +1,7 @@
 extends Control
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 signal next_level_requested(next_level_id: int)
 signal retry_requested()
 signal main_menu_requested()
@@ -79,10 +81,8 @@ func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_ac
 	
 	if stars_label:
 		var clamped_stars := clampi(stars, 1, 3)
-		var star_str := ""
-		for i in range(1, 4):
-			star_str += "★ " if i <= clamped_stars else "☆ "
-		stars_label.text = star_str.strip_edges() + "   RATING (" + str(clamped_stars) + "/3)"
+		_show_star_strip(clamped_stars)
+		stars_label.text = "RATING (" + str(clamped_stars) + "/3)"
 		stars_label.add_theme_color_override("font_color", Color(0.98, 0.82, 0.25, 1.0))
 		stars_label.visible = true
 	
@@ -93,7 +93,7 @@ func show_victory(level_id: int, score: int, kills: int, stars: int, unlocked_ac
 		var base_msg := "[ PROGRESS SAVED — SECTOR 0" + str(level_id + 1) + " UNLOCKED ]" if level_id < 5 else "[ CAMPAIGN COMPLETE — ALL QUARANTINE SECTORS CLEARED! ]"
 		if not unlocked_achs.is_empty():
 			var ach_str := ", ".join(PackedStringArray(unlocked_achs))
-			base_msg += "\n★ ACHIEVEMENT UNLOCKED: " + ach_str + " ★"
+			base_msg += "\nACHIEVEMENT UNLOCKED: " + ach_str + ""
 		unlock_banner.text = base_msg
 		unlock_banner.add_theme_color_override("font_color", Color(0.98, 0.82, 0.28, 1.0) if not unlocked_achs.is_empty() else Color(0.45, 0.88, 0.55, 1.0))
 	
@@ -134,7 +134,8 @@ func show_defeat(level_id: int, score: int, kills: int, reason: String = "OUTPOS
 		outcome_title.add_theme_color_override("font_color", Color(0.92, 0.22, 0.22, 1.0))
 	
 	if stars_label:
-		stars_label.text = "☆ ☆ ☆   SECTOR LOST"
+		_show_star_strip(0)
+		stars_label.text = "SECTOR LOST"
 		stars_label.add_theme_color_override("font_color", Color(0.65, 0.28, 0.28, 1.0))
 		stars_label.visible = true
 	
@@ -158,6 +159,7 @@ func show_survival_defeat(wave: int, score: int, kills: int, is_new_best: bool =
 		outcome_title.add_theme_color_override("font_color", Color(0.92, 0.22, 0.22, 1.0))
 	
 	if stars_label:
+		_show_star_strip(-1)
 		stars_label.text = "WAVES SURVIVED: " + str(wave)
 		stars_label.add_theme_color_override("font_color", Color(0.95, 0.82, 0.25, 1.0) if is_new_best else Color(0.85, 0.55, 0.25, 1.0))
 		stars_label.visible = true
@@ -167,7 +169,7 @@ func show_survival_defeat(wave: int, score: int, kills: int, is_new_best: bool =
 	
 	if unlock_banner:
 		if is_new_best:
-			unlock_banner.text = "★ NEW PERSONAL RECORD SET! ★"
+			unlock_banner.text = "NEW PERSONAL RECORD SET!"
 			unlock_banner.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25, 1.0))
 		else:
 			unlock_banner.text = "[ POSITION OVERRUN BY ENDLESS HORDE — REARM & RETRY ]"
@@ -195,3 +197,22 @@ func _on_main_menu_pressed() -> void:
 	visible = false
 	get_tree().paused = false
 	main_menu_requested.emit()
+
+# Star rating drawn as an icon strip above the rating label. Pass -1 to hide it
+# (endless survival has no star rating).
+func _show_star_strip(filled: int) -> void:
+	if not stars_label or not stars_label.get_parent():
+		return
+	var strip := stars_label.get_parent().get_node_or_null("StarStrip") as TextureRect
+	if strip == null:
+		strip = TextureRect.new()
+		strip.name = "StarStrip"
+		strip.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		strip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		strip.custom_minimum_size = Vector2(0, 44)
+		strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stars_label.get_parent().add_child(strip)
+		stars_label.get_parent().move_child(strip, stars_label.get_index())
+	strip.visible = filled >= 0
+	if filled >= 0:
+		strip.texture = UiIcons.star_strip(filled, 3)

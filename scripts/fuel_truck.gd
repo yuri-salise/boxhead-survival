@@ -1,5 +1,7 @@
 extends StaticBody2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 signal gasoline_dispensed(player_node: Node2D)
 signal player_proximity_changed(in_range: bool)
 
@@ -26,7 +28,7 @@ func _ready() -> void:
 	
 	if prompt_label:
 		prompt_label.visible = true
-		prompt_label.text = "⛽ FUEL TRUCK [GET GASOLINE]"
+		prompt_label.text = "FUEL TRUCK [GET GASOLINE]"
 
 func _process(delta: float) -> void:
 	anim_time += delta
@@ -65,7 +67,7 @@ func dispense_gasoline(target_player: Node2D = null) -> bool:
 	if recipient.get("has_gasoline") == true:
 		var tree := get_tree()
 		if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -54), "⛽ ALREADY CARRYING GASOLINE — DELIVER TO GENERATOR! ⛽", Color(1.0, 0.85, 0.25))
+			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -54), "ALREADY CARRYING GASOLINE — DELIVER TO GENERATOR!", Color(1.0, 0.85, 0.25))
 		return false
 	
 	recipient.set("has_gasoline", true)
@@ -79,10 +81,10 @@ func dispense_gasoline(target_player: Node2D = null) -> bool:
 	
 	var tree := get_tree()
 	if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -56), "⛽ GASOLINE CAN ACQUIRED — REFUEL THE GENERATOR! ⛽", Color(1.0, 0.82, 0.22))
+		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -56), "GASOLINE CAN ACQUIRED — REFUEL THE GENERATOR!", Color(1.0, 0.82, 0.22))
 	
 	if prompt_label:
-		prompt_label.text = "⛽ DELIVER GAS TO GENERATOR"
+		prompt_label.text = "DELIVER GAS TO GENERATOR"
 	
 	gasoline_dispensed.emit(recipient)
 	queue_redraw()
@@ -131,7 +133,7 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 			dispense_gasoline(body)
 		if prompt_label:
 			prompt_label.visible = true
-			prompt_label.text = "⛽ DELIVER GAS TO GENERATOR" if body.get("has_gasoline") == true else "TAP / [E] TO GRAB GASOLINE"
+			prompt_label.text = "DELIVER GAS TO GENERATOR" if body.get("has_gasoline") == true else "TAP / [E] TO GRAB GASOLINE"
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			if body.get("has_gasoline") != true:
 				body.touch_controls.set_interact_prompt(true, "GRAB GASOLINE CAN", self)
@@ -142,7 +144,7 @@ func _on_interaction_body_exited(body: Node2D) -> void:
 		is_player_nearby = false
 		player_proximity_changed.emit(false)
 		if prompt_label:
-			prompt_label.text = "⛽ FUEL TRUCK [GET GASOLINE]"
+			prompt_label.text = "FUEL TRUCK [GET GASOLINE]"
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()
@@ -171,6 +173,8 @@ func _draw() -> void:
 	# Windshield
 	draw_rect(Rect2(Vector2(34, -15), Vector2(7, 30)), Color(0.42, 0.56, 0.65, 0.85), true)
 	# Headlights
+	LightFX.draw_glow(self, Vector2(48, -13), 16.0, Color(1.0, 0.93, 0.70, 0.55))
+	LightFX.draw_glow(self, Vector2(48, 13), 16.0, Color(1.0, 0.93, 0.70, 0.55))
 	draw_circle(Vector2(46, -13), 3.0, Color(1.0, 0.92, 0.65, 0.95))
 	draw_circle(Vector2(46, 13), 3.0, Color(1.0, 0.92, 0.65, 0.95))
 	
@@ -189,5 +193,5 @@ func _draw() -> void:
 	draw_circle(Vector2(-6, 0), 5.0, Color(0.28, 0.30, 0.32, 1.0))
 	
 	# Amber roof beacon light + warm ground glow
-	draw_circle(Vector2(26, 0), 52.0, Color(1.0, 0.68, 0.18, 0.12 * pulse))
+	LightFX.draw_glow(self, Vector2(26, 0), 95.0, Color(1.0, 0.68, 0.20, 0.42 * pulse))
 	draw_circle(Vector2(26, 0), 4.2, Color(1.0, 0.75, 0.15, 0.98))

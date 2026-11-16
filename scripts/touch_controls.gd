@@ -1,5 +1,7 @@
 extends Control
 
+const UiIcons := preload("res://scripts/ui_icons.gd")
+
 signal dash_pressed()
 signal grenade_pressed()
 signal switch_weapon_pressed()
@@ -112,8 +114,8 @@ func set_interact_prompt(visible_flag: bool, prompt_text: String = "USE", target
 	if interact_btn:
 		interact_btn.visible = visible_flag
 		var is_revive: bool = ("REVIVE" in prompt_text.to_upper())
-		var icon: String = "✚ " if is_revive else "⚡ "
-		interact_btn.text = icon + prompt_text
+		interact_btn.text = prompt_text
+		UiIcons.apply(interact_btn, "medic" if is_revive else "bolt", 22)
 		if is_revive:
 			interact_btn.add_theme_color_override("font_color", Color(0.25, 1.0, 0.45, 1.0))
 		else:

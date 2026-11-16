@@ -1,5 +1,7 @@
 extends Control
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 var low_health_ratio: float = 1.0
 var pulse_time: float = 0.0
 var bite_flash_alpha: float = 0.0
@@ -94,10 +96,12 @@ float calc_flashlight(vec2 p, vec2 origin, float aim_ang, float beam_len, float 
 				float obs_ang = atan(to_obs.y, to_obs.x);
 				float obs_diff = abs(mod(ang - obs_ang + 3.14159265, 6.2831853) - 3.14159265);
 				float shadow_w = atan(u_shadow_obs_radius[i] * 0.85, obs_dist);
-				if (obs_diff < shadow_w * 1.4) {
-					// Soft penumbra transition instead of hard cutout
-					float penumbra = smoothstep(shadow_w * 1.4, shadow_w * 0.65, obs_diff);
-					beam *= (1.0 - penumbra * 0.88);
+				// A real shadow edge is sharp at the object and blurs with distance behind it.
+				float behind = clamp((dist - obs_dist) / (beam_len * 0.6), 0.0, 1.0);
+				float outer_w = shadow_w * mix(1.15, 1.9, behind);
+				if (obs_diff < outer_w) {
+					float penumbra = smoothstep(outer_w, shadow_w * mix(0.80, 0.30, behind), obs_diff);
+					beam *= (1.0 - penumbra * mix(0.90, 0.62, behind));
 				}
 			}
 		}
@@ -120,11 +124,14 @@ void fragment() {
 		// 1. Local Player Tactical Flashlight
 		float player_flash = calc_flashlight(p, u_player_screen_pos, u_flashlight_angle, u_beam_len, u_cone_half, u_inner_radius, true);
 		darkness *= (1.0 - player_flash);
-		
+		// Warm tungsten cast of the torch on whatever it lights
+		accumulated_tint += vec3(1.0, 0.90, 0.70) * (player_flash * 0.16);
+
 		// 2. Co-op Squadmates & AI Companion Flashlights
 		for (int a = 0; a < u_ally_count; a++) {
 			float ally_flash = calc_flashlight(p, u_ally_screen_pos[a], u_ally_flashlight_angle[a], u_beam_len * 0.95, u_cone_half, u_inner_radius, false);
 			darkness *= (1.0 - ally_flash);
+			accumulated_tint += vec3(1.0, 0.90, 0.70) * (ally_flash * 0.12);
 		}
 		
 		// 3. Multi-source World Ambient Lights (Emergency Generator, Streetlights, Barrels, Turrets)
@@ -148,11 +155,21 @@ void fragment() {
 		float corner_dist_sq = dot(uv_norm, uv_norm);
 		float lens_vignette = 1.0 + corner_dist_sq * 0.12;
 		
-		float total_illumination = 1.0 - darkness;
 		float dark_alpha = clamp(darkness * lens_vignette * 0.96 * u_night_factor, 0.0, 0.98);
-		
-		vec3 dark_col = vec3(0.012, 0.012, 0.022) + accumulated_tint;
-		COLOR = vec4(dark_col, dark_alpha);
+
+		// Screen-space dither hides the 8-bit banding rings in long, smooth falloffs
+		float grain = fract(52.9829189 * fract(dot(FRAGCOORD.xy, vec2(0.06711056, 0.00583715)))) - 0.5;
+		dark_alpha = clamp(dark_alpha + grain * (2.0 / 255.0), 0.0, 0.98);
+
+		// Lit areas pick up the colour of their light source (sodium orange, cold LED,
+		// warm torch) instead of only having the darkness removed.
+		float tint_len = max(max(accumulated_tint.r, accumulated_tint.g), accumulated_tint.b);
+		float wash_a = clamp(tint_len * 0.55, 0.0, 0.16) * u_night_factor * (1.0 - dark_alpha);
+		vec3 wash_col = accumulated_tint / max(tint_len, 0.0001);
+
+		vec3 dark_col = vec3(0.012, 0.012, 0.022);
+		float out_a = dark_alpha + wash_a;
+		COLOR = vec4((dark_col * dark_alpha + wash_col * wash_a) / max(out_a, 0.0001), out_a);
 	}
 }
 """
@@ -443,8 +460,8 @@ func _draw() -> void:
 			var glow_col := Color(base_eye.r, base_eye.g, base_eye.b, (0.38 if not is_enr else 0.68) * p_glow)
 			var pupil_col := Color(minf(1.0, base_eye.r + 0.15), minf(1.0, base_eye.g + 0.15), minf(1.0, base_eye.b + 0.15), 0.98) if not is_enr else Color(1.0, 0.85, 0.2, 1.0)
 			
-			# Outer crimson glare aura
-			draw_circle(spos + fwd, 10.0 if not is_enr else 14.0, glow_col)
+			# Outer crimson glare aura (soft falloff, no disc edge)
+			LightFX.draw_glow(self, spos + fwd, 22.0 if not is_enr else 30.0, Color(glow_col.r, glow_col.g, glow_col.b, minf(1.0, glow_col.a * 1.6)))
 			# Left eye glint
 			draw_circle(eye_l, 2.2 if is_enr else 1.8, pupil_col)
 			# Right eye glint

@@ -1,5 +1,7 @@
 extends StaticBody2D
 
+const LightFX := preload("res://scripts/light_fx.gd")
+
 signal generator_started(world_pos: Vector2)
 signal generator_depleted(world_pos: Vector2)
 signal generator_refueled(world_pos: Vector2)
@@ -141,7 +143,7 @@ func _try_refuel_from_player() -> bool:
 				p.queue_redraw()
 				return refuel_and_restart()
 		if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -48), "⛽ OUT OF FUEL! COLLECT GASOLINE FROM FUEL TRUCK! ⛽", Color(1.0, 0.45, 0.20))
+			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -48), "OUT OF FUEL! COLLECT GASOLINE FROM FUEL TRUCK!", Color(1.0, 0.45, 0.20))
 	return false
 
 @rpc("any_peer", "call_local", "reliable")
@@ -403,9 +405,8 @@ func _draw() -> void:
 	# Light bulb, ground floodlight pool & fuel gauge bar
 	if is_running:
 		var pulse := 0.95 + 0.05 * sin(anim_time * 24.0)
-		draw_circle(Vector2(16, -30), 125.0, Color(1.0, 0.92, 0.55, 0.13 * pulse))
-		draw_circle(Vector2(16, -30), 54.0, Color(1.0, 0.88, 0.42, 0.22 * pulse))
-		draw_circle(Vector2(16, -30), 22.0, Color(1.0, 0.90, 0.50, 0.38 * pulse))
+		LightFX.draw_glow(self, Vector2(16, -30), 190.0, Color(1.0, 0.90, 0.55, 0.42 * pulse))
+		LightFX.draw_glow(self, Vector2(16, -30), 46.0, Color(1.0, 0.94, 0.70, 0.75 * pulse))
 		draw_circle(Vector2(16, -30), 5.0, Color(1.0, 0.98, 0.85, 1.0))
 		
 		# Overhead Fuel Timer Bar
@@ -416,7 +417,7 @@ func _draw() -> void:
 		draw_rect(Rect2(bar_rect.position, Vector2(bar_rect.size.x * f_ratio, bar_rect.size.y)), fill_col, true)
 	elif is_starting:
 		var flick := 0.5 + 0.5 * sin(anim_time * 30.0)
-		draw_circle(Vector2(16, -30), 36.0, Color(1.0, 0.85, 0.35, 0.25 * flick))
+		LightFX.draw_glow(self, Vector2(16, -30), 70.0, Color(1.0, 0.85, 0.40, 0.50 * flick))
 		draw_circle(Vector2(16, -30), 4.2, Color(1.0, 0.92, 0.65, flick))
 	else:
 		# Standby slow red pulse

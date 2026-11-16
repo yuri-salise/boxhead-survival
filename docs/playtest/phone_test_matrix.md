@@ -2,7 +2,7 @@
 
 Empirical device verification across physical hardware, featuring the **Samsung Galaxy A56** as the primary physical mobile deployment target, tested in conjunction with a networked desktop co-op peer and secondary device over local Wi-Fi / Hotspot.
 
-| # | Test Case | Phone 1: Samsung Galaxy A56 (Android 15) | Device 2: Windows PC / Hotspot Peer | Phone 2: Secondary Android (Shared / Lab) | Result & Engineering Notes |
+| # | Test Case | Phone 1: Samsung Galaxy A56 (Android 15) | Device 2: Windows PC / Hotspot Peer | Phone 2: Secondary Android (MODEL + OS: TO FILL) | Result & Engineering Notes |
 | :-: | :--- | :---: | :---: | :---: | :--- |
 | **1** | **App installs and opens to title screen** | PASS | PASS | PASS | `DeadBlockSurvival.apk` installs and boots to `title_screen.tscn` in < 1.6s. |
 | **2** | **Offline mode works in airplane mode** | PASS | PASS | PASS | Verified with Wi-Fi & Mobile Data OFF (Airplane Mode ON); Solo + AI Bot work with 0 network calls. |
@@ -13,3 +13,9 @@ Empirical device verification across physical hardware, featuring the **Samsung 
 | **7** | **Turning off Wi-Fi mid-match shows an error, no crash** | PASS | PASS | PASS | Disconnecting peer cleanly removes avatar (`rpc_remove_squad_peer`) and returns guest to Lobby with status message. |
 | **8** | **UI fits the screen (no cut-off buttons)** | PASS | PASS | PASS | `canvas_items` + `expand` aspect keeps TopBar and twin-stick TouchControls inside safe margins on 19.5:9 Samsung display. |
 | **9** | **Frame rate feels smooth (≥ 30 fps)** | PASS (60 FPS) | PASS (60 FPS) | PASS (60 FPS) | Compatibility renderer + cached occluder queries & decal cap keep frame times < 11 ms (sustained 60 FPS). |
+| **10** | **Touch controls respond correctly (sticks and buttons)** | NOT YET RECORDED | N/A | NOT YET RECORDED | Required by lab Phase 7 matrix. |
+| **11** | **Battery / heat acceptable after 10 minutes** | NOT YET RECORDED | N/A | NOT YET RECORDED | Required by lab Phase 7 matrix. |
+
+### Open items before submission
+- Name the second phone (model, Android version). The lab requires two different phones.
+- Requirement R7 / Checkpoint 5 expects an online match between **two phones**. Row 6 currently shows phone + PC; add a recording of two phones in one match.

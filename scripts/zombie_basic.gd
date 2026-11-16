@@ -368,7 +368,7 @@ func _physics_process(delta: float) -> void:
 					audio_mgr.play_sfx("sfx_screamer", 0.75, 4.0)
 				summon_requested.emit(global_position, 10, self)
 				if scene and scene.has_method("spawn_floating_text"):
-					scene.spawn_floating_text(global_position + Vector2(0, -56), "☠ NECROMANCER SUMMONED HORDE (10)! ☠", Color(0.18, 1.0, 0.40))
+					scene.spawn_floating_text(global_position + Vector2(0, -56), "NECROMANCER SUMMONED HORDE (10)!", Color(0.18, 1.0, 0.40))
 				queue_redraw()
 	elif passive_heal_rate > 0.0 and current_health > 0.0 and current_health < max_health:
 		current_health = minf(max_health, current_health + passive_heal_rate * delta)
@@ -827,7 +827,7 @@ func _grant_player_edge_bonus() -> void:
 								z.apply_hit_impulse(push_dir * 420.0)
 							z.take_damage(24.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "⚡ SONIC SHOCKWAVE EDGE!", Color(0.95, 0.45, 1.0))
+				scene.spawn_floating_text(global_position, "SONIC SHOCKWAVE EDGE!", Color(0.95, 0.45, 1.0))
 		
 		ZombieType.STALKER:
 			# Shadow Reflex Edge: Instant Dash reset + +10 HP
@@ -836,28 +836,28 @@ func _grant_player_edge_bonus() -> void:
 			if p.has_method("heal"):
 				p.heal(10.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "⚡ SHADOW EDGE: DASH READY +10 HP", Color(0.45, 0.90, 1.0))
+				scene.spawn_floating_text(global_position, "SHADOW EDGE: DASH READY +10 HP", Color(0.45, 0.90, 1.0))
 		
 		ZombieType.LEAPER:
 			# Feral Adrenaline Edge: 3.5s Adrenaline Rush speed & fire-rate boost
 			if "adrenaline_time_left" in p:
 				p.adrenaline_time_left = maxf(float(p.adrenaline_time_left), 3.5)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "⚡ FERAL ADRENALINE RUSH!", Color(1.0, 0.65, 0.20))
+				scene.spawn_floating_text(global_position, "FERAL ADRENALINE RUSH!", Color(1.0, 0.65, 0.20))
 		
 		ZombieType.BRUTE:
 			# Scavenged Riot Plate Edge: +20 Kevlar Armor
 			if p.has_method("add_armor"):
 				p.add_armor(20.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "🛡️ RIOT PLATE SCAVENGED +20 ARMOR", Color(0.35, 0.80, 1.0))
+				scene.spawn_floating_text(global_position, "RIOT PLATE SCAVENGED +20 ARMOR", Color(0.35, 0.80, 1.0))
 		
 		ZombieType.PARASITE:
 			# Bio-Marrow Edge: +15 HP
 			if p.has_method("heal"):
 				p.heal(15.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "🧬 BIO-EXTRACT +15 HP", Color(0.55, 1.0, 0.35))
+				scene.spawn_floating_text(global_position, "BIO-EXTRACT +15 HP", Color(0.55, 1.0, 0.35))
 		
 		ZombieType.BUTCHER:
 			# Cleaver Bandolier Edge: Refill unlocked weapons ammo
@@ -865,7 +865,7 @@ func _grant_player_edge_bonus() -> void:
 			if wc and wc.has_method("refill_all_unlocked_ammo"):
 				wc.refill_all_unlocked_ammo()
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "⚔️ BUTCHER STASH: AMMO REFILLED!", Color(1.0, 0.85, 0.25))
+				scene.spawn_floating_text(global_position, "BUTCHER STASH: AMMO REFILLED!", Color(1.0, 0.85, 0.25))
 		
 		ZombieType.PHANTOM:
 			# Soul Flare Edge: +15 HP, +15 Armor, & searing light burst to nearby undead
@@ -879,7 +879,7 @@ func _grant_player_edge_bonus() -> void:
 						if global_position.distance_to(z.global_position) <= 160.0:
 							z.take_damage(28.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "👻 SOUL FLARE: +15 HP / +15 ARMOR", Color(0.40, 1.0, 0.95))
+				scene.spawn_floating_text(global_position, "SOUL FLARE: +15 HP / +15 ARMOR", Color(0.40, 1.0, 0.95))
 		
 		ZombieType.NECRO:
 			# Necromancer Apex Edge: +60 HP, +50 Armor, Full Ammo Refill, & Coven Banish Shockwave!
@@ -896,7 +896,7 @@ func _grant_player_edge_bonus() -> void:
 						if global_position.distance_to(z.global_position) <= 190.0:
 							z.take_damage(45.0)
 			if scene and scene.has_method("spawn_floating_text"):
-				scene.spawn_floating_text(global_position, "☠️ NECRO VANQUISHED: +60 HP, +50 ARMOR & FULL AMMO!", Color(0.18, 1.0, 0.28))
+				scene.spawn_floating_text(global_position, "NECRO VANQUISHED: +60 HP, +50 ARMOR & FULL AMMO!", Color(0.18, 1.0, 0.28))
 
 func _draw_arm_or_stump(start_p: Vector2, end_p: Vector2, arm_col: Color, width: float, claw_col: Color, claw_r: float, is_present: bool) -> void:
 	if is_present:
