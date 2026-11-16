@@ -734,15 +734,12 @@ func _process(delta: float) -> void:
 					for z in zombie_container.get_children():
 						if is_instance_valid(z) and not z.get("is_dead"):
 							var dist: float = z.global_position.distance_to(relocate_target.global_position)
-							if aggressive_sweep and dist > 520.0:
-								# Last 1-3 enemies: immediately relocate directly towards player
-								var spawn_p := find_valid_spawn_position(relocate_target.global_position, 380.0, 480.0)
-								z.global_position = spawn_p
-								if z.has_method("set_target"):
-									z.set_target(relocate_target)
-							elif dist > 820.0:
-								# General straggler: keep within active fighting perimeter
-								var spawn_p := find_valid_spawn_position(relocate_target.global_position, 480.0, 620.0)
+							# Keep targets updated so zombies never wander aimlessly
+							if z.has_method("set_target") and (z.get("target_player") == null or not is_instance_valid(z.get("target_player"))):
+								z.set_target(relocate_target)
+							# Only relocate extreme stragglers that are far away (>1400px) and completely outside all players' view
+							if dist > 1400.0 and not is_in_any_player_view(z.global_position, 160.0):
+								var spawn_p := find_valid_spawn_position(relocate_target.global_position)
 								z.global_position = spawn_p
 								if z.has_method("set_target"):
 									z.set_target(relocate_target)
@@ -1027,10 +1024,11 @@ func _check_all_players_dead() -> bool:
 	var players := get_tree().get_nodes_in_group("players")
 	for p in players:
 		if is_instance_valid(p) and p.get("is_ai_bot") != true:
-			var dead: bool = (p.get("is_dead") == true)
-			var downed: bool = (p.get("is_downed") == true)
-			if not dead and not downed:
-				return false
+			if p == player or p == player2 or is_ancestor_of(p):
+				var dead: bool = (p.get("is_dead") == true)
+				var downed: bool = (p.get("is_downed") == true)
+				if not dead and not downed:
+					return false
 	return true
 
 func _handle_all_players_dead() -> void:
@@ -1149,24 +1147,99 @@ func _on_wave_enemies_updated(remaining_in_wave: int, _total_in_wave: int) -> vo
 	if is_coop and is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 		rpc_sync_wave_enemies.rpc(remaining_in_wave)
 
-func find_valid_spawn_position(near_pos: Vector2, min_dist: float = 520.0, max_dist: float = 680.0) -> Vector2:
-	var best_pos := near_pos + Vector2.from_angle(randf() * TAU) * randf_range(min_dist, max_dist)
-	for attempt in range(8):
+func get_screen_view_scope_half_size() -> Vector2:
+	var vp_size := Vector2(1280.0, 720.0)
+	if is_inside_tree() and get_viewport():
+		var v_rect := get_viewport().get_visible_rect()
+		if v_rect.size.x > 100.0 and v_rect.size.y > 100.0:
+			vp_size = v_rect.size
+	return Vector2(maxf(640.0, vp_size.x * 0.5), maxf(360.0, vp_size.y * 0.5))
+
+func is_in_any_player_view(world_pos: Vector2, margin: float = 120.0) -> bool:
+	var tree := get_tree()
+	if not tree:
+		return false
+	var half_sz := get_screen_view_scope_half_size()
+	var limit_x := half_sz.x + margin
+	var limit_y := half_sz.y + margin
+	
+	for p in tree.get_nodes_in_group("players"):
+		if is_instance_valid(p) and not p.get("is_dead"):
+			var center_p: Vector2 = p.global_position
+			var cam: Camera2D = p.get_node_or_null("PlayerCamera") if p.has_node("PlayerCamera") else null
+			if cam and cam.is_inside_tree() and cam.enabled:
+				center_p = cam.get_screen_center_position()
+			if absf(world_pos.x - center_p.x) <= limit_x and absf(world_pos.y - center_p.y) <= limit_y:
+				return true
+	return false
+
+func find_valid_spawn_position(near_pos: Vector2, min_dist: float = -1.0, max_dist: float = -1.0) -> Vector2:
+	var half_sz := get_screen_view_scope_half_size()
+	var margin := 130.0
+	var limit_x := half_sz.x + margin
+	var limit_y := half_sz.y + margin
+	
+	var has_explicit_range := (min_dist > 0.0 and max_dist > min_dist)
+	var tree := get_tree()
+	var has_active_players := (tree != null and not tree.get_nodes_in_group("players").is_empty())
+	
+	for attempt in range(32):
 		var ang := randf() * TAU
-		var dist := randf_range(min_dist, max_dist)
-		var cand := near_pos + Vector2.from_angle(ang) * dist
-		if is_instance_valid(arena_env) and arena_env.has_method("is_position_blocked"):
-			if not arena_env.is_position_blocked(cand, 26.0):
-				return cand
+		var cos_a := absf(cos(ang))
+		var sin_a := absf(sin(ang))
+		
+		var edge_dist := 850.0
+		if cos_a > 0.001 and sin_a > 0.001:
+			edge_dist = minf(limit_x / cos_a, limit_y / sin_a)
+		elif cos_a <= 0.001:
+			edge_dist = limit_y
 		else:
-			return cand
-	return best_pos
+			edge_dist = limit_x
+		
+		var effective_min := edge_dist + 50.0
+		var effective_max := edge_dist + 240.0
+		
+		if has_explicit_range:
+			if has_active_players:
+				effective_min = maxf(min_dist, effective_min)
+				effective_max = maxf(max_dist, effective_min + 60.0)
+			else:
+				effective_min = min_dist
+				effective_max = max_dist
+		
+		var dist := randf_range(effective_min, effective_max)
+		var cand := near_pos + Vector2.from_angle(ang) * dist
+		
+		# 1. Must never spawn within any player's screen view scope
+		if has_active_players and is_in_any_player_view(cand, margin):
+			continue
+		
+		# 2. Must not collide with arena environment props / walls
+		if is_instance_valid(arena_env) and arena_env.has_method("is_position_blocked"):
+			if arena_env.is_position_blocked(cand, 26.0):
+				continue
+		
+		return cand
+	
+	# Fallback: further out along random angle
+	for fallback_attempt in range(16):
+		var ang := randf() * TAU
+		var dist := randf_range(limit_x + 180.0, limit_x + 450.0)
+		var cand := near_pos + Vector2.from_angle(ang) * dist
+		if not has_active_players or not is_in_any_player_view(cand, margin):
+			if is_instance_valid(arena_env) and arena_env.has_method("is_position_blocked"):
+				if not arena_env.is_position_blocked(cand, 26.0):
+					return cand
+			else:
+				return cand
+	
+	return near_pos + Vector2(limit_x + 200.0, 0.0)
 
 func _on_wave_enemy_spawn_requested(enemy_type: int) -> void:
 	var focus := get_active_living_squadmate()
 	if not is_instance_valid(focus):
 		return
-	var pos := find_valid_spawn_position(focus.global_position, 560.0, 720.0)
+	var pos := find_valid_spawn_position(focus.global_position)
 	var z := spawn_test_zombie_at(pos, enemy_type)
 	if is_instance_valid(z):
 		z.set_meta("is_wave_enemy", true)
@@ -1653,10 +1726,8 @@ func _on_spawn_timer_timeout() -> void:
 	if zombie_container.get_child_count() >= max_alive_zombies:
 		return
 	
-	# Spawn zombies on a 360-degree perimeter ring around the player's current position in the infinite world
-	var spawn_ang := randf() * TAU
-	var spawn_dist := randf_range(640.0, 780.0)
-	var pos := focus.global_position + Vector2.from_angle(spawn_ang) * spawn_dist
+	# Spawn zombies outside players' screen view scope in the infinite world
+	var pos := find_valid_spawn_position(focus.global_position)
 	var z_type := _pick_zombie_type_for_spawn()
 	var z := spawn_test_zombie_at(pos, z_type)
 	if is_instance_valid(z):

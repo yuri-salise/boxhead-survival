@@ -235,7 +235,6 @@ var stuck_accum: float = 0.0
 var stuck_last_pos: Vector2 = Vector2.ZERO
 var detour_dir: Vector2 = Vector2.ZERO
 var detour_timer: float = 0.0
-var prolonged_stuck_timer: float = 0.0
 
 # Necro Boss & 7-Witch Coven escort state
 var passive_heal_rate: float = 0.0
@@ -320,12 +319,12 @@ func _physics_process(delta: float) -> void:
 	
 	if is_network_puppet:
 		if target_sync_pos != Vector2.ZERO:
-			if global_position.distance_squared_to(target_sync_pos) > 10000.0:
+			if global_position.distance_squared_to(target_sync_pos) > 250000.0:
 				global_position = target_sync_pos
 			else:
-				global_position = global_position.lerp(target_sync_pos, minf(1.0, delta * 15.0))
+				global_position = global_position.lerp(target_sync_pos, minf(1.0, delta * 18.0))
 		if visuals:
-			visuals.rotation = lerp_angle(visuals.rotation, target_sync_rot, minf(1.0, delta * 15.0))
+			visuals.rotation = lerp_angle(visuals.rotation, target_sync_rot, minf(1.0, delta * 18.0))
 		if redraw_accum >= 0.055 or hurt_flash_timer > 0.0:
 			redraw_accum = 0.0
 			queue_redraw()
@@ -531,24 +530,14 @@ func _physics_process(delta: float) -> void:
 			# Physical stuck detection against obstacles
 			if global_position.distance_squared_to(stuck_last_pos) < 6.25:
 				stuck_accum += delta
-				if stuck_accum >= 0.75:
+				if stuck_accum >= 0.65:
 					stuck_accum = 0.0
 					var perp := Vector2(-dir.y, dir.x) * (1.0 if randf() > 0.5 else -1.0)
 					detour_dir = perp
 					detour_timer = randf_range(0.85, 1.45)
 					knockback_velocity = perp * 110.0
-				
-				if hit_obstacle:
-					prolonged_stuck_timer += delta
-					# If stuck for > 2.8s while off-screen (> 540px), relocate towards player
-					if prolonged_stuck_timer >= 2.8 and dist > 540.0:
-						prolonged_stuck_timer = 0.0
-						var rel_ang := randf() * TAU
-						global_position = target_player.global_position + Vector2.from_angle(rel_ang) * randf_range(440.0, 520.0)
-						knockback_velocity = Vector2.ZERO
 			else:
 				stuck_accum = 0.0
-				prolonged_stuck_timer = 0.0
 				stuck_last_pos = global_position
 		
 		# Performance: throttle procedural _draw() to ~18 Hz and skip off-screen zombies (>820px away)
