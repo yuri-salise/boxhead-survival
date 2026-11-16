@@ -17,7 +17,10 @@ var fire_timer: float = 0.0
 var aim_angle: float = 0.0
 var current_target: Node2D = null
 
+const MAX_INTERACTION_DISTANCE: float = 135.0
+
 var is_player_nearby: bool = false
+var nearby_players: Array[Node2D] = []
 var anim_time: float = 0.0
 var muzzle_flash_timer: float = 0.0
 var target_scan_timer: float = 999.0
@@ -42,11 +45,37 @@ func _ready() -> void:
 		prompt_label.visible = false
 		prompt_label.text = "TAP TO ACTIVATE TURRET"
 
-func can_interact() -> bool:
-	return not is_active
+func get_nearby_player(max_dist: float = MAX_INTERACTION_DISTANCE) -> Node2D:
+	var tree := get_tree()
+	if not tree:
+		return null
+	var players := tree.get_nodes_in_group("players")
+	var closest: Node2D = null
+	var min_d: float = max_dist
+	for p in players:
+		if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+			var d := global_position.distance_to(p.global_position)
+			if d <= min_d:
+				min_d = d
+				closest = p as Node2D
+	return closest
 
-func interact() -> bool:
-	return activate_turret()
+func can_interact(p_actor: Node2D = null) -> bool:
+	if is_active:
+		return false
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
+	return true
+
+func interact(p_actor: Node2D = null) -> bool:
+	return activate_turret(p_actor)
 
 func get_interaction_prompt() -> String:
 	return "START TURRET"
@@ -58,36 +87,46 @@ func _can_local_player_interact() -> bool:
 		if is_instance_valid(lp):
 			if lp.get("is_dead") == true or lp.get("is_downed") == true:
 				return false
+			if global_position.distance_to(lp.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	return true
 
 func _input(event: InputEvent) -> void:
 	if is_active or not _can_local_player_interact():
 		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
-		if global_position.distance_to(mpos) <= 80.0 or (is_player_nearby and global_position.distance_to(mpos) <= 125.0):
-			activate_turret()
+		if global_position.distance_to(mpos) <= 80.0:
+			activate_turret(nearby_p)
 	elif event is InputEventScreenTouch and event.pressed:
 		var canvas_pos := get_global_transform_with_canvas().origin
-		if canvas_pos.distance_to(event.position) <= 85.0 or (is_player_nearby and canvas_pos.distance_to(event.position) <= 140.0):
-			activate_turret()
+		if canvas_pos.distance_to(event.position) <= 85.0:
+			activate_turret(nearby_p)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby or is_active or not _can_local_player_interact():
+	if is_active or not _can_local_player_interact():
+		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
-			activate_turret()
+			activate_turret(nearby_p)
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_activate_turret() -> void:
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		var sender := multiplayer.get_remote_sender_id()
-		if sender != 0 and sender != 1:
+		var players := get_tree().get_nodes_in_group("players")
+		if not players.is_empty():
 			var caller_valid := false
-			for p in get_tree().get_nodes_in_group("players"):
-				if is_instance_valid(p) and p.get("peer_id") == sender and not p.get("is_dead") and not p.get("is_downed"):
-					if global_position.distance_to(p.global_position) <= 220.0:
+			for p in players:
+				if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+					var sender_ok: bool = (sender == 0 or sender == 1 or int(p.get("peer_id")) == sender)
+					if sender_ok and global_position.distance_to(p.global_position) <= MAX_INTERACTION_DISTANCE + 25.0:
 						caller_valid = true
 						break
 			if not caller_valid:
@@ -98,9 +137,18 @@ func rpc_sync_activate_turret() -> void:
 func rpc_sync_deactivate_turret() -> void:
 	_execute_deactivate_turret()
 
-func activate_turret() -> bool:
+func activate_turret(p_actor: Node2D = null) -> bool:
 	if is_active:
 		return false
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		rpc_sync_activate_turret.rpc()
 		return true
@@ -267,6 +315,8 @@ func get_spotlight_data() -> Dictionary:
 
 func _on_interaction_body_entered(body: Node2D) -> void:
 	if body.is_in_group("players"):
+		if not nearby_players.has(body):
+			nearby_players.append(body)
 		is_player_nearby = true
 		player_proximity_changed.emit(true)
 		if not is_active and prompt_label:
@@ -278,10 +328,12 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 
 func _on_interaction_body_exited(body: Node2D) -> void:
 	if body.is_in_group("players"):
-		is_player_nearby = false
-		player_proximity_changed.emit(false)
-		if not is_active and prompt_label:
-			prompt_label.visible = false
+		nearby_players.erase(body)
+		is_player_nearby = not nearby_players.is_empty()
+		if not is_player_nearby:
+			player_proximity_changed.emit(false)
+			if not is_active and prompt_label:
+				prompt_label.visible = false
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()

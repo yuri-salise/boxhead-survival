@@ -47,8 +47,25 @@ func _ready() -> void:
 		interact_btn.visible = false
 		interact_btn.pressed.connect(func():
 			interact_pressed.emit()
-			if is_instance_valid(current_interactable) and current_interactable.has_method("interact"):
-				current_interactable.interact()
+			if is_instance_valid(current_interactable):
+				var tree := get_tree()
+				var player_in_range := true
+				var p_actor: Node2D = null
+				if tree:
+					var players := tree.get_nodes_in_group("players")
+					var min_d := INF
+					for p in players:
+						if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed") and p is Node2D:
+							var d: float = p.global_position.distance_to(current_interactable.global_position)
+							if d < min_d:
+								min_d = d
+								p_actor = p
+					if not players.is_empty():
+						player_in_range = (min_d <= 135.0)
+				if player_in_range and current_interactable.has_method("interact"):
+					current_interactable.interact(p_actor)
+				elif not player_in_range:
+					set_interact_prompt(false, "", null)
 		)
 	if grenade_btn:
 		grenade_btn.pressed.connect(func(): grenade_pressed.emit())

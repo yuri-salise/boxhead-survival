@@ -3,8 +3,11 @@ extends StaticBody2D
 signal crate_opened(world_pos: Vector2)
 signal player_proximity_changed(in_range: bool)
 
+const MAX_INTERACTION_DISTANCE: float = 135.0
+
 @export var is_opened: bool = false
 var is_player_nearby: bool = false
+var nearby_players: Array[Node2D] = []
 var anim_time: float = 0.0
 
 @onready var interaction_area: Area2D = $InteractionArea
@@ -30,37 +33,89 @@ func _process(delta: float) -> void:
 	if is_player_nearby and not is_opened:
 		queue_redraw()
 
-func can_interact() -> bool:
-	return not is_opened
+func get_nearby_player(max_dist: float = MAX_INTERACTION_DISTANCE) -> Node2D:
+	var tree := get_tree()
+	if not tree:
+		return null
+	var players := tree.get_nodes_in_group("players")
+	var closest: Node2D = null
+	var min_d: float = max_dist
+	for p in players:
+		if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+			var d := global_position.distance_to(p.global_position)
+			if d <= min_d:
+				min_d = d
+				closest = p as Node2D
+	return closest
 
-func interact() -> bool:
-	return open_crate()
+func can_interact(p_actor: Node2D = null) -> bool:
+	if is_opened:
+		return false
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
+	return true
+
+func interact(p_actor: Node2D = null) -> bool:
+	return open_crate(p_actor)
 
 func get_interaction_prompt() -> String:
 	return "OPEN CRATE"
 
+func _can_local_player_interact() -> bool:
+	var scene := get_tree().current_scene if get_tree() else null
+	if scene and scene.has_method("get_local_player"):
+		var lp: Node = scene.get_local_player()
+		if is_instance_valid(lp):
+			if lp.get("is_dead") == true or lp.get("is_downed") == true:
+				return false
+			if global_position.distance_to(lp.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
+	return true
+
 func _input(event: InputEvent) -> void:
-	if is_opened:
+	if is_opened or not _can_local_player_interact():
+		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
 		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
-		if global_position.distance_to(mpos) <= 75.0 or (is_player_nearby and global_position.distance_to(mpos) <= 120.0):
-			open_crate()
+		if global_position.distance_to(mpos) <= 75.0:
+			open_crate(nearby_p)
 	elif event is InputEventScreenTouch and event.pressed:
 		var canvas_pos := get_global_transform_with_canvas().origin
-		if canvas_pos.distance_to(event.position) <= 85.0 or (is_player_nearby and canvas_pos.distance_to(event.position) <= 140.0):
-			open_crate()
+		if canvas_pos.distance_to(event.position) <= 85.0:
+			open_crate(nearby_p)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby or is_opened:
+	if is_opened or not _can_local_player_interact():
+		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
-			open_crate()
+			open_crate(nearby_p)
 
-func open_crate() -> bool:
+func open_crate(p_actor: Node2D = null) -> bool:
 	if is_opened:
 		return false
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	
 	is_opened = true
 	if prompt_label:
@@ -94,6 +149,8 @@ func open_crate() -> bool:
 
 func _on_interaction_body_entered(body: Node2D) -> void:
 	if body.is_in_group("players"):
+		if not nearby_players.has(body):
+			nearby_players.append(body)
 		is_player_nearby = true
 		player_proximity_changed.emit(true)
 		if not is_opened and prompt_label:
@@ -104,10 +161,12 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 
 func _on_interaction_body_exited(body: Node2D) -> void:
 	if body.is_in_group("players"):
-		is_player_nearby = false
-		player_proximity_changed.emit(false)
-		if prompt_label:
-			prompt_label.visible = false
+		nearby_players.erase(body)
+		is_player_nearby = not nearby_players.is_empty()
+		if not is_player_nearby:
+			player_proximity_changed.emit(false)
+			if prompt_label:
+				prompt_label.visible = false
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()

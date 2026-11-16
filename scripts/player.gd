@@ -82,6 +82,7 @@ func is_local_player() -> bool:
 	return peer_id == 1
 
 func _ready() -> void:
+	add_to_group("players")
 	current_health = max_health
 	is_dead = false
 	
@@ -198,16 +199,16 @@ func _physics_process(delta: float) -> void:
 	var aim_pos: Vector2
 	var shooting: bool
 	
-	if is_coop_mode and not is_local_player():
+	if input_override_enabled:
+		move_vec = override_move_vec
+		aim_pos = override_aim_pos
+		shooting = override_is_shooting and not is_downed
+	elif is_coop_mode and not is_local_player():
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting and not is_downed
 	elif is_ai_bot:
 		_update_ai_bot_behavior(delta)
-		move_vec = override_move_vec
-		aim_pos = override_aim_pos
-		shooting = override_is_shooting and not is_downed
-	elif not is_coop_mode and input_override_enabled:
 		move_vec = override_move_vec
 		aim_pos = override_aim_pos
 		shooting = override_is_shooting and not is_downed
@@ -429,13 +430,16 @@ func try_interact() -> bool:
 	var closest: Node = null
 	var min_d := 130.0
 	for item in interactables:
-		if is_instance_valid(item) and item.has_method("can_interact") and item.can_interact():
+		if is_instance_valid(item):
 			var d := global_position.distance_to(item.global_position)
-			if d < min_d:
+			if d <= min_d:
+				if item.has_method("can_interact"):
+					if not item.can_interact(self):
+						continue
 				min_d = d
 				closest = item
 	if closest and closest.has_method("interact"):
-		return closest.interact()
+		return closest.interact(self)
 	return false
 
 func apply_pickup(pickup_type: String) -> void:

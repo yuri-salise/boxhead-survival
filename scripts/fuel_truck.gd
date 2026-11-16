@@ -8,7 +8,10 @@ signal player_proximity_changed(in_range: bool)
 @export var light_radius: float = 175.0
 @export var light_color: Color = Color(1.0, 0.72, 0.25, 0.88)
 
+const MAX_INTERACTION_DISTANCE: float = 135.0
+
 var is_player_nearby: bool = false
+var nearby_players: Array[Node2D] = []
 var anim_time: float = 0.0
 
 @onready var interaction_area: Area2D = $InteractionArea
@@ -34,15 +37,32 @@ func _process(delta: float) -> void:
 	anim_time += delta
 	queue_redraw()
 
-func can_interact(p_actor: Node2D = null) -> bool:
-	if is_instance_valid(p_actor):
-		return p_actor.get("has_gasoline") != true
+func get_nearby_player(max_dist: float = MAX_INTERACTION_DISTANCE) -> Node2D:
 	var tree := get_tree()
-	if tree:
-		for p in tree.get_nodes_in_group("players"):
-			if is_instance_valid(p) and p.get("has_gasoline") != true:
-				return true
-	return true
+	if not tree:
+		return null
+	var players := tree.get_nodes_in_group("players")
+	var closest: Node2D = null
+	var min_d: float = max_dist
+	for p in players:
+		if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+			var d := global_position.distance_to(p.global_position)
+			if d <= min_d:
+				min_d = d
+				closest = p as Node2D
+	return closest
+
+func can_interact(p_actor: Node2D = null) -> bool:
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
+	return is_instance_valid(actor) and actor.get("has_gasoline") != true
 
 func interact(p_actor: Node2D = null) -> bool:
 	return dispense_gasoline(p_actor)
@@ -52,16 +72,14 @@ func get_interaction_prompt() -> String:
 
 func dispense_gasoline(target_player: Node2D = null) -> bool:
 	var recipient: Node2D = target_player
-	if not is_instance_valid(recipient):
-		var tree := get_tree()
-		if tree:
-			var min_d := INF
-			for p in tree.get_nodes_in_group("players"):
-				if is_instance_valid(p) and p.get("is_dead") != true:
-					var d := global_position.distance_to(p.global_position)
-					if d < min_d:
-						min_d = d
-						recipient = p as Node2D
+	if is_instance_valid(recipient):
+		if global_position.distance_to(recipient.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		recipient = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(recipient) or global_position.distance_to(recipient.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	if not is_instance_valid(recipient):
 		return false
 	if recipient.get("has_gasoline") == true:
@@ -97,26 +115,34 @@ func _can_local_player_interact() -> bool:
 		if is_instance_valid(lp):
 			if lp.get("is_dead") == true or lp.get("is_downed") == true:
 				return false
+			if global_position.distance_to(lp.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	return true
 
 func _input(event: InputEvent) -> void:
 	if not _can_local_player_interact():
 		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
-		if global_position.distance_to(mpos) <= 95.0 or (is_player_nearby and global_position.distance_to(mpos) <= 140.0):
-			dispense_gasoline()
+		if global_position.distance_to(mpos) <= 95.0:
+			dispense_gasoline(nearby_p)
 	elif event is InputEventScreenTouch and event.pressed:
 		var canvas_pos := get_global_transform_with_canvas().origin
-		if canvas_pos.distance_to(event.position) <= 100.0 or (is_player_nearby and canvas_pos.distance_to(event.position) <= 155.0):
-			dispense_gasoline()
+		if canvas_pos.distance_to(event.position) <= 100.0:
+			dispense_gasoline(nearby_p)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby or not _can_local_player_interact():
+	if not _can_local_player_interact():
+		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
-			dispense_gasoline()
+			dispense_gasoline(nearby_p)
 
 func get_light_data() -> Dictionary:
 	return {
@@ -127,6 +153,8 @@ func get_light_data() -> Dictionary:
 
 func _on_interaction_body_entered(body: Node2D) -> void:
 	if body.is_in_group("players"):
+		if not nearby_players.has(body):
+			nearby_players.append(body)
 		is_player_nearby = true
 		player_proximity_changed.emit(true)
 		if body.get("has_gasoline") != true:
@@ -141,10 +169,12 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 
 func _on_interaction_body_exited(body: Node2D) -> void:
 	if body.is_in_group("players"):
-		is_player_nearby = false
-		player_proximity_changed.emit(false)
-		if prompt_label:
-			prompt_label.text = "FUEL TRUCK [GET GASOLINE]"
+		nearby_players.erase(body)
+		is_player_nearby = not nearby_players.is_empty()
+		if not is_player_nearby:
+			player_proximity_changed.emit(false)
+			if prompt_label:
+				prompt_label.text = "FUEL TRUCK [GET GASOLINE]"
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()

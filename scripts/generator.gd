@@ -13,12 +13,15 @@ signal player_proximity_changed(in_range: bool)
 @export var restart_delay: float = 3.0
 @export var generator_label: String = "COMMAND CENTER"
 
+const MAX_INTERACTION_DISTANCE: float = 135.0
+
 var is_running: bool = false
 var has_fuel: bool = true
 var fuel_time_left: float = 50.0
 var is_starting: bool = false
 var startup_time_left: float = 0.0
 var is_player_nearby: bool = false
+var nearby_players: Array[Node2D] = []
 var anim_time: float = 0.0
 var exhaust_puffs: Array[Dictionary] = []
 
@@ -107,54 +110,88 @@ func _process(delta: float) -> void:
 	if needs_redraw:
 		queue_redraw()
 
+func get_nearby_player(max_dist: float = MAX_INTERACTION_DISTANCE) -> Node2D:
+	var tree := get_tree()
+	if not tree:
+		return null
+	var players := tree.get_nodes_in_group("players")
+	var closest: Node2D = null
+	var min_d: float = max_dist
+	for p in players:
+		if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+			var d := global_position.distance_to(p.global_position)
+			if d <= min_d:
+				min_d = d
+				closest = p as Node2D
+	return closest
+
 func can_interact(p_actor: Node2D = null) -> bool:
 	if is_running or is_starting:
 		return false
-	if not has_fuel and is_instance_valid(p_actor):
-		return p_actor.get("has_gasoline") == true
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
+	if not has_fuel and is_instance_valid(actor):
+		return actor.get("has_gasoline") == true
 	return true
 
 func interact(p_actor: Node2D = null) -> bool:
 	if is_running or is_starting:
 		return false
+	var actor := p_actor
+	if is_instance_valid(actor):
+		if global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+			return false
+	else:
+		actor = get_nearby_player()
+		if get_tree() and not get_tree().get_nodes_in_group("players").is_empty():
+			if not is_instance_valid(actor) or global_position.distance_to(actor.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	if not has_fuel:
-		if is_instance_valid(p_actor) and p_actor.get("has_gasoline") == true:
-			p_actor.set("has_gasoline", false)
-			if p_actor.has_method("sync_gasoline_state"):
-				p_actor.sync_gasoline_state(false)
-			p_actor.queue_redraw()
+		if is_instance_valid(actor) and actor.get("has_gasoline") == true:
+			actor.set("has_gasoline", false)
+			if actor.has_method("sync_gasoline_state"):
+				actor.sync_gasoline_state(false)
+			actor.queue_redraw()
 			return refuel_and_restart()
-		return _try_refuel_from_player()
-	return start_generator()
+		return _try_refuel_from_player(actor)
+	return start_generator(actor)
 
 func get_interaction_prompt() -> String:
 	if not has_fuel:
 		return "ADD GASOLINE & TURN ON (3S)"
 	return "START GENERATOR"
 
-func _try_refuel_from_player() -> bool:
+func _try_refuel_from_player(actor: Node2D = null) -> bool:
+	var p: Node2D = actor if is_instance_valid(actor) else get_nearby_player()
+	if is_instance_valid(p) and p.get("has_gasoline") == true:
+		p.set("has_gasoline", false)
+		if p.has_method("sync_gasoline_state"):
+			p.sync_gasoline_state(false)
+		p.queue_redraw()
+		return refuel_and_restart()
 	var tree := get_tree()
-	if tree:
-		for p in tree.get_nodes_in_group("players"):
-			if is_instance_valid(p) and p.get("has_gasoline") == true:
-				p.set("has_gasoline", false)
-				if p.has_method("sync_gasoline_state"):
-					p.sync_gasoline_state(false)
-				p.queue_redraw()
-				return refuel_and_restart()
-		if tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
-			tree.current_scene.spawn_floating_text(global_position + Vector2(0, -48), "OUT OF FUEL! COLLECT GASOLINE FROM FUEL TRUCK!", Color(1.0, 0.45, 0.20))
+	if tree and tree.current_scene and tree.current_scene.has_method("spawn_floating_text"):
+		tree.current_scene.spawn_floating_text(global_position + Vector2(0, -48), "OUT OF FUEL! COLLECT GASOLINE FROM FUEL TRUCK!", Color(1.0, 0.45, 0.20))
 	return false
 
 @rpc("any_peer", "call_local", "reliable")
 func rpc_sync_refuel_and_restart() -> void:
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		var sender := multiplayer.get_remote_sender_id()
-		if sender != 0 and sender != 1:
+		var players := get_tree().get_nodes_in_group("players")
+		if not players.is_empty():
 			var caller_valid := false
-			for p in get_tree().get_nodes_in_group("players"):
-				if is_instance_valid(p) and p.get("peer_id") == sender and not p.get("is_dead") and not p.get("is_downed"):
-					if global_position.distance_to(p.global_position) <= 220.0:
+			for p in players:
+				if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+					var sender_ok: bool = (sender == 0 or sender == 1 or int(p.get("peer_id")) == sender)
+					if sender_ok and global_position.distance_to(p.global_position) <= MAX_INTERACTION_DISTANCE + 25.0:
 						caller_valid = true
 						break
 			if not caller_valid:
@@ -165,11 +202,13 @@ func rpc_sync_refuel_and_restart() -> void:
 func rpc_sync_start_generator() -> void:
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		var sender := multiplayer.get_remote_sender_id()
-		if sender != 0 and sender != 1:
+		var players := get_tree().get_nodes_in_group("players")
+		if not players.is_empty():
 			var caller_valid := false
-			for p in get_tree().get_nodes_in_group("players"):
-				if is_instance_valid(p) and p.get("peer_id") == sender and not p.get("is_dead") and not p.get("is_downed"):
-					if global_position.distance_to(p.global_position) <= 220.0:
+			for p in players:
+				if is_instance_valid(p) and not p.get("is_dead") and not p.get("is_downed"):
+					var sender_ok: bool = (sender == 0 or sender == 1 or int(p.get("peer_id")) == sender)
+					if sender_ok and global_position.distance_to(p.global_position) <= MAX_INTERACTION_DISTANCE + 25.0:
 						caller_valid = true
 						break
 			if not caller_valid:
@@ -210,34 +249,40 @@ func _can_local_player_interact() -> bool:
 		if is_instance_valid(lp):
 			if lp.get("is_dead") == true or lp.get("is_downed") == true:
 				return false
+			if global_position.distance_to(lp.global_position) > MAX_INTERACTION_DISTANCE:
+				return false
 	return true
 
 func _input(event: InputEvent) -> void:
 	if is_running or is_starting or not _can_local_player_interact():
 		return
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		var mpos := get_global_mouse_position()
-		if global_position.distance_to(mpos) <= 85.0 or (is_player_nearby and global_position.distance_to(mpos) <= 130.0):
-			interact()
+		if global_position.distance_to(mpos) <= 85.0:
+			interact(nearby_p)
 	elif event is InputEventScreenTouch and event.pressed:
-		var tpos: Vector2 = event.position
 		var canvas_pos := get_global_transform_with_canvas().origin
-		if canvas_pos.distance_to(tpos) <= 90.0 or (is_player_nearby and canvas_pos.distance_to(tpos) <= 150.0):
-			interact()
+		if canvas_pos.distance_to(event.position) <= 90.0:
+			interact(nearby_p)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_player_nearby or is_running or is_starting or not _can_local_player_interact():
+	if is_running or is_starting or not _can_local_player_interact():
 		return
-	
+	var nearby_p := get_nearby_player()
+	if not is_instance_valid(nearby_p):
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_E:
-			interact()
+			interact(nearby_p)
 
-func start_generator() -> bool:
+func start_generator(actor: Node2D = null) -> bool:
 	if is_running or is_starting:
 		return false
 	if not has_fuel:
-		return _try_refuel_from_player()
+		return _try_refuel_from_player(actor)
 	if is_inside_tree() and multiplayer and multiplayer.has_multiplayer_peer():
 		rpc_sync_start_generator.rpc()
 		return true
@@ -335,6 +380,8 @@ func get_light_data() -> Dictionary:
 
 func _on_interaction_body_entered(body: Node2D) -> void:
 	if body.is_in_group("players"):
+		if not nearby_players.has(body):
+			nearby_players.append(body)
 		is_player_nearby = true
 		player_proximity_changed.emit(true)
 		# Auto-refuel if generator is out of fuel and player walks up carrying gasoline!
@@ -354,10 +401,12 @@ func _on_interaction_body_entered(body: Node2D) -> void:
 
 func _on_interaction_body_exited(body: Node2D) -> void:
 	if body.is_in_group("players"):
-		is_player_nearby = false
-		player_proximity_changed.emit(false)
-		if not is_running and not is_starting and has_fuel and prompt_label:
-			prompt_label.visible = false
+		nearby_players.erase(body)
+		is_player_nearby = not nearby_players.is_empty()
+		if not is_player_nearby:
+			player_proximity_changed.emit(false)
+			if not is_running and not is_starting and prompt_label:
+				prompt_label.visible = false
 		if "touch_controls" in body and body.touch_controls and body.touch_controls.has_method("set_interact_prompt"):
 			body.touch_controls.set_interact_prompt(false, "", null)
 		queue_redraw()
