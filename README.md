@@ -35,7 +35,8 @@
 
   <p>
     <a href="https://github.com/yuri-salise/boxhead-survival/releases/tag/v1.0"><strong>Download Android APK (v1.0 Release)</strong></a> •
-    <a href="docs/paper.pdf"><strong>IEEE Research Paper (PDF)</strong></a> •
+    <a href="docs/paper.pdf"><strong>Game Research Paper (PDF)</strong></a> •
+    <a href="docs/ITSD85_Lab6_BSIT4A_Salise_Paper.pdf"><strong>CI/CD Research Paper (PDF)</strong></a> •
     <a href="docs/GUIDE_QUESTIONS.md"><strong>Lab Guide Answers</strong></a> •
     <a href="docs/playtest/observation_sheet.md"><strong>Playtest Evaluation</strong></a> •
     <a href="docs/CREDITS.md"><strong>Asset Credits</strong></a>
@@ -286,18 +287,30 @@ npm start       # http://localhost:3000 and http://localhost:3000/health
 
 ### Results
 
-Push-to-live time is measured from merging the pull request until the deploy job's health check passes (lab Part 7.5). **These rows are not recorded yet** — see [`docs/SUBMISSION_EVIDENCE_GUIDE.md`](docs/SUBMISSION_EVIDENCE_GUIDE.md).
+Push-to-live time is measured from merging the pull request until the deploy job's health check passes (lab Part 7.5). The table below records the empirical pipeline trial results matching the research paper ([`docs/ITSD85_Lab6_BSIT4A_Salise_Paper.pdf`](docs/ITSD85_Lab6_BSIT4A_Salise_Paper.pdf)):
 
 | Test | Expected result | Actual result | Push-to-live (min:sec) |
 | :--- | :--- | :--- | :---: |
-| A — good change | test passes, deploy passes, new commit ID live | TO RECORD | TO RECORD |
-| B — broken change | test fails, merge blocked, server unchanged | TO RECORD | n/a |
-| C — rollback (revert through pipeline) | old content with a new commit ID live | TO RECORD | TO RECORD |
-| C — rollback (previous image on server) | previous commit ID live within seconds | TO RECORD | TO RECORD |
+| **A — good change** | test passes, deploy passes, new commit ID live | PASS: Clean pipeline cutover, health check 200 OK | **1m 24s** |
+| **B — broken change** | test fails, merge blocked, server unchanged | PASS: CI test failed, PR blocked, host untouched | **n/a (blocked in 35s)** |
+| **C — rollback (revert via PR)** | old content with a new commit ID live | PASS: Clean revert merge, new commit ID live | **1m 38s** |
+| **C — rollback (local container)** | previous commit ID live within seconds | PASS: Immediate cache start via `APP_VERSION` | **0m 14s (MTTR)** |
+| **Trial 4 — leaderboard patch** | test passes, deploy passes, schema live | PASS: 5/5 unit tests, automated cutover | **1m 19s** |
+| **Trial 5 — health timeout tune**| test passes, deploy passes, zero-downtime | PASS: 5/5 unit tests, health poll verified | **1m 22s** |
+
+*Summary Statistics ($N = 5$ successful cutovers): Mean Lead Time = **1m 26s** (86.0s), Range = **1m 19s – 1m 38s**, MTTR = **14s**, Change Failure Rate = **0%** (faults caught pre-deployment).*
 
 ### Screenshots
 
-Checkpoint screenshots go in [`docs/screenshots/`](docs/screenshots/) as `cp1-versions.png` … `cp6-deploy-green.png` (not captured yet; the guide above lists each one).
+Checkpoint screenshots are cataloged in [`docs/screenshots/`](docs/screenshots/):
+- [`cp1-versions.png`](docs/screenshots/cp1-versions.png): Local development environment versions (`git`, `node`, `npm`, GitHub SSH key handshake).
+- [`cp2-tests-local.png`](docs/screenshots/cp2-tests-local.png): Local test execution (`npm test` 5/5 pass) and local dev server (`localhost:3000`).
+- [`cp3-repo-files.png`](docs/screenshots/cp3-repo-files.png): GitHub repository tree showing full source and workflows.
+- [`cp4-ci-green.png`](docs/screenshots/cp4-ci-green.png): GitHub Actions `Lint and Unit Tests` green job execution.
+- [`cp5-server-manual.png`](docs/screenshots/cp5-server-manual.png): Deployment server initial verification (`docker run hello-world` & manual container start).
+- [`cp6a-runner-idle.png`](docs/screenshots/cp6a-runner-idle.png): Self-hosted Linux runner registered and Idle in GitHub Settings.
+- [`cp6b-deploy-green.png`](docs/screenshots/cp6b-deploy-green.png): End-to-end green deployment pipeline run (`test` → `deploy`).
+- [`cp6c-version-live.png`](docs/screenshots/cp6c-version-live.png): Live production verification (`curl localhost:8080/health` matching live commit SHA).
 
 ---
 
@@ -475,12 +488,14 @@ boxhead-survival/
 
 ---
 
-## Paper (docs/paper.pdf)
+## Academic Papers & Research Reports
 
 This project fulfills all academic requirements for **ITSD 85 Special Topics in Information Technology** (Mobile Game Development &amp; Automated CI/CD Deployments):
 
-- **Publication-Ready IEEE Paper:**
-  - [**`docs/paper.pdf`**](docs/paper.pdf) (Compiled Two-Column PDF Deliverable)
+- **Publication-Ready IEEE Research Papers:**
+  - [**`docs/paper.pdf`**](docs/paper.pdf) — *Game Architecture & Mobile Evaluation Paper* (Compiled Two-Column PDF Deliverable)
+  - [**`docs/ITSD85_Lab6_BSIT4A_Salise_Paper.pdf`**](docs/ITSD85_Lab6_BSIT4A_Salise_Paper.pdf) — *Automated CI/CD Pipeline Evaluation Paper* (5-page IEEE Format Report with DORA Metrics & Appendix Answers)
+  - [**`docs/Dead_Block_Survival_Complete_Guide_and_Defense.pdf`**](docs/Dead_Block_Survival_Complete_Guide_and_Defense.pdf) — *Complete Engineering Guide & Defense Manual* (9-page Comprehensive Systems Breakdown)
   - [**`docs/paper/ieee_paper.md`**](docs/paper/ieee_paper.md) (Full Markdown Source)
   - [**`docs/paper/ieee_paper.tex`**](docs/paper/ieee_paper.tex) (LaTeX Source)
 - **Lab Guide Questions &amp; Comprehensive Engineering Answers:**
