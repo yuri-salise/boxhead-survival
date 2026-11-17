@@ -16,7 +16,7 @@ app.get("/", (_req, res) => {
 <html>
   <head><meta charset="utf-8"><title>ITSD 85 CI/CD — Dead Block: Survival</title></head>
   <body style="font-family: sans-serif; max-width: 680px; margin: 40px auto; background: #121519; color: #e8eaed;">
-    <h1>ITSD 85 — Automated CI/CD &amp; Dead Block: Survival Server</h1>
+    <h1>ITSD 85 — Automated CI/CD &amp; Dead Block: Survival Server (Live Demo by Yuri)</h1>
     <p>Status: <strong>running</strong></p>
     <p>Version: <code>${version}</code></p>
     <p>Game Package: <code>com.itsd85.deadblock.survival</code></p>
